@@ -413,14 +413,6 @@ export default function ConfirmPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black"
           >
-            {/* Camera feed */}
-            <video
-              ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover"
-              autoPlay
-              playsInline
-              muted
-            />
 
             {/* Dark overlay with cutout */}
             <div className="absolute inset-0 flex items-center justify-center">
