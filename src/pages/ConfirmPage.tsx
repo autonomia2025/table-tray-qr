@@ -236,7 +236,7 @@ export default function ConfirmPage() {
           unit_price: item.unitPrice,
           quantity: item.quantity,
           subtotal: item.subtotal,
-          selected_modifiers: item.selectedModifiers,
+          selected_modifiers: item.selectedModifiers as any,
           item_notes: item.itemNotes || null,
         }));
 
