@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import RestaurantSplash from "./pages/RestaurantSplash";
 import MenuPage from "./pages/MenuPage";
+import ItemDetailPage from "./pages/ItemDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -20,7 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/:slug" element={<RestaurantSplash />} />
           <Route path="/:slug/menu" element={<MenuPage />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/:slug/item/:id" element={<ItemDetailPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
