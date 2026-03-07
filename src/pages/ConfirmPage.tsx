@@ -296,8 +296,14 @@ export default function ConfirmPage() {
   /* ========== RENDER ========== */
   return (
     <div className="min-h-screen bg-background">
-      {/* Hidden video element for QR scanning */}
-      <video ref={videoRef} className="hidden" />
+      {/* Video element — hidden when not scanning, fullscreen when scanning */}
+      <video
+        ref={videoRef}
+        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        autoPlay
+        playsInline
+        muted
+      />
 
       {/* Header — always visible except during scanning */}
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
