@@ -9,6 +9,7 @@ import RestaurantSplash from "./pages/RestaurantSplash";
 import MenuPage from "./pages/MenuPage";
 import ItemDetailPage from "./pages/ItemDetailPage";
 import CartPage from "./pages/CartPage";
+import ConfirmPage from "./pages/ConfirmPage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/:slug/menu" element={<MenuPage />} />
           <Route path="/:slug/item/:id" element={<ItemDetailPage />} />
           <Route path="/:slug/cart" element={<CartPage />} />
+          <Route path="/:slug/confirm" element={<ConfirmPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
