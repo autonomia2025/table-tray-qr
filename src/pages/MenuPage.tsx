@@ -168,7 +168,7 @@ export default function MenuPage() {
 
   // Active category tracking
   const [activeCatId, setActiveCatId] = useState<string>("");
-  const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
   const isManualScroll = useRef(false);
 
   useEffect(() => {
