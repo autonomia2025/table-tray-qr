@@ -106,8 +106,19 @@ export default function MenuPage() {
 
   // Cart store
   const setTableContext = useCartStore((s) => s.setTableContext);
+  const setTableNumber = useCartStore((s) => s.setTableNumber);
   const totalItems = useCartStore((s) => s.getTotalItems());
   const totalPrice = useCartStore((s) => s.getTotalPrice());
+
+  // Read ?mesa= query param and store table number
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const mesa = params.get("mesa");
+    if (mesa) {
+      const num = parseInt(mesa, 10);
+      if (!isNaN(num)) setTableNumber(num);
+    }
+  }, [location.search, setTableNumber]);
 
   // Resolve branchId if not in state
   const { data: resolvedIds } = useQuery({
