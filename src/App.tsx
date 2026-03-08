@@ -25,6 +25,12 @@ import MozoLayout from "./pages/mozo/MozoLayout";
 import MozoMesasPage from "./pages/mozo/MozoMesasPage";
 import MozoNotificacionesPage from "./pages/mozo/MozoNotificacionesPage";
 import MozoPerfilPage from "./pages/mozo/MozoPerfilPage";
+import { SuperAdminProvider } from "./contexts/SuperAdminContext";
+import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
+import SATenantsPage from "./pages/superadmin/SATenantsPage";
+import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
+import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
+import SAConfigPage from "./pages/superadmin/SAConfigPage";
 
 const queryClient = new QueryClient();
 
