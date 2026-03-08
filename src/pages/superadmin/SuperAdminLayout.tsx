@@ -1,7 +1,12 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Building2, BarChart2, ToggleLeft, Settings } from 'lucide-react';
+import { Building2, BarChart2, ToggleLeft, Settings, LogIn } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSuperAdmin } from '@/contexts/SuperAdminContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 const NAV_ITEMS = [
   { path: '/superadmin/tenants', icon: Building2, label: 'Tenants' },
@@ -10,14 +15,60 @@ const NAV_ITEMS = [
   { path: '/superadmin/config', icon: Settings, label: 'Config' },
 ];
 
+function SuperAdminLogin() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setError(error.message);
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
+        <div className="text-center mb-6">
+          <Badge className="bg-indigo-600 text-white mb-2">SuperAdmin</Badge>
+          <h1 className="text-xl font-bold text-foreground">Acceso restringido</h1>
+        </div>
+        <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+        <Input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+        {error && <p className="text-destructive text-sm">{error}</p>}
+        <Button type="submit" className="w-full gap-2" disabled={loading}>
+          <LogIn className="w-4 h-4" />
+          {loading ? 'Ingresando...' : 'Ingresar'}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export default function SuperAdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { isPlatformAdmin, isLoading } = useSuperAdmin();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isPlatformAdmin) {
+    return <SuperAdminLogin />;
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
       {!isMobile && (
         <aside className="w-56 border-r border-border bg-card flex flex-col shrink-0">
           <div className="h-14 flex items-center gap-2 px-4 border-b border-border">
@@ -45,7 +96,6 @@ export default function SuperAdminLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
         {isMobile && (
           <header className="h-12 flex items-center gap-2 px-4 border-b border-border bg-card">
             <span className="font-bold text-foreground text-sm">MenuQR SuperAdmin</span>
@@ -57,7 +107,6 @@ export default function SuperAdminLayout() {
           <Outlet />
         </main>
 
-        {/* Mobile bottom nav */}
         {isMobile && (
           <nav className="h-16 border-t border-border bg-card flex items-center justify-around shrink-0">
             {NAV_ITEMS.map(item => {
