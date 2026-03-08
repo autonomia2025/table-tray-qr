@@ -17,8 +17,12 @@ const ADMIN_TENANT_ID = "7adf15c6-326b-4820-b2fc-aca7660133a5";
 const ADMIN_BRANCH_ID = "53fd9168-e7b1-4f07-bc1b-a419d6333f6c";
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
+  // Check for SuperAdmin impersonation via sessionStorage
+  const impersonating = sessionStorage.getItem("superadmin_impersonating");
+  const effectiveTenantId = impersonating || ADMIN_TENANT_ID;
+
   const [ctx, setCtx] = useState<Omit<AdminContextType, "loading">>({
-    tenantId: ADMIN_TENANT_ID,
+    tenantId: effectiveTenantId,
     branchId: ADMIN_BRANCH_ID,
     tenantName: "",
     branchName: "",
@@ -28,20 +32,47 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function load() {
-      const [{ data: tenant }, { data: branch }] = await Promise.all([
-        supabase.from("tenants").select("name, primary_color").eq("id", ADMIN_TENANT_ID).single(),
-        supabase.from("branches").select("name").eq("id", ADMIN_BRANCH_ID).single(),
-      ]);
-      setCtx((prev) => ({
-        ...prev,
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("name, primary_color")
+        .eq("id", effectiveTenantId)
+        .single();
+
+      // If impersonating, get the first branch of that tenant
+      let branchId = ADMIN_BRANCH_ID;
+      let branchName = "";
+
+      if (impersonating) {
+        const { data: branch } = await supabase
+          .from("branches")
+          .select("id, name")
+          .eq("tenant_id", effectiveTenantId)
+          .limit(1)
+          .maybeSingle();
+        if (branch) {
+          branchId = branch.id;
+          branchName = branch.name;
+        }
+      } else {
+        const { data: branch } = await supabase
+          .from("branches")
+          .select("name")
+          .eq("id", ADMIN_BRANCH_ID)
+          .single();
+        branchName = branch?.name ?? "";
+      }
+
+      setCtx({
+        tenantId: effectiveTenantId,
+        branchId,
         tenantName: tenant?.name ?? "",
-        branchName: branch?.name ?? "",
+        branchName,
         primaryColor: tenant?.primary_color ?? "#E8531D",
-      }));
+      });
       setLoading(false);
     }
     load();
-  }, []);
+  }, [effectiveTenantId]);
 
   return <AdminContext.Provider value={{ ...ctx, loading }}>{children}</AdminContext.Provider>;
 }
