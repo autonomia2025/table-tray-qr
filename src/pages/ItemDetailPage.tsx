@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -164,9 +164,6 @@ async function fetchPrimaryColor(slug: string): Promise<string> {
 export default function ItemDetailPage() {
   const { slug, id } = useParams<{ slug: string; id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const tableToken = searchParams.get("t");
-  const qs = tableToken ? `?t=${tableToken}` : "";
 
   const addItem = useCartStore((s) => s.addItem);
 
@@ -222,7 +219,6 @@ export default function ItemDetailPage() {
         }
       }
       next.set(groupId, current);
-      // Clear invalid state for this group
       setInvalidGroups((inv) => {
         const n = new Set(inv);
         n.delete(groupId);
@@ -299,7 +295,7 @@ export default function ItemDetailPage() {
 
     setShowSuccess(true);
     setTimeout(() => {
-      navigate(`/${slug}/menu${qs}`);
+      navigate(`/${slug}/menu`);
     }, 800);
   };
 
@@ -321,7 +317,7 @@ export default function ItemDetailPage() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-lg font-bold text-foreground">Plato no encontrado</p>
-          <button onClick={() => navigate(`/${slug}/menu${qs}`)} className="mt-3 text-sm underline text-muted-foreground">
+          <button onClick={() => navigate(`/${slug}/menu`)} className="mt-3 text-sm underline text-muted-foreground">
             Volver al menú
           </button>
         </div>
@@ -354,7 +350,7 @@ export default function ItemDetailPage() {
 
       {/* Back button */}
       <button
-        onClick={() => navigate(`/${slug}/menu${qs}`)}
+        onClick={() => navigate(`/${slug}/menu`)}
         className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow text-foreground"
       >
         <ArrowLeft className="h-5 w-5" />
@@ -383,10 +379,8 @@ export default function ItemDetailPage() {
 
       {/* Body */}
       <div className="px-4 pt-4">
-        {/* Name */}
         <h1 className="text-[22px] font-bold leading-tight text-foreground">{item.name}</h1>
 
-        {/* Price + time */}
         <div className="mt-2 flex items-center gap-3">
           <span className="text-xl font-bold" style={{ color: primaryColor }}>
             {formatCLP(item.price)}
@@ -398,14 +392,12 @@ export default function ItemDetailPage() {
           )}
         </div>
 
-        {/* Description */}
         {(item.description_long || item.description_short) && (
           <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
             {item.description_long || item.description_short}
           </p>
         )}
 
-        {/* Labels */}
         {item.labels && item.labels.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {item.labels.map((l) => {
@@ -420,7 +412,6 @@ export default function ItemDetailPage() {
           </div>
         )}
 
-        {/* Allergens */}
         {item.allergens && item.allergens.length > 0 && (
           <div className="mt-4">
             <p className="text-[13px] font-bold text-muted-foreground mb-1.5">Alérgenos</p>
@@ -434,10 +425,8 @@ export default function ItemDetailPage() {
           </div>
         )}
 
-        {/* Separator */}
         {groups.length > 0 && <hr className="my-5 border-border" />}
 
-        {/* Modifier groups */}
         {groups.map((group) => {
           const sel = selections.get(group.id) || new Set<string>();
           const isInvalid = invalidGroups.has(group.id);
@@ -484,7 +473,6 @@ export default function ItemDetailPage() {
                       } disabled:opacity-40`}
                       style={isSelected ? { borderColor: primaryColor } : undefined}
                     >
-                      {/* Radio / Checkbox indicator */}
                       <div
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-${
                           group.type === "choose_one" ? "full" : "md"

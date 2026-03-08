@@ -1,8 +1,8 @@
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { MapPin, ArrowRight, ShoppingBag } from "lucide-react";
+import { MapPin, ArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import defaultCover from "@/assets/default-cover.jpg";
 
@@ -78,37 +78,12 @@ const NotFound = () => (
 export default function RestaurantSplash() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const tableToken = searchParams.get("t");
 
   const { data: tenant, isLoading, isError } = useQuery({
     queryKey: ["tenant-splash", slug],
     queryFn: () => fetchTenantBySlug(slug!),
     enabled: !!slug,
     staleTime: 5 * 60 * 1000,
-  });
-
-  // Check for active session if table token exists
-  const { data: activeSession } = useQuery({
-    queryKey: ["active-session", tableToken],
-    queryFn: async () => {
-      if (!tableToken) return null;
-      const { data: table } = await supabase
-        .from("tables")
-        .select("id")
-        .eq("qr_token", tableToken)
-        .maybeSingle();
-      if (!table) return null;
-
-      const { data: session } = await supabase
-        .from("table_sessions")
-        .select("id")
-        .eq("table_id", table.id)
-        .eq("is_active", true)
-        .maybeSingle();
-      return session;
-    },
-    enabled: !!tableToken,
   });
 
   if (isLoading) return <SplashSkeleton />;
@@ -119,10 +94,7 @@ export default function RestaurantSplash() {
   const initial = tenant.name.charAt(0).toUpperCase();
 
   const handleGoToMenu = () => {
-    const params = new URLSearchParams();
-    if (tableToken) params.set("t", tableToken);
-    const qs = params.toString();
-    navigate(`/${slug}/menu${qs ? `?${qs}` : ""}`, {
+    navigate(`/${slug}/menu`, {
       state: { tenantId: tenant.id, branchId: tenant.branch_id },
     });
   };
@@ -145,21 +117,6 @@ export default function RestaurantSplash() {
 
       {/* Overlay */}
       <div className="absolute inset-0 bg-[hsl(var(--overlay-dark))]" />
-
-      {/* Active session banner */}
-      {activeSession && (
-        <motion.button
-          initial={{ y: -60, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          onClick={() => navigate(`/${slug}/tracking${tableToken ? `?t=${tableToken}` : ""}`)}
-          className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-2 py-3 px-4 text-sm font-medium"
-          style={{ backgroundColor: primaryColor, color: "#fff" }}
-        >
-          <ShoppingBag className="h-4 w-4" />
-          Tienes un pedido activo →
-        </motion.button>
-      )}
 
       {/* Content */}
       <div className="relative z-10 flex h-full flex-col items-center justify-center px-6">

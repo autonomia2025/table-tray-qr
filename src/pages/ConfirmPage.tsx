@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,15 +19,6 @@ function extractTokenFromScan(raw: string): string {
   }
 }
 
-async function fetchTenantId(slug: string): Promise<string | null> {
-  const { data } = await supabase
-    .from("tenants")
-    .select("id, primary_color")
-    .eq("slug", slug)
-    .maybeSingle();
-  return data ? data.id : null;
-}
-
 async function fetchPrimaryColor(slug: string): Promise<string> {
   const { data } = await supabase
     .from("tenants")
@@ -45,15 +36,17 @@ export default function ConfirmPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const tableTokenFromUrl = searchParams.get("t");
-  const orderNotes = (location.state as any)?.orderNotes || "";
+  const locState = location.state as { orderNotes?: string; autoScan?: boolean } | null;
+  const orderNotes = locState?.orderNotes || "";
+  const autoScan = locState?.autoScan ?? false;
   const { toast } = useToast();
 
   const items = useCartStore((s) => s.items);
   const getTotalPrice = useCartStore((s) => s.getTotalPrice);
   const clearCart = useCartStore((s) => s.clearCart);
   const storedTenantId = useCartStore((s) => s.tenantId);
+  const setTableToken = useCartStore((s) => s.setTableToken);
+  const setTableNumber = useCartStore((s) => s.setTableNumber);
 
   const { data: primaryColor = "#E8531D" } = useQuery({
     queryKey: ["primary-color", slug],
@@ -62,30 +55,20 @@ export default function ConfirmPage() {
     staleTime: Infinity,
   });
 
-  const { data: tenantId } = useQuery({
-    queryKey: ["tenant-id", slug],
-    queryFn: () => fetchTenantId(slug!),
-    enabled: !!slug && !storedTenantId,
-    staleTime: Infinity,
-  });
-
-  const resolvedTenantId = storedTenantId || tenantId;
-
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
-  const controlsRef = useRef<ReturnType<BrowserQRCodeReader["decodeFromVideoDevice"]> | null>(null);
 
   const totalPrice = getTotalPrice();
 
   // Redirect if cart is empty
   useEffect(() => {
     if (items.length === 0 && pageState !== "success" && pageState !== "processing") {
-      navigate(`/${slug}/menu${tableTokenFromUrl ? `?t=${tableTokenFromUrl}` : ""}`, { replace: true });
+      navigate(`/${slug}/menu`, { replace: true });
     }
-  }, [items.length, pageState, slug, navigate, tableTokenFromUrl]);
+  }, [items.length, pageState, slug, navigate]);
 
   // Cleanup camera on unmount
   useEffect(() => {
@@ -93,6 +76,14 @@ export default function ConfirmPage() {
       stopCamera();
     };
   }, []);
+
+  // Auto-scan when arriving from cart
+  useEffect(() => {
+    if (autoScan && items.length > 0 && pageState === "summary") {
+      const timer = setTimeout(() => startScanning(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, []); // only on mount
 
   const stopCamera = useCallback(() => {
     if (videoRef.current?.srcObject) {
@@ -110,19 +101,17 @@ export default function ConfirmPage() {
       const reader = new BrowserQRCodeReader();
       codeReaderRef.current = reader;
 
-      const controls = await reader.decodeFromVideoDevice(
+      await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current!,
-        (result, error) => {
+        (result) => {
           if (result) {
             const token = extractTokenFromScan(result.getText());
             stopCamera();
             handleScannedToken(token);
           }
-          // Ignore errors during scanning (they're continuous)
         }
       );
-      controlsRef.current = controls as any;
     } catch (err: any) {
       console.error("Camera error:", err);
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
@@ -145,7 +134,7 @@ export default function ConfirmPage() {
       setPageState("processing");
 
       try {
-        // 1. Validate the scanned QR token
+        // 1. Validate the scanned QR token against tables
         const { data: tableData, error: tableError } = await supabase
           .from("tables")
           .select("id, number, name, tenant_id, branch_id, status")
@@ -156,11 +145,15 @@ export default function ConfirmPage() {
           throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
         }
 
-        if (resolvedTenantId && tableData.tenant_id !== resolvedTenantId) {
+        if (storedTenantId && tableData.tenant_id !== storedTenantId) {
           throw new Error("Este QR pertenece a otro restaurante.");
         }
 
-        // 2. Find or create active table_session
+        // 2. Save table info in store
+        setTableToken(scannedToken);
+        setTableNumber(tableData.number);
+
+        // 3. Find or create active table_session
         const { data: existingSession } = await supabase
           .from("table_sessions")
           .select("id, total_amount")
@@ -194,7 +187,7 @@ export default function ConfirmPage() {
           sessionId = newSession.id;
         }
 
-        // 3. Generate order number
+        // 4. Generate order number
         const { count } = await supabase
           .from("orders")
           .select("*", { count: "exact", head: true })
@@ -202,7 +195,7 @@ export default function ConfirmPage() {
 
         const orderNumber = (count || 0) + 1;
 
-        // 4. Create the order
+        // 5. Create the order
         const currentItems = useCartStore.getState().items;
         const currentTotalPrice = useCartStore.getState().getTotalPrice();
 
@@ -227,7 +220,7 @@ export default function ConfirmPage() {
           throw new Error("Error al crear el pedido. Intenta de nuevo.");
         }
 
-        // 5. Create order_items
+        // 6. Create order_items
         const orderItems = currentItems.map((item) => ({
           tenant_id: tableData.tenant_id,
           order_id: order.id,
@@ -245,7 +238,7 @@ export default function ConfirmPage() {
           throw new Error("Error al guardar los ítems del pedido.");
         }
 
-        // 6. Update table status + session total
+        // 7. Update table status + session total
         await supabase
           .from("tables")
           .update({ status: "occupied" })
@@ -256,7 +249,7 @@ export default function ConfirmPage() {
           .update({ total_amount: existingAmount + currentTotalPrice })
           .eq("id", sessionId);
 
-        // 7. Increment total_orders for each menu item
+        // 8. Increment total_orders for each menu item
         const itemCounts = new Map<string, number>();
         for (const ci of currentItems) {
           itemCounts.set(ci.menuItemId, (itemCounts.get(ci.menuItemId) || 0) + ci.quantity);
@@ -275,7 +268,7 @@ export default function ConfirmPage() {
           }
         }
 
-        // 8. Success
+        // 9. Success — clear cart items (token stays)
         setPageState("success");
         clearCart();
 
@@ -288,15 +281,13 @@ export default function ConfirmPage() {
         setPageState("error");
       }
     },
-    [resolvedTenantId, orderNotes, clearCart, navigate, slug],
+    [storedTenantId, orderNotes, clearCart, navigate, slug, setTableToken, setTableNumber],
   );
-
-  const qs = tableTokenFromUrl ? `?t=${tableTokenFromUrl}` : "";
 
   /* ========== RENDER ========== */
   return (
     <div className="min-h-screen bg-background">
-      {/* Video element — hidden when not scanning, fullscreen when scanning */}
+      {/* Video element */}
       <video
         ref={videoRef}
         className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
@@ -305,11 +296,11 @@ export default function ConfirmPage() {
         muted
       />
 
-      {/* Header — always visible except during scanning */}
+      {/* Header */}
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
           <button
-            onClick={() => navigate(`/${slug}/cart${qs}`)}
+            onClick={() => navigate(`/${slug}/cart`)}
             className="flex h-9 w-9 items-center justify-center rounded-full text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -371,12 +362,10 @@ export default function ConfirmPage() {
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   className="relative h-40 w-40"
                 >
-                  {/* Corner brackets */}
                   <div className="absolute top-0 left-0 h-8 w-8 border-t-[3px] border-l-[3px] rounded-tl-md" style={{ borderColor: primaryColor }} />
                   <div className="absolute top-0 right-0 h-8 w-8 border-t-[3px] border-r-[3px] rounded-tr-md" style={{ borderColor: primaryColor }} />
                   <div className="absolute bottom-0 left-0 h-8 w-8 border-b-[3px] border-l-[3px] rounded-bl-md" style={{ borderColor: primaryColor }} />
                   <div className="absolute bottom-0 right-0 h-8 w-8 border-b-[3px] border-r-[3px] rounded-br-md" style={{ borderColor: primaryColor }} />
-                  {/* QR icon */}
                   <div className="flex h-full w-full items-center justify-center text-5xl opacity-30">📱</div>
                 </motion.div>
               </div>
@@ -413,27 +402,18 @@ export default function ConfirmPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black"
           >
-
-            {/* Dark overlay with cutout */}
             <div className="absolute inset-0 flex items-center justify-center">
-              {/* Top */}
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              {/* Bottom */}
               <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              {/* Left */}
               <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
-              {/* Right */}
               <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
 
-              {/* Viewfinder */}
               <div className="relative h-[260px] w-[260px]">
-                {/* Corners */}
                 <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
                 <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
                 <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
                 <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
 
-                {/* Scan line */}
                 <motion.div
                   className="absolute left-2 right-2 h-0.5 rounded-full"
                   style={{ backgroundColor: primaryColor }}
@@ -443,12 +423,10 @@ export default function ConfirmPage() {
               </div>
             </div>
 
-            {/* Text */}
             <div className="absolute bottom-32 left-0 right-0 text-center">
               <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
             </div>
 
-            {/* Cancel button */}
             <button
               onClick={cancelScanning}
               className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
@@ -521,7 +499,7 @@ export default function ConfirmPage() {
               <Camera className="h-4 w-4" /> Intentar de nuevo
             </button>
             <button
-              onClick={() => navigate(`/${slug}/cart${qs}`)}
+              onClick={() => navigate(`/${slug}/cart`)}
               className="mt-3 text-sm text-muted-foreground underline"
             >
               Volver al carrito
