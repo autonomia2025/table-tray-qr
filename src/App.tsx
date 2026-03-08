@@ -49,10 +49,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* Admin global selector */}
-          <Route path="/admin" element={<AdminGlobalPage />} />
-          {/* Admin login (outside layout) */}
-          <Route path="/admin/:slug/login" element={<AdminProvider><AdminLoginPage /></AdminProvider>} />
+          {/* Admin login (no slug needed) */}
+          <Route path="/admin" element={<AdminLoginPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           {/* Admin with slug (protected) */}
           <Route path="/admin/:slug" element={<AdminProvider><AdminLayout /></AdminProvider>}>
             <Route element={<AdminGuard />}>
