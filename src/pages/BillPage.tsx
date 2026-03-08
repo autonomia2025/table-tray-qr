@@ -1,0 +1,588 @@
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
+import { BrowserQRCodeReader } from "@zxing/browser";
+import { formatCLP } from "@/lib/format";
+import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+
+/* ---------- helpers ---------- */
+function extractTokenFromScan(raw: string): string {
+  try {
+    const url = new URL(raw);
+    return url.searchParams.get("t") || raw;
+  } catch {
+    return raw;
+  }
+}
+
+interface OrderWithItems {
+  id: string;
+  order_number: number;
+  status: string;
+  total_amount: number;
+  confirmed_at: string | null;
+  items: {
+    menu_item_name: string;
+    quantity: number;
+    unit_price: number;
+    subtotal: number;
+    selected_modifiers: any;
+  }[];
+}
+
+type PageState = "summary" | "scanning" | "processing" | "success" | "error";
+
+const TIP_OPTIONS = [
+  { label: "Sin propina", pct: 0 },
+  { label: "10%", pct: 10 },
+  { label: "15%", pct: 15 },
+  { label: "20%", pct: 20 },
+];
+
+/* ---------- component ---------- */
+export default function BillPage() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tableToken = searchParams.get("t") || "";
+  const { toast } = useToast();
+
+  const [pageState, setPageState] = useState<PageState>("summary");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [cameraError, setCameraError] = useState("");
+  const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
+  const [customTip, setCustomTip] = useState("");
+  const [showBackBtn, setShowBackBtn] = useState(false);
+  const [finalTotal, setFinalTotal] = useState(0);
+  const [finalTip, setFinalTip] = useState(0);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+
+  /* ---- queries ---- */
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant-bill", slug],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tenants")
+        .select("id, name, primary_color")
+        .eq("slug", slug!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!slug,
+    staleTime: Infinity,
+  });
+
+  const primaryColor = tenant?.primary_color || "#E8531D";
+
+  const { data: tableData } = useQuery({
+    queryKey: ["table-bill", tableToken],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tables")
+        .select("id, number, name, tenant_id, branch_id")
+        .eq("qr_token", tableToken)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!tableToken,
+    staleTime: Infinity,
+  });
+
+  const { data: session } = useQuery({
+    queryKey: ["session-bill", tableData?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("table_sessions")
+        .select("id, total_amount")
+        .eq("table_id", tableData!.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!tableData?.id,
+    staleTime: 5000,
+  });
+
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["orders-bill", session?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("orders")
+        .select("id, order_number, status, total_amount, confirmed_at")
+        .eq("session_id", session!.id)
+        .neq("status", "cancelled")
+        .order("confirmed_at", { ascending: true });
+
+      if (!data) return [];
+
+      const ordersWithItems: OrderWithItems[] = [];
+      for (const o of data) {
+        const { data: items } = await supabase
+          .from("order_items")
+          .select("menu_item_name, quantity, unit_price, subtotal, selected_modifiers")
+          .eq("order_id", o.id);
+        ordersWithItems.push({ ...o, items: items || [] });
+      }
+      return ordersWithItems;
+    },
+    enabled: !!session?.id,
+    staleTime: 5000,
+  });
+
+  const subtotal = orders.reduce((s, o) => s + o.total_amount, 0);
+
+  /* ---- tip logic ---- */
+  const tipAmount = (() => {
+    if (customTip) return parseInt(customTip, 10) || 0;
+    if (selectedTipIdx !== null) return Math.round(subtotal * (TIP_OPTIONS[selectedTipIdx].pct / 100));
+    return 0;
+  })();
+
+  const tipPercentage = selectedTipIdx !== null && !customTip ? TIP_OPTIONS[selectedTipIdx].pct : 0;
+  const total = subtotal + tipAmount;
+
+  /* ---- camera ---- */
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const startScanning = useCallback(async () => {
+    setCameraError("");
+    setPageState("scanning");
+    try {
+      const reader = new BrowserQRCodeReader();
+      codeReaderRef.current = reader;
+      await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
+        if (result) {
+          const token = extractTokenFromScan(result.getText());
+          stopCamera();
+          handleScannedToken(token);
+        }
+      });
+    } catch (err: any) {
+      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
+        setCameraError("camera_denied");
+      } else {
+        setCameraError("camera_error");
+      }
+      setPageState("summary");
+    }
+  }, [stopCamera]);
+
+  const cancelScanning = useCallback(() => {
+    stopCamera();
+    setPageState("summary");
+  }, [stopCamera]);
+
+  /* ---- bill creation ---- */
+  const handleScannedToken = useCallback(
+    async (scannedToken: string) => {
+      setPageState("processing");
+      try {
+        // Validate
+        const { data: scannedTable } = await supabase
+          .from("tables")
+          .select("id, tenant_id")
+          .eq("qr_token", scannedToken)
+          .maybeSingle();
+
+        if (!scannedTable) throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
+        if (tenant?.id && scannedTable.tenant_id !== tenant.id) throw new Error("QR incorrecto.");
+        if (!session?.id) throw new Error("No se encontró la sesión activa.");
+
+        // Create bill_request
+        const { error: billError } = await supabase.from("bill_requests").insert({
+          tenant_id: scannedTable.tenant_id,
+          session_id: session.id,
+          table_id: scannedTable.id,
+          branch_id: tableData!.branch_id,
+          total_amount: subtotal,
+          tip_amount: tipAmount,
+          tip_percentage: tipPercentage,
+          status: "pending",
+          requested_at: new Date().toISOString(),
+        });
+
+        if (billError) throw new Error("Error al enviar la solicitud.");
+
+        // Update table status
+        await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
+
+        setFinalTotal(total);
+        setFinalTip(tipAmount);
+        setPageState("success");
+      } catch (err: any) {
+        setErrorMsg(err.message || "Error desconocido");
+        setPageState("error");
+      }
+    },
+    [tenant?.id, session?.id, tableData, subtotal, tipAmount, tipPercentage, total],
+  );
+
+  // Show "back to start" button after 3s on success
+  useEffect(() => {
+    if (pageState === "success") {
+      const timer = setTimeout(() => setShowBackBtn(true), 3000);
+      return () => clearTimeout(timer);
+    }
+    setShowBackBtn(false);
+  }, [pageState]);
+
+  const formatTime = (iso: string | null) => {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  /* ========== RENDER ========== */
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!session && !isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
+        <p className="text-5xl mb-4">🔍</p>
+        <p className="text-base font-bold text-foreground">No encontramos tu sesión</p>
+        <p className="mt-1 text-sm text-muted-foreground">Escanea el QR de tu mesa nuevamente.</p>
+        <button
+          onClick={() => navigate(`/${slug}/menu${tableToken ? `?t=${tableToken}` : ""}`)}
+          className="mt-6 rounded-2xl px-6 py-3 text-sm font-semibold text-white"
+          style={{ backgroundColor: primaryColor }}
+        >
+          Volver al menú
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Hidden video for QR scanning */}
+      <video
+        ref={videoRef}
+        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        autoPlay
+        playsInline
+        muted
+      />
+
+      {/* Header */}
+      {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
+          <button
+            onClick={() => navigate(`/${slug}/tracking?t=${tableToken}`)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <span className="text-sm font-bold text-foreground">La cuenta</span>
+          <div className="w-9" />
+        </header>
+      )}
+
+      <AnimatePresence mode="wait">
+        {/* SUMMARY */}
+        {pageState === "summary" && (
+          <motion.div
+            key="summary"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="px-4 pt-4 pb-40"
+          >
+            {/* Visit summary */}
+            <p className="text-sm font-bold text-muted-foreground mb-3">Todo lo que pediste</p>
+
+            <div className="rounded-xl border border-border bg-card p-4 mb-4">
+              {orders.map((order) => (
+                <div key={order.id} className="mb-3 last:mb-0">
+                  <p className="text-xs text-muted-foreground mb-1.5">
+                    Pedido #{String(order.order_number).padStart(3, "0")} · {formatTime(order.confirmed_at)}
+                  </p>
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-0.5">
+                      <span className="text-sm text-card-foreground">
+                        {item.quantity}× {item.menu_item_name}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{formatCLP(item.subtotal)}</span>
+                    </div>
+                  ))}
+                  {order !== orders[orders.length - 1] && <hr className="my-2 border-border" />}
+                </div>
+              ))}
+
+              <hr className="my-2 border-border" />
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-card-foreground">Subtotal</span>
+                <span className="text-sm font-bold text-card-foreground">{formatCLP(subtotal)}</span>
+              </div>
+            </div>
+
+            {/* Tip section */}
+            <div className="mb-4">
+              <p className="text-[15px] font-bold text-foreground mb-3">¿Quieres dejar propina?</p>
+
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {TIP_OPTIONS.map((opt, idx) => {
+                  const isSelected = selectedTipIdx === idx && !customTip;
+                  const tipVal = Math.round(subtotal * (opt.pct / 100));
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedTipIdx(idx);
+                        setCustomTip("");
+                      }}
+                      className="flex flex-col items-center rounded-xl border-2 py-2.5 px-1 text-center transition-colors"
+                      style={{
+                        borderColor: isSelected ? primaryColor : "hsl(var(--border))",
+                        backgroundColor: isSelected ? `${primaryColor}10` : "transparent",
+                      }}
+                    >
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ color: isSelected ? primaryColor : "hsl(var(--foreground))" }}
+                      >
+                        {opt.label}
+                      </span>
+                      {opt.pct > 0 && (
+                        <span className="text-[11px] text-muted-foreground mt-0.5">{formatCLP(tipVal)}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Otro monto</label>
+                <Input
+                  type="number"
+                  placeholder="$0"
+                  value={customTip}
+                  onChange={(e) => {
+                    setCustomTip(e.target.value);
+                    if (e.target.value) setSelectedTipIdx(null);
+                  }}
+                  className="h-11"
+                />
+              </div>
+            </div>
+
+            {/* Totals */}
+            <div className="rounded-xl border border-border bg-card p-4 mb-4">
+              {tipAmount > 0 && (
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-card-foreground">Propina</span>
+                  <span className="text-sm text-card-foreground">{formatCLP(tipAmount)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between border-t-2 border-border pt-2">
+                <span className="text-base font-bold text-card-foreground">TOTAL</span>
+                <span className="text-xl font-bold" style={{ color: primaryColor }}>
+                  {formatCLP(total)}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center mb-6">
+              El mozo llegará con la máquina de pago 💳
+            </p>
+
+            <hr className="my-5 border-border" />
+
+            {/* Scan section */}
+            <div className="text-center">
+              <h2 className="text-lg font-bold text-foreground mb-1">Escanea para confirmar 🪪</h2>
+              <p className="text-sm text-muted-foreground mb-5">Apunta al QR de la tarjeta de tu mesa</p>
+
+              <div className="flex justify-center mb-5">
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative h-32 w-32"
+                >
+                  <div className="absolute top-0 left-0 h-7 w-7 border-t-[3px] border-l-[3px] rounded-tl-md" style={{ borderColor: primaryColor }} />
+                  <div className="absolute top-0 right-0 h-7 w-7 border-t-[3px] border-r-[3px] rounded-tr-md" style={{ borderColor: primaryColor }} />
+                  <div className="absolute bottom-0 left-0 h-7 w-7 border-b-[3px] border-l-[3px] rounded-bl-md" style={{ borderColor: primaryColor }} />
+                  <div className="absolute bottom-0 right-0 h-7 w-7 border-b-[3px] border-r-[3px] rounded-br-md" style={{ borderColor: primaryColor }} />
+                  <div className="flex h-full w-full items-center justify-center text-4xl opacity-30">📱</div>
+                </motion.div>
+              </div>
+
+              {cameraError && (
+                <div className="mx-auto mb-4 max-w-[300px] rounded-xl bg-yellow-50 border border-yellow-200 p-3">
+                  <p className="text-xs text-yellow-800 font-medium">
+                    {cameraError === "camera_denied"
+                      ? "Necesitamos acceso a la cámara. Habilita el permiso en la configuración de tu navegador."
+                      : "Error al acceder a la cámara. Intenta de nuevo."}
+                  </p>
+                </div>
+              )}
+
+              <button
+                onClick={startScanning}
+                className="mx-auto flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.97]"
+                style={{ backgroundColor: primaryColor, minHeight: "3.5rem" }}
+              >
+                <Camera className="h-5 w-5" />
+                Pedir la cuenta →
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* SCANNING */}
+        {pageState === "scanning" && (
+          <motion.div
+            key="scanning"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black"
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
+              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
+
+              <div className="relative h-[260px] w-[260px]">
+                <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
+                <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
+                <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
+                <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
+                <motion.div
+                  className="absolute left-2 right-2 h-0.5 rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                  animate={{ top: ["10%", "90%", "10%"] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </div>
+            </div>
+
+            <div className="absolute bottom-32 left-0 right-0 text-center">
+              <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
+            </div>
+
+            <button
+              onClick={cancelScanning}
+              className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
+            >
+              <X className="h-4 w-4" /> Cancelar
+            </button>
+          </motion.div>
+        )}
+
+        {/* PROCESSING */}
+        {pageState === "processing" && (
+          <motion.div
+            key="processing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
+          >
+            <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
+            <p className="mt-4 text-base font-semibold text-foreground">Enviando solicitud...</p>
+          </motion.div>
+        )}
+
+        {/* SUCCESS */}
+        {pageState === "success" && (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background px-6 text-center"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="text-[80px] mb-4"
+            >
+              🧾
+            </motion.div>
+            <p className="text-xl font-bold text-foreground">¡La cuenta está en camino!</p>
+            <p className="mt-1 text-sm text-muted-foreground">El mozo viene con la máquina de pago</p>
+            <p className="mt-4 text-2xl font-bold" style={{ color: primaryColor }}>
+              {formatCLP(finalTotal)}
+            </p>
+            {finalTip > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Propina sugerida: {formatCLP(finalTip)}
+              </p>
+            )}
+            <p className="mt-4 text-xs text-muted-foreground">Puedes pagar en efectivo o con tarjeta</p>
+
+            <AnimatePresence>
+              {showBackBtn && (
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => navigate(`/${slug}`)}
+                  className="mt-8 text-sm text-muted-foreground underline"
+                >
+                  Volver al inicio
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {/* ERROR */}
+        {pageState === "error" && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center px-6 pt-20 text-center"
+          >
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-10 w-10 text-destructive" />
+            </div>
+            <p className="mt-4 text-base font-bold text-foreground">Error al pedir la cuenta</p>
+            <p className="mt-1 text-sm text-muted-foreground max-w-[280px]">{errorMsg}</p>
+            <button
+              onClick={() => {
+                setErrorMsg("");
+                startScanning();
+              }}
+              className="mt-6 flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold text-white"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Camera className="h-4 w-4" /> Intentar de nuevo
+            </button>
+            <button
+              onClick={() => navigate(`/${slug}/tracking?t=${tableToken}`)}
+              className="mt-3 text-sm text-muted-foreground underline"
+            >
+              Volver al tracking
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

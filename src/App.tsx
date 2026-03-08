@@ -11,6 +11,7 @@ import ItemDetailPage from "./pages/ItemDetailPage";
 import CartPage from "./pages/CartPage";
 import ConfirmPage from "./pages/ConfirmPage";
 import TrackingPage from "./pages/TrackingPage";
+import BillPage from "./pages/BillPage";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/:slug/cart" element={<CartPage />} />
           <Route path="/:slug/confirm" element={<ConfirmPage />} />
           <Route path="/:slug/tracking" element={<TrackingPage />} />
+          <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
