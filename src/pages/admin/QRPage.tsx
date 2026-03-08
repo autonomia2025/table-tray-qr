@@ -29,7 +29,8 @@ export default function QRPage() {
   const [printAllType, setPrintAllType] = useState<"mesa" | "tarjeta">("mesa");
   const qrRef = useRef<HTMLDivElement>(null);
 
-  const menuUrl = `${window.location.origin}/${slug}/menu`;
+  const menuBaseUrl = `${window.location.origin}/${slug}/menu`;
+  const menuUrlForTable = (tableNumber: number) => `${menuBaseUrl}?mesa=${tableNumber}`;
 
   const fetchTables = async () => {
     const { data } = await supabase
