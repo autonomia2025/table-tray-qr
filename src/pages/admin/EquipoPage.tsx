@@ -38,6 +38,8 @@ export default function EquipoPage() {
   const [saving, setSaving] = useState(false);
   const [revealedPins, setRevealedPins] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const fetchStaff = async () => {
     const { data } = await supabase
