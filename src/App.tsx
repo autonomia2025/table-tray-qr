@@ -15,10 +15,14 @@ import BillPage from "./pages/BillPage";
 import KDSPage from "./pages/KDSPage";
 import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
+import AdminGuard from "./pages/admin/AdminGuard";
+import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import AdminGlobalPage from "./pages/admin/AdminGlobalPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
 import SucursalPage from "./pages/admin/SucursalPage";
+import EquipoPage from "./pages/admin/EquipoPage";
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLoginPage from "./pages/mozo/MozoLoginPage";
 import MozoLayout from "./pages/mozo/MozoLayout";
@@ -42,12 +46,20 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/admin" element={<AdminProvider><AdminLayout /></AdminProvider>}>
-            <Route index element={<Navigate to="/admin/mesas" replace />} />
-            <Route path="mesas" element={<MesasPage />} />
-            <Route path="menu" element={<MenuAdminPage />} />
-            <Route path="qr" element={<QRPage />} />
-            <Route path="sucursal" element={<SucursalPage />} />
+          {/* Admin global selector */}
+          <Route path="/admin" element={<AdminGlobalPage />} />
+          {/* Admin login (outside layout) */}
+          <Route path="/admin/:slug/login" element={<AdminProvider><AdminLoginPage /></AdminProvider>} />
+          {/* Admin with slug (protected) */}
+          <Route path="/admin/:slug" element={<AdminProvider><AdminLayout /></AdminProvider>}>
+            <Route element={<AdminGuard />}>
+              <Route index element={<Navigate to="mesas" replace />} />
+              <Route path="mesas" element={<MesasPage />} />
+              <Route path="menu" element={<MenuAdminPage />} />
+              <Route path="equipo" element={<EquipoPage />} />
+              <Route path="qr" element={<QRPage />} />
+              <Route path="sucursal" element={<SucursalPage />} />
+            </Route>
           </Route>
           <Route path="/:slug" element={<RestaurantSplash />} />
           <Route path="/:slug/menu" element={<MenuPage />} />

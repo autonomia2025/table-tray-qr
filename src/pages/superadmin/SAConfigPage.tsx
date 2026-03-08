@@ -1,11 +1,140 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, AlertTriangle, Copy, UserPlus } from 'lucide-react';
+
+function AdminAccessSection() {
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [tenants, setTenants] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [role, setRole] = useState('owner');
+  const [creating, setCreating] = useState(false);
+  const [sqlOutput, setSqlOutput] = useState('');
+
+  useEffect(() => {
+    supabase.from('tenants').select('id, name, slug').order('name').then(({ data }) => setTenants(data ?? []));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedTenant) { setBranches([]); return; }
+    supabase.from('branches').select('id, name').eq('tenant_id', selectedTenant).then(({ data }) => {
+      setBranches(data ?? []);
+      if (data?.[0]) setSelectedBranch(data[0].id);
+    });
+  }, [selectedTenant]);
+
+  const handleCreate = async () => {
+    if (!email || !password || !selectedTenant || !selectedBranch) return;
+    setCreating(true);
+    setSqlOutput('');
+
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error || !data.user) {
+      toast({ title: 'Error', description: error?.message ?? 'Error creando usuario', variant: 'destructive' });
+      setCreating(false);
+      return;
+    }
+
+    // Insert tenant_member
+    const { error: memberErr } = await supabase.from('tenant_members').insert({
+      user_id: data.user.id,
+      tenant_id: selectedTenant,
+      branch_id: selectedBranch,
+      role,
+      is_active: true,
+    });
+
+    if (memberErr) {
+      // Show SQL fallback
+      const sql = `INSERT INTO public.tenant_members (user_id, tenant_id, branch_id, role)
+SELECT '${data.user.id}', '${selectedTenant}', '${selectedBranch}', '${role}';`;
+      setSqlOutput(sql);
+      toast({ title: 'Usuario creado, pero hay que insertar membership manualmente', variant: 'destructive' });
+    } else {
+      const tenant = tenants.find(t => t.id === selectedTenant);
+      toast({ title: 'Acceso creado', description: `${email} puede acceder a /admin/${tenant?.slug}/login` });
+    }
+
+    setCreating(false);
+    // Sign out from this new account to keep superadmin session
+    // Actually signUp doesn't sign in when autoconfirm is on... but just in case
+  };
+
+  const copySQL = () => {
+    navigator.clipboard.writeText(sqlOutput);
+    toast({ title: 'SQL copiado' });
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base flex items-center gap-2"><UserPlus className="w-4 h-4" />Crear acceso admin</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Email</Label>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@restaurante.cl" />
+          </div>
+          <div>
+            <Label>Contraseña</Label>
+            <Input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="min 6 chars" />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>Tenant</Label>
+            <Select value={selectedTenant} onValueChange={setSelectedTenant}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+              <SelectContent>
+                {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Sucursal</Label>
+            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+              <SelectContent>
+                {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Rol</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="owner">Owner</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <Button onClick={handleCreate} disabled={creating || !email || !password || !selectedTenant || !selectedBranch}>
+          {creating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+          Crear acceso
+        </Button>
+        {sqlOutput && (
+          <div className="bg-muted rounded-lg p-3 mt-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-muted-foreground">SQL de fallback:</p>
+              <Button variant="ghost" size="sm" onClick={copySQL}><Copy className="w-3 h-3 mr-1" />Copiar</Button>
+            </div>
+            <pre className="text-xs font-mono whitespace-pre-wrap">{sqlOutput}</pre>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SAConfigPage() {
   const { toast } = useToast();
@@ -122,6 +251,8 @@ export default function SAConfigPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <AdminAccessSection />
 
       <Card className="border-destructive/30">
         <CardHeader>
