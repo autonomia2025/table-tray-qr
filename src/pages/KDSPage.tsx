@@ -285,32 +285,114 @@ function KDSColumn({
   );
 }
 
+/* ===================== AUTH HOOK ===================== */
+function useKDSAuth() {
+  const [authState, setAuthState] = useState<{
+    loading: boolean;
+    authenticated: boolean;
+    tenantId: string | null;
+  }>({ loading: true, authenticated: false, tenantId: null });
+
+  useEffect(() => {
+    async function check() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setAuthState({ loading: false, authenticated: false, tenantId: null });
+        return;
+      }
+
+      const userId = session.user.id;
+
+      // Check tenant_members first
+      const { data: member } = await supabase
+        .from("tenant_members")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (member) {
+        setAuthState({ loading: false, authenticated: true, tenantId: member.tenant_id });
+        return;
+      }
+
+      // Check staff_users
+      const { data: staff } = await supabase
+        .from("staff_users")
+        .select("tenant_id")
+        .eq("auth_user_id", userId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (staff) {
+        setAuthState({ loading: false, authenticated: true, tenantId: staff.tenant_id });
+        return;
+      }
+
+      setAuthState({ loading: false, authenticated: false, tenantId: null });
+    }
+
+    check();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") check();
+      if (event === "SIGNED_OUT") setAuthState({ loading: false, authenticated: false, tenantId: null });
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return authState;
+}
+
+/* ===================== ACCESS DENIED ===================== */
+function KDSAccessDenied() {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-6" style={{ backgroundColor: "#0A0A0A" }}>
+      <div className="text-center space-y-2">
+        <p className="text-4xl">🔒</p>
+        <h1 className="text-xl font-bold text-white">Acceso restringido</h1>
+        <p className="text-sm text-gray-400">Necesitas iniciar sesión para acceder al KDS</p>
+      </div>
+      <Button
+        onClick={() => navigate("/admin/login")}
+        className="gap-2"
+      >
+        <LogIn className="h-4 w-4" />
+        Iniciar sesión
+      </Button>
+    </div>
+  );
+}
+
 /* ===================== BRANCH SELECTOR ===================== */
-function BranchSelector() {
+function BranchSelector({ tenantId }: { tenantId: string }) {
   const navigate = useNavigate();
 
   const { data: branches = [], isLoading } = useQuery({
-    queryKey: ["kds-branches"],
+    queryKey: ["kds-branches", tenantId],
     queryFn: async () => {
       const { data } = await supabase
         .from("branches")
-        .select("id, name, restaurant_id, tenant_id, is_open")
+        .select("id, name, tenant_id")
+        .eq("tenant_id", tenantId)
         .eq("is_open", true);
 
       if (!data) return [];
 
-      // Fetch tenant names
-      const tenantIds = [...new Set(data.map((b) => b.tenant_id))];
-      const { data: tenants } = await supabase
+      const { data: tenant } = await supabase
         .from("tenants")
-        .select("id, name")
-        .in("id", tenantIds);
-      const tenantMap = new Map((tenants || []).map((t) => [t.id, t.name]));
+        .select("name")
+        .eq("id", tenantId)
+        .single();
 
       return data.map((b) => ({
         id: b.id,
         name: b.name,
-        tenant_name: tenantMap.get(b.tenant_id) || "",
+        tenant_name: tenant?.name || "",
       }));
     },
   });
@@ -345,8 +427,21 @@ function BranchSelector() {
 export default function KDSPage() {
   const [searchParams] = useSearchParams();
   const branchId = searchParams.get("branch");
+  const { loading, authenticated, tenantId } = useKDSAuth();
 
-  if (!branchId) return <BranchSelector />;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#0A0A0A" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
+
+  if (!authenticated || !tenantId) {
+    return <KDSAccessDenied />;
+  }
+
+  if (!branchId) return <BranchSelector tenantId={tenantId} />;
 
   return <KDSBoard branchId={branchId} />;
 }
