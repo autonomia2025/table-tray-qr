@@ -29,7 +29,8 @@ export default function QRPage() {
   const [printAllType, setPrintAllType] = useState<"mesa" | "tarjeta">("mesa");
   const qrRef = useRef<HTMLDivElement>(null);
 
-  const menuUrl = `${window.location.origin}/${slug}/menu`;
+  const menuBaseUrl = `${window.location.origin}/${slug}/menu`;
+  const menuUrlForTable = (tableNumber: number) => `${menuBaseUrl}?mesa=${tableNumber}`;
 
   const fetchTables = async () => {
     const { data } = await supabase
@@ -65,7 +66,7 @@ export default function QRPage() {
   };
 
   const getQrValue = () => {
-    if (selectedQrType === "mesa") return menuUrl;
+    if (selectedQrType === "mesa") return menuUrlForTable(selectedTable?.number ?? 0);
     return selectedTable?.qr_token || "";
   };
 
@@ -114,8 +115,8 @@ export default function QRPage() {
         <TabsContent value="mesa">
           <div className="rounded-xl border border-border bg-card p-4 mb-4">
             <p className="text-sm text-muted-foreground">
-              Este QR va <strong>pegado en la mesa</strong>. Al escanearlo, el cliente abre el menú del restaurante.
-              Es el mismo enlace para todas las mesas: <code className="text-xs bg-muted px-1 py-0.5 rounded">{menuUrl}</code>
+              Este QR va <strong>pegado en la mesa</strong>. Al escanearlo, el cliente abre el menú e identifica automáticamente su mesa.
+              Ejemplo: <code className="text-xs bg-muted px-1 py-0.5 rounded">{menuUrlForTable(1)}</code>
             </p>
           </div>
 
@@ -213,7 +214,7 @@ export default function QRPage() {
             </p>
           </div>
           <p className="text-center text-xs text-muted-foreground font-mono break-all">
-            {selectedQrType === "mesa" ? menuUrl : selectedTable?.qr_token}
+            {selectedQrType === "mesa" ? menuUrlForTable(selectedTable?.number ?? 0) : selectedTable?.qr_token}
           </p>
           <div className="flex gap-2 justify-center mt-2">
             <Button variant="outline" onClick={downloadQR}><Download className="h-4 w-4 mr-1" />Descargar PNG</Button>
@@ -230,7 +231,7 @@ export default function QRPage() {
             {printAllType === "mesa"
               ? tables.map((t) => (
                   <div key={t.id} className="flex flex-col items-center border border-border rounded-lg p-4 break-inside-avoid">
-                    <QRCodeCanvas value={menuUrl} size={180} level="H" includeMargin />
+                    <QRCodeCanvas value={menuUrlForTable(t.number)} size={180} level="H" includeMargin />
                     <p className="mt-2 text-lg font-bold">Mesa {t.number}</p>
                     {t.name && <p className="text-sm text-muted-foreground">{t.name}</p>}
                     <p className="text-xs text-muted-foreground mt-1">Escanea para ver el menú 🍽</p>
