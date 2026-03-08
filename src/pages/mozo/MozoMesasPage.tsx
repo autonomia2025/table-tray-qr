@@ -6,7 +6,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, PlusCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface TableData {
   id: string;
