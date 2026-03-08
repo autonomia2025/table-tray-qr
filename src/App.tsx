@@ -25,6 +25,12 @@ import MozoLayout from "./pages/mozo/MozoLayout";
 import MozoMesasPage from "./pages/mozo/MozoMesasPage";
 import MozoNotificacionesPage from "./pages/mozo/MozoNotificacionesPage";
 import MozoPerfilPage from "./pages/mozo/MozoPerfilPage";
+import { SuperAdminProvider } from "./contexts/SuperAdminContext";
+import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
+import SATenantsPage from "./pages/superadmin/SATenantsPage";
+import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
+import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
+import SAConfigPage from "./pages/superadmin/SAConfigPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +63,13 @@ const App = () => (
             <Route path="mesas" element={<MozoMesasPage />} />
             <Route path="notificaciones" element={<MozoNotificacionesPage />} />
             <Route path="perfil" element={<MozoPerfilPage />} />
+          </Route>
+          <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
+            <Route index element={<Navigate to="/superadmin/tenants" replace />} />
+            <Route path="tenants" element={<SATenantsPage />} />
+            <Route path="metricas" element={<SAMetricsPage />} />
+            <Route path="flags" element={<SAFlagsPage />} />
+            <Route path="config" element={<SAConfigPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
