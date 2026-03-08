@@ -17,7 +17,7 @@ import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminGuard from "./pages/admin/AdminGuard";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
-import AdminGlobalPage from "./pages/admin/AdminGlobalPage";
+import MozoJoinPage from "./pages/mozo/MozoJoinPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
