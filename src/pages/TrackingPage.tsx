@@ -1,13 +1,14 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Receipt, Bell, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { ShoppingBag, Receipt, Bell, ChevronDown, ChevronUp, AlertTriangle, Camera, X } from "lucide-react";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCartStore } from "@/store/cartStore";
+import { BrowserQRCodeReader } from "@zxing/browser";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,15 @@ function formatTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
 }
 
+function extractTokenFromScan(raw: string): string {
+  try {
+    const url = new URL(raw);
+    return url.searchParams.get("t") || raw;
+  } catch {
+    return raw;
+  }
+}
+
 /* ---------- confetti ---------- */
 function spawnConfetti(primaryColor: string) {
   const container = document.createElement("div");
@@ -91,7 +101,6 @@ export default function TrackingPage() {
   const orderIdParam = searchParams.get("order");
   const { toast } = useToast();
 
-  // Also read from store as fallback
   const storeTableToken = useCartStore((s) => s.tableToken);
   const tableToken = tableTokenFromUrl || storeTableToken;
 
@@ -100,6 +109,11 @@ export default function TrackingPage() {
   const [waiterModalOpen, setWaiterModalOpen] = useState(false);
   const [waiterSending, setWaiterSending] = useState(false);
   const [readyFired, setReadyFired] = useState(false);
+
+  // QR scanner state for waiter call
+  const [waiterScanOpen, setWaiterScanOpen] = useState(false);
+  const [waiterReason, setWaiterReason] = useState("");
+  const waiterVideoRef = useRef<HTMLVideoElement>(null);
 
   // Tenant
   const { data: tenant } = useQuery({
@@ -265,18 +279,82 @@ export default function TrackingPage() {
     });
   };
 
-  // Waiter call
-  const callWaiter = useCallback(
-    async (reason: string) => {
+  // Waiter call — select reason then open scanner
+  const onReasonSelected = (reason: string) => {
+    setWaiterReason(reason);
+    setWaiterModalOpen(false);
+    setTimeout(() => setWaiterScanOpen(true), 200);
+  };
+
+  // Stop waiter camera
+  const stopWaiterCamera = useCallback(() => {
+    if (waiterVideoRef.current?.srcObject) {
+      const stream = waiterVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((t) => t.stop());
+      waiterVideoRef.current.srcObject = null;
+    }
+  }, []);
+
+  // Start waiter QR scanner
+  useEffect(() => {
+    if (!waiterScanOpen) return;
+
+    let cancelled = false;
+    const startCamera = async () => {
+      try {
+        const reader = new BrowserQRCodeReader();
+        await reader.decodeFromVideoDevice(
+          undefined,
+          waiterVideoRef.current!,
+          (result) => {
+            if (result && !cancelled) {
+              const token = extractTokenFromScan(result.getText());
+              stopWaiterCamera();
+              setWaiterScanOpen(false);
+              handleWaiterScanned(token);
+            }
+          }
+        );
+      } catch (err) {
+        console.error("Camera error:", err);
+        toast({ title: "Error al abrir la cámara", variant: "destructive" });
+        setWaiterScanOpen(false);
+      }
+    };
+
+    startCamera();
+    return () => {
+      cancelled = true;
+      stopWaiterCamera();
+    };
+  }, [waiterScanOpen]);
+
+  // Validate scanned token and send waiter call
+  const handleWaiterScanned = useCallback(
+    async (scannedToken: string) => {
       if (!tableData || !session) return;
       setWaiterSending(true);
+
+      // Validate token matches this table
+      const { data: scannedTable } = await supabase
+        .from("tables")
+        .select("id")
+        .eq("qr_token", scannedToken)
+        .maybeSingle();
+
+      if (!scannedTable || scannedTable.id !== tableData.id) {
+        toast({ title: "QR no válido para esta mesa", variant: "destructive" });
+        setWaiterSending(false);
+        return;
+      }
+
       try {
         await supabase.from("waiter_calls").insert({
           tenant_id: tableData.tenant_id,
           table_id: tableData.id,
           branch_id: tableData.branch_id,
           session_id: session.id,
-          reason,
+          reason: waiterReason,
           status: "pending",
         });
         toast({ title: "El mozo fue notificado 👍" });
@@ -284,10 +362,9 @@ export default function TrackingPage() {
         toast({ title: "Error al llamar al mozo", variant: "destructive" });
       } finally {
         setWaiterSending(false);
-        setWaiterModalOpen(false);
       }
     },
-    [tableData, session, toast]
+    [tableData, session, toast, waiterReason]
   );
 
   /* ---------- LOADING ---------- */
@@ -342,6 +419,59 @@ export default function TrackingPage() {
       animate={{ opacity: 1 }}
       className="min-h-screen bg-background pb-8"
     >
+      {/* Waiter QR scanner - fullscreen overlay */}
+      <video
+        ref={waiterVideoRef}
+        className={waiterScanOpen ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        autoPlay
+        playsInline
+        muted
+      />
+
+      <AnimatePresence>
+        {waiterScanOpen && (
+          <motion.div
+            key="waiter-scan"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black"
+          >
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
+              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
+
+              <div className="relative h-[260px] w-[260px]">
+                <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
+                <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
+                <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
+                <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
+
+                <motion.div
+                  className="absolute left-2 right-2 h-0.5 rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                  animate={{ top: ["10%", "90%", "10%"] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </div>
+            </div>
+
+            <div className="absolute bottom-32 left-0 right-0 text-center">
+              <p className="text-white text-sm font-medium">Escanea la tarjeta QR de tu mesa 🛎</p>
+            </div>
+
+            <button
+              onClick={() => { stopWaiterCamera(); setWaiterScanOpen(false); }}
+              className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
+            >
+              <X className="h-4 w-4" /> Cancelar
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
         {tenant.logo_url ? (
@@ -585,7 +715,7 @@ export default function TrackingPage() {
         )}
       </div>
 
-      {/* Waiter call modal */}
+      {/* Waiter call modal — select reason */}
       <Dialog open={waiterModalOpen} onOpenChange={setWaiterModalOpen}>
         <DialogContent className="max-w-[340px] rounded-2xl">
           <DialogHeader>
@@ -596,14 +726,16 @@ export default function TrackingPage() {
             {WAITER_REASONS.map((r) => (
               <button
                 key={r.key}
-                disabled={waiterSending}
-                onClick={() => callWaiter(r.key)}
-                className="flex w-full items-center rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors active:bg-accent disabled:opacity-50"
+                onClick={() => onReasonSelected(r.key)}
+                className="flex w-full items-center rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors active:bg-accent"
               >
                 {r.label}
               </button>
             ))}
           </div>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Después deberás escanear la tarjeta QR de tu mesa
+          </p>
         </DialogContent>
       </Dialog>
     </motion.div>
