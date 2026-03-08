@@ -51,6 +51,13 @@ const App = () => (
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/kds" element={<KDSPage />} />
+          <Route path="/mozo" element={<WaitersProvider><Navigate to="/mozo/login" replace /></WaitersProvider>} />
+          <Route path="/mozo/login" element={<WaitersProvider><MozoLoginPage /></WaitersProvider>} />
+          <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
+            <Route path="mesas" element={<MozoMesasPage />} />
+            <Route path="notificaciones" element={<MozoNotificacionesPage />} />
+            <Route path="perfil" element={<MozoPerfilPage />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
