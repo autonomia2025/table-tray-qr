@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, Eye, UserCheck } from 'lucide-react';
+import { Loader2, Plus, Eye, UserCheck, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 
 interface TenantRow {
   id: string;
@@ -40,11 +40,35 @@ export default function SATenantsPage() {
   const [detail, setDetail] = useState<TenantDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Wizard state
   const [createOpen, setCreateOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [creating, setCreating] = useState(false);
+  const [wizardError, setWizardError] = useState('');
+
+  // Step 1: Restaurant info
   const [newName, setNewName] = useState('');
   const [newSlug, setNewSlug] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newColor, setNewColor] = useState('#E8531D');
+
+  // Step 2: Admin credentials
   const [newEmail, setNewEmail] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+
+  const resetWizard = () => {
+    setWizardStep(1);
+    setNewName('');
+    setNewSlug('');
+    setNewPhone('');
+    setNewColor('#E8531D');
+    setNewEmail('');
+    setNewPassword('');
+    setNewPasswordConfirm('');
+    setWizardError('');
+  };
 
   const fetchTenants = async () => {
     const { data: tenantsData } = await supabase
@@ -54,7 +78,6 @@ export default function SATenantsPage() {
 
     if (!tenantsData) { setLoading(false); return; }
 
-    // Get counts
     const enriched = await Promise.all(tenantsData.map(async (t) => {
       const [tablesRes, ordersRes] = await Promise.all([
         supabase.from('tables').select('id', { count: 'exact', head: true }).eq('tenant_id', t.id),
@@ -93,55 +116,104 @@ export default function SATenantsPage() {
   };
 
   const impersonate = async (tenantId: string) => {
-    // Get slug for the tenant
     const { data: t } = await supabase.from('tenants').select('slug').eq('id', tenantId).single();
     setImpersonating(tenantId);
     sessionStorage.setItem('superadmin_impersonating_slug', t?.slug ?? '');
     navigate(`/admin/${t?.slug ?? ''}/mesas`);
   };
 
-  const createTenant = async () => {
-    if (!newName.trim() || !newSlug.trim() || !newEmail.trim()) return;
-    setCreating(true);
-    try {
-      // Check slug uniqueness
-      const { data: existing } = await supabase.from('tenants').select('id').eq('slug', newSlug.toLowerCase().trim()).maybeSingle();
-      if (existing) { toast({ title: 'Error', description: 'El slug ya existe', variant: 'destructive' }); setCreating(false); return; }
+  const validateStep1 = (): boolean => {
+    if (!newName.trim()) { setWizardError('Nombre del restaurante obligatorio'); return false; }
+    if (!newSlug.trim()) { setWizardError('Slug obligatorio'); return false; }
+    if (newSlug.trim().length < 3) { setWizardError('Slug debe tener al menos 3 caracteres'); return false; }
+    setWizardError('');
+    return true;
+  };
 
+  const validateStep2 = (): boolean => {
+    if (!newEmail.trim()) { setWizardError('Email obligatorio'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { setWizardError('Email inválido'); return false; }
+    if (newPassword.length < 6) { setWizardError('Contraseña debe tener al menos 6 caracteres'); return false; }
+    if (newPassword !== newPasswordConfirm) { setWizardError('Las contraseñas no coinciden'); return false; }
+    setWizardError('');
+    return true;
+  };
+
+  const goToStep2 = async () => {
+    if (!validateStep1()) return;
+    // Check slug uniqueness
+    const { data: existing } = await supabase.from('tenants').select('id').eq('slug', newSlug.toLowerCase().trim()).maybeSingle();
+    if (existing) { setWizardError('Este slug ya está en uso'); return; }
+    setWizardStep(2);
+  };
+
+  const createTenant = async () => {
+    if (!validateStep2()) return;
+    setCreating(true);
+    setWizardError('');
+
+    try {
+      // 1. Create auth user via edge function
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('create-tenant-user', {
+        body: { email: newEmail.trim(), password: newPassword },
+      });
+
+      if (fnError || fnData?.error) {
+        setWizardError(fnData?.error || fnError?.message || 'Error creando usuario');
+        setCreating(false);
+        return;
+      }
+
+      const userId = fnData.user_id;
+
+      // 2. Create tenant
       const { data: tenant, error: tErr } = await supabase.from('tenants').insert({
         name: newName.trim(),
         slug: newSlug.toLowerCase().trim(),
         email: newEmail.trim(),
+        phone: newPhone.trim() || null,
+        primary_color: newColor,
         is_active: true,
       }).select('id').single();
       if (tErr || !tenant) throw tErr;
 
+      // 3. Create restaurant + branch + menu + tenant_member in parallel where possible
       const { data: restaurant } = await supabase.from('restaurants').insert({
         name: newName.trim(),
         tenant_id: tenant.id,
       }).select('id').single();
-      if (!restaurant) throw new Error('Failed to create restaurant');
+      if (!restaurant) throw new Error('Error creando restaurante');
 
       const { data: branch } = await supabase.from('branches').insert({
         name: 'Principal',
         restaurant_id: restaurant.id,
         tenant_id: tenant.id,
       }).select('id').single();
-      if (!branch) throw new Error('Failed to create branch');
+      if (!branch) throw new Error('Error creando sucursal');
 
-      await supabase.from('menus').insert({
-        name: 'Menú Principal',
-        branch_id: branch.id,
-        tenant_id: tenant.id,
-        is_active: true,
-      });
+      // Menu + tenant_member in parallel
+      await Promise.all([
+        supabase.from('menus').insert({
+          name: 'Menú Principal',
+          branch_id: branch.id,
+          tenant_id: tenant.id,
+          is_active: true,
+        }),
+        supabase.from('tenant_members').insert({
+          user_id: userId,
+          tenant_id: tenant.id,
+          branch_id: branch.id,
+          role: 'owner',
+          is_active: true,
+        }),
+      ]);
 
-      toast({ title: 'Tenant creado', description: `/${newSlug} listo` });
+      toast({ title: 'Restaurante creado', description: `${newName.trim()} listo con acceso para ${newEmail.trim()}` });
       setCreateOpen(false);
-      setNewName(''); setNewSlug(''); setNewEmail('');
+      resetWizard();
       fetchTenants();
     } catch (e: any) {
-      toast({ title: 'Error', description: e?.message ?? 'Error creando tenant', variant: 'destructive' });
+      setWizardError(e?.message ?? 'Error creando restaurante');
     } finally {
       setCreating(false);
     }
@@ -153,7 +225,7 @@ export default function SATenantsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Tenants</h1>
-        <Button onClick={() => setCreateOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" />Nuevo tenant</Button>
+        <Button onClick={() => { resetWizard(); setCreateOpen(true); }} size="sm"><Plus className="w-4 h-4 mr-1" />Nuevo restaurante</Button>
       </div>
 
       <div className="border border-border rounded-lg overflow-hidden">
@@ -243,30 +315,138 @@ export default function SATenantsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nuevo tenant</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Nombre</Label>
-              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Mi Restaurante" />
+      {/* Create wizard dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetWizard(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Nuevo restaurante — Paso {wizardStep} de 2
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Step indicators */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${wizardStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+              {wizardStep > 1 ? <Check className="w-4 h-4" /> : '1'}
             </div>
-            <div>
-              <Label>Slug</Label>
-              <Input value={newSlug} onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="mi-restaurante" />
-              <p className="text-xs text-muted-foreground mt-1">menuqr.cl/{newSlug || '...'}</p>
+            <div className="flex-1 h-0.5 bg-border">
+              <div className={`h-full transition-all ${wizardStep >= 2 ? 'bg-primary w-full' : 'w-0'}`} />
             </div>
-            <div>
-              <Label>Email</Label>
-              <Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="contacto@email.com" />
+            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${wizardStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+              2
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={createTenant} disabled={creating || !newName.trim() || !newSlug.trim() || !newEmail.trim()}>
-              {creating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}Crear
-            </Button>
+
+          {wizardStep === 1 && (
+            <div className="space-y-4 py-2">
+              <div>
+                <Label>Nombre del restaurante *</Label>
+                <Input
+                  value={newName}
+                  onChange={e => {
+                    setNewName(e.target.value);
+                    if (!newSlug || newSlug === newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) {
+                      setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+                    }
+                  }}
+                  placeholder="La Parrilla de Juan"
+                />
+              </div>
+              <div>
+                <Label>Slug (URL) *</Label>
+                <Input
+                  value={newSlug}
+                  onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  placeholder="la-parrilla-de-juan"
+                />
+                <p className="text-xs text-muted-foreground mt-1">menuqr.cl/{newSlug || '...'}</p>
+              </div>
+              <div>
+                <Label>Teléfono</Label>
+                <Input
+                  value={newPhone}
+                  onChange={e => setNewPhone(e.target.value)}
+                  placeholder="+56 9 1234 5678"
+                />
+              </div>
+              <div>
+                <Label>Color principal</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={newColor}
+                    onChange={e => setNewColor(e.target.value)}
+                    className="w-10 h-10 rounded cursor-pointer border border-border"
+                  />
+                  <Input
+                    value={newColor}
+                    onChange={e => setNewColor(e.target.value)}
+                    className="font-mono text-sm w-28"
+                    maxLength={7}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {wizardStep === 2 && (
+            <div className="space-y-4 py-2">
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <p className="font-medium text-foreground">{newName}</p>
+                <p className="text-muted-foreground text-xs">/{newSlug}</p>
+              </div>
+              <div>
+                <Label>Email del administrador *</Label>
+                <Input
+                  type="email"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  placeholder="admin@restaurante.cl"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Con este email podrá ingresar al panel</p>
+              </div>
+              <div>
+                <Label>Contraseña *</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div>
+                <Label>Confirmar contraseña *</Label>
+                <Input
+                  type="password"
+                  value={newPasswordConfirm}
+                  onChange={e => setNewPasswordConfirm(e.target.value)}
+                  placeholder="Repetir contraseña"
+                />
+              </div>
+            </div>
+          )}
+
+          {wizardError && <p className="text-sm text-destructive">{wizardError}</p>}
+
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            {wizardStep === 1 ? (
+              <>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+                <Button onClick={goToStep2}>
+                  Siguiente <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => { setWizardStep(1); setWizardError(''); }}>
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Atrás
+                </Button>
+                <Button onClick={createTenant} disabled={creating}>
+                  {creating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                  Crear restaurante
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
