@@ -48,9 +48,10 @@ const App = () => (
           <Route path="/" element={<Index />} />
           {/* Admin global selector */}
           <Route path="/admin" element={<AdminGlobalPage />} />
-          {/* Admin with slug */}
+          {/* Admin login (outside layout) */}
+          <Route path="/admin/:slug/login" element={<AdminProvider><AdminLoginPage /></AdminProvider>} />
+          {/* Admin with slug (protected) */}
           <Route path="/admin/:slug" element={<AdminProvider><AdminLayout /></AdminProvider>}>
-            <Route path="login" element={<AdminLoginPage />} />
             <Route element={<AdminGuard />}>
               <Route index element={<Navigate to="mesas" replace />} />
               <Route path="mesas" element={<MesasPage />} />
