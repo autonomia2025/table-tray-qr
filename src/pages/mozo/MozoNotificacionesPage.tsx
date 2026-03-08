@@ -135,9 +135,9 @@ export default function MozoNotificacionesPage() {
 
     const channel = supabase
       .channel('mozo-notifs')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) playSound(); })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) playSound(); })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) playSound(); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
