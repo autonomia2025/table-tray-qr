@@ -71,8 +71,9 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ user_id: data.user.id }),
+      JSON.stringify({ user_id: userId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
     );
   } catch (e) {
     return new Response(
