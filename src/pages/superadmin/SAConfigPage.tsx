@@ -123,6 +123,8 @@ export default function SAConfigPage() {
         </CardContent>
       </Card>
 
+      <AdminAccessSection />
+
       <Card className="border-destructive/30">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2 text-destructive">

@@ -92,9 +92,12 @@ export default function SATenantsPage() {
     setDetailLoading(false);
   };
 
-  const impersonate = (tenantId: string) => {
+  const impersonate = async (tenantId: string) => {
+    // Get slug for the tenant
+    const { data: t } = await supabase.from('tenants').select('slug').eq('id', tenantId).single();
     setImpersonating(tenantId);
-    navigate('/admin');
+    sessionStorage.setItem('superadmin_impersonating_slug', t?.slug ?? '');
+    navigate(`/admin/${t?.slug ?? ''}/mesas`);
   };
 
   const createTenant = async () => {
