@@ -23,6 +23,8 @@ import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
 import SucursalPage from "./pages/admin/SucursalPage";
 import EquipoPage from "./pages/admin/EquipoPage";
+import PedidosPage from "./pages/admin/PedidosPage";
+import ReportesPage from "./pages/admin/ReportesPage";
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLoginPage from "./pages/mozo/MozoLoginPage";
 import MozoLayout from "./pages/mozo/MozoLayout";
