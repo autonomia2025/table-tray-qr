@@ -854,6 +854,7 @@ export type Database = {
       }
       tables: {
         Row: {
+          assigned_waiter_id: string | null
           branch_id: string
           capacity: number | null
           created_at: string | null
@@ -868,6 +869,7 @@ export type Database = {
           zone: string | null
         }
         Insert: {
+          assigned_waiter_id?: string | null
           branch_id: string
           capacity?: number | null
           created_at?: string | null
@@ -882,6 +884,7 @@ export type Database = {
           zone?: string | null
         }
         Update: {
+          assigned_waiter_id?: string | null
           branch_id?: string
           capacity?: number | null
           created_at?: string | null
@@ -896,6 +899,13 @@ export type Database = {
           zone?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tables_assigned_waiter_id_fkey"
+            columns: ["assigned_waiter_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tables_branch_id_fkey"
             columns: ["branch_id"]
