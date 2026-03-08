@@ -155,7 +155,7 @@ export default function MozoJoinPage() {
       <div className="flex h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-sm">
           <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+            <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
             <p className="text-lg font-semibold text-foreground">¡Registro exitoso!</p>
             <p className="text-sm text-muted-foreground">Ya puedes ingresar a la app de mozo con tu PIN.</p>
             <Button onClick={() => navigate("/mozo/login")} className="w-full">
