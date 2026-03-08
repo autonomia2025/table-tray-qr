@@ -214,7 +214,7 @@ export default function QRPage() {
             </p>
           </div>
           <p className="text-center text-xs text-muted-foreground font-mono break-all">
-            {selectedQrType === "mesa" ? menuUrl : selectedTable?.qr_token}
+            {selectedQrType === "mesa" ? menuUrlForTable(selectedTable?.number ?? 0) : selectedTable?.qr_token}
           </p>
           <div className="flex gap-2 justify-center mt-2">
             <Button variant="outline" onClick={downloadQR}><Download className="h-4 w-4 mr-1" />Descargar PNG</Button>
