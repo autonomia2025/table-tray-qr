@@ -42,6 +42,10 @@ export default function SATenantsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<TenantRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Wizard state
   const [createOpen, setCreateOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
