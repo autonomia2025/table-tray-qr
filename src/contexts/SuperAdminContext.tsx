@@ -1,11 +1,16 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SuperAdminContextType {
+  isPlatformAdmin: boolean;
+  isLoading: boolean;
   impersonating: string | null;
   setImpersonating: (id: string | null) => void;
 }
 
 const SuperAdminContext = createContext<SuperAdminContextType>({
+  isPlatformAdmin: false,
+  isLoading: true,
   impersonating: null,
   setImpersonating: () => {},
 });
@@ -13,6 +18,8 @@ const SuperAdminContext = createContext<SuperAdminContextType>({
 export const useSuperAdmin = () => useContext(SuperAdminContext);
 
 export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [impersonating, setImpersonatingState] = useState<string | null>(
     () => sessionStorage.getItem('superadmin_impersonating')
   );
@@ -26,8 +33,32 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  useEffect(() => {
+    const check = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsPlatformAdmin(false);
+        setIsLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('platform_admins')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      setIsPlatformAdmin(!!data);
+      setIsLoading(false);
+    };
+    check();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      check();
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   return (
-    <SuperAdminContext.Provider value={{ impersonating, setImpersonating }}>
+    <SuperAdminContext.Provider value={{ isPlatformAdmin, isLoading, impersonating, setImpersonating }}>
       {children}
     </SuperAdminContext.Provider>
   );
