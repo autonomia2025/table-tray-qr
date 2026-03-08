@@ -13,7 +13,18 @@ const SuperAdminContext = createContext<SuperAdminContextType>({
 export const useSuperAdmin = () => useContext(SuperAdminContext);
 
 export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [impersonating, setImpersonating] = useState<string | null>(null);
+  const [impersonating, setImpersonatingState] = useState<string | null>(
+    () => sessionStorage.getItem('superadmin_impersonating')
+  );
+
+  const setImpersonating = (id: string | null) => {
+    setImpersonatingState(id);
+    if (id) {
+      sessionStorage.setItem('superadmin_impersonating', id);
+    } else {
+      sessionStorage.removeItem('superadmin_impersonating');
+    }
+  };
 
   return (
     <SuperAdminContext.Provider value={{ impersonating, setImpersonating }}>
