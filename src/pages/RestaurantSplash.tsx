@@ -1,20 +1,16 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { MapPin, ArrowRight } from "lucide-react";
+import { ArrowRight, UtensilsCrossed } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import defaultCover from "@/assets/default-cover.jpg";
 
 interface TenantData {
   id: string;
   name: string;
   primary_color: string | null;
-  secondary_color: string | null;
   logo_url: string | null;
-  cover_image_url: string | null;
   welcome_message: string | null;
-  branch_name: string;
   branch_id: string;
   is_open: boolean;
 }
@@ -23,9 +19,9 @@ const fetchTenantBySlug = async (slug: string): Promise<TenantData | null> => {
   const { data, error } = await supabase
     .from("tenants")
     .select(`
-      id, name, primary_color, secondary_color, logo_url, cover_image_url, welcome_message,
+      id, name, primary_color, logo_url, welcome_message,
       restaurants!inner(
-        branches!inner(id, name, is_open)
+        branches!inner(id, is_open)
       )
     `)
     .eq("slug", slug)
@@ -42,41 +38,35 @@ const fetchTenantBySlug = async (slug: string): Promise<TenantData | null> => {
     id: data.id,
     name: data.name,
     primary_color: data.primary_color,
-    secondary_color: data.secondary_color,
     logo_url: data.logo_url,
-    cover_image_url: data.cover_image_url,
     welcome_message: data.welcome_message,
-    branch_name: branch.name,
     branch_id: branch.id,
     is_open: branch.is_open ?? true,
   };
 };
 
-const SplashSkeleton = () => (
-  <div className="fixed inset-0 bg-muted flex flex-col items-center justify-center gap-4 p-6">
-    <Skeleton className="h-24 w-24 rounded-full" />
-    <Skeleton className="h-8 w-48" />
-    <Skeleton className="h-5 w-64" />
-    <div className="absolute bottom-8 left-6 right-6">
-      <Skeleton className="h-14 w-full rounded-2xl" />
-    </div>
-  </div>
-);
-
-const NotFound = () => (
-  <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-4 p-6 text-center">
-    <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center">
-      <MapPin className="h-10 w-10 text-muted-foreground" />
-    </div>
-    <h1 className="text-xl font-bold text-foreground">Restaurante no encontrado</h1>
-    <p className="text-muted-foreground text-sm max-w-[260px]">
-      Revisa el enlace o escanea nuevamente el QR de tu mesa.
-    </p>
-  </div>
-);
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
 
 export default function RestaurantSplash() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const { data: tenant, isLoading, isError } = useQuery({
@@ -86,123 +76,138 @@ export default function RestaurantSplash() {
     staleTime: 5 * 60 * 1000,
   });
 
-  if (isLoading) return <SplashSkeleton />;
-  if (isError || !tenant) return <NotFound />;
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <Skeleton className="h-16 w-16 rounded-full" />
+      </div>
+    );
+  }
+
+  if (isError || !tenant) {
+    return (
+      <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <UtensilsCrossed className="h-10 w-10 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Restaurante no encontrado</p>
+      </div>
+    );
+  }
 
   const primaryColor = tenant.primary_color || "#E8531D";
-  const coverImage = tenant.cover_image_url || defaultCover;
+  const { h, s, l } = hexToHsl(primaryColor);
   const initial = tenant.name.charAt(0).toUpperCase();
+  const isDark = l < 50;
 
   const handleGoToMenu = () => {
-    navigate(`/${slug}/menu`, {
+    const mesa = searchParams.get("mesa");
+    const params = mesa ? `?mesa=${mesa}` : "";
+    navigate(`/${slug}/menu${params}`, {
       state: { tenantId: tenant.id, branchId: tenant.branch_id },
     });
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden">
-      {/* Cover image */}
+    <div
+      className="fixed inset-0 overflow-hidden flex flex-col items-center justify-center"
+      style={{ backgroundColor: primaryColor }}
+    >
+      {/* Subtle radial glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at 50% 40%, hsla(${h}, ${s}%, ${Math.min(l + 20, 95)}%, 0.3) 0%, transparent 70%)`,
+        }}
+      />
+
+      {/* Center content */}
       <motion.div
-        className="absolute inset-0"
-        initial={{ scale: 1.1 }}
-        animate={{ scale: 1 }}
-        transition={{ duration: 1.2, ease: "easeOut" }}
+        className="relative z-10 flex flex-col items-center gap-5 px-8 text-center"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        <img
-          src={coverImage}
-          alt={tenant.name}
-          className="h-full w-full object-cover"
-        />
-      </motion.div>
+        {/* Logo or initial */}
+        {tenant.logo_url ? (
+          <motion.img
+            src={tenant.logo_url}
+            alt={tenant.name}
+            className="h-20 w-20 rounded-2xl object-cover shadow-lg"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          />
+        ) : (
+          <motion.div
+            className="flex h-20 w-20 items-center justify-center rounded-2xl text-3xl font-black shadow-lg"
+            style={{
+              backgroundColor: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)",
+              color: isDark ? "#fff" : "rgba(0,0,0,0.7)",
+            }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            {initial}
+          </motion.div>
+        )}
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-[hsl(var(--overlay-dark))]" />
-
-      {/* Content */}
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6">
-        <motion.div
-          className="flex flex-col items-center gap-4 text-center"
-          initial={{ opacity: 0, y: 20 }}
+        {/* Restaurant name */}
+        <motion.h1
+          className="text-2xl font-extrabold leading-tight max-w-[260px]"
+          style={{ color: isDark ? "#fff" : "rgba(0,0,0,0.85)" }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          transition={{ delay: 0.25 }}
         >
-          {/* Logo */}
-          {tenant.logo_url ? (
-            <img
-              src={tenant.logo_url}
-              alt={`Logo ${tenant.name}`}
-              className="h-24 w-24 rounded-full object-cover shadow-xl border-2"
-              style={{ borderColor: `${primaryColor}40` }}
-            />
-          ) : (
-            <div
-              className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold shadow-xl"
-              style={{ backgroundColor: primaryColor, color: "#fff" }}
-            >
-              {initial}
-            </div>
-          )}
+          {tenant.name}
+        </motion.h1>
 
-          {/* Restaurant name */}
-          <h1 className="text-[28px] font-bold leading-tight text-[hsl(var(--text-on-overlay))]">
-            {tenant.name}
-          </h1>
+        {/* Welcome message */}
+        {tenant.welcome_message && (
+          <motion.p
+            className="text-sm max-w-[240px] leading-relaxed"
+            style={{ color: isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.5)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+          >
+            {tenant.welcome_message}
+          </motion.p>
+        )}
 
-          {/* Welcome message */}
-          {tenant.welcome_message && (
-            <p className="max-w-[280px] text-base text-[hsl(var(--text-on-overlay-muted))]">
-              {tenant.welcome_message}
-            </p>
-          )}
-
-          {/* Branch info */}
-          <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--text-on-overlay-muted))]">
-            <MapPin className="h-3.5 w-3.5" />
-            <span>{tenant.branch_name}</span>
-            <span className="mx-1">·</span>
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
-              style={{
-                backgroundColor: tenant.is_open ? "#22c55e20" : "#ef444420",
-                color: tenant.is_open ? "#4ade80" : "#f87171",
-              }}
-            >
-              <span
-                className="h-1.5 w-1.5 rounded-full"
-                style={{ backgroundColor: tenant.is_open ? "#4ade80" : "#f87171" }}
-              />
-              {tenant.is_open ? "Abierto" : "Cerrado"}
-            </span>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Bottom CTA */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 z-10 p-6 pb-8"
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.7 }}
-      >
-        <button
+        {/* CTA Button */}
+        <motion.button
           onClick={handleGoToMenu}
           disabled={!tenant.is_open}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-2 flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold shadow-xl transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
-            backgroundColor: tenant.is_open ? primaryColor : "#6b7280",
-            color: "#fff",
-            minHeight: "var(--touch-min)",
+            backgroundColor: isDark ? "#fff" : "rgba(0,0,0,0.85)",
+            color: isDark ? primaryColor : "#fff",
           }}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, type: "spring", stiffness: 200 }}
         >
           {tenant.is_open ? (
             <>
-              Ver el menú
-              <ArrowRight className="h-5 w-5" />
+              Ver menú
+              <ArrowRight className="h-4 w-4" />
             </>
           ) : (
-            "Cerrado por ahora"
+            "Cerrado ahora"
           )}
-        </button>
+        </motion.button>
+      </motion.div>
+
+      {/* Powered by */}
+      <motion.div
+        className="absolute bottom-6 z-10 flex items-center gap-1.5 text-[11px] font-medium tracking-wide"
+        style={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.25)" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7 }}
+      >
+        powered by <span className="font-bold tracking-normal">MenuQR</span>
       </motion.div>
     </div>
   );
