@@ -127,6 +127,28 @@ export default function EquipoPage() {
     });
   };
 
+  const generateInviteLink = async () => {
+    setGeneratingLink(true);
+    const { data, error: err } = await supabase
+      .from("staff_invitations")
+      .insert({ tenant_id: tenantId, branch_id: branchId, role: "waiter" })
+      .select("token")
+      .single();
+
+    if (err || !data) {
+      toast({ title: "Error al generar link", variant: "destructive" });
+      setGeneratingLink(false);
+      return;
+    }
+
+    const link = `${window.location.origin}/mozo/join/${data.token}`;
+    await navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    toast({ title: "Link copiado al portapapeles" });
+    setGeneratingLink(false);
+    setTimeout(() => setCopiedLink(false), 3000);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -138,7 +160,13 @@ export default function EquipoPage() {
           <Users className="h-5 w-5 text-muted-foreground" />
           <h1 className="text-xl font-bold text-foreground">Equipo</h1>
         </div>
-        <Button onClick={openCreate} size="sm"><Plus className="w-4 h-4 mr-1" />Agregar mozo</Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={generateInviteLink} variant="outline" size="sm" disabled={generatingLink}>
+            {copiedLink ? <Check className="w-4 h-4 mr-1" /> : <Link2 className="w-4 h-4 mr-1" />}
+            {copiedLink ? "Copiado" : "Invitar mozo"}
+          </Button>
+          <Button onClick={openCreate} size="sm"><Plus className="w-4 h-4 mr-1" />Agregar mozo</Button>
+        </div>
       </div>
 
       {staff.length === 0 ? (
