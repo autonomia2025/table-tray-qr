@@ -127,6 +127,63 @@ export default function SATenantsPage() {
     navigate(`/admin/${t?.slug ?? ''}/mesas`);
   };
 
+  const deleteTenant = async (tenant: TenantRow) => {
+    setDeleting(true);
+    try {
+      const tenantId = tenant.id;
+
+      // Delete in dependency order (children first)
+      // 1. modifiers → modifier_groups → menu_items → categories → menus
+      const { data: menuItems } = await supabase.from('menu_items').select('id').eq('tenant_id', tenantId);
+      if (menuItems?.length) {
+        const itemIds = menuItems.map(i => i.id);
+        const { data: groups } = await supabase.from('modifier_groups').select('id').in('menu_item_id', itemIds);
+        if (groups?.length) {
+          await supabase.from('modifiers').delete().in('group_id', groups.map(g => g.id));
+          await supabase.from('modifier_groups').delete().in('id', groups.map(g => g.id));
+        }
+        await supabase.from('menu_items').delete().eq('tenant_id', tenantId);
+      }
+      await supabase.from('categories').delete().eq('tenant_id', tenantId);
+      await supabase.from('menus').delete().eq('tenant_id', tenantId);
+
+      // 2. order_items → orders
+      const { data: orders } = await supabase.from('orders').select('id').eq('tenant_id', tenantId);
+      if (orders?.length) {
+        await supabase.from('order_items').delete().in('order_id', orders.map(o => o.id));
+        await supabase.from('orders').delete().eq('tenant_id', tenantId);
+      }
+
+      // 3. Other tenant-scoped tables
+      await Promise.all([
+        supabase.from('bill_requests').delete().eq('tenant_id', tenantId),
+        supabase.from('waiter_calls').delete().eq('tenant_id', tenantId),
+        supabase.from('table_sessions').delete().eq('tenant_id', tenantId),
+        supabase.from('staff_invitations').delete().eq('tenant_id', tenantId),
+        supabase.from('audit_logs').delete().eq('tenant_id', tenantId),
+        supabase.from('tenant_feature_flags').delete().eq('tenant_id', tenantId),
+        supabase.from('staff_users').delete().eq('tenant_id', tenantId),
+      ]);
+
+      // 4. tables → branches → restaurants
+      await supabase.from('tables').delete().eq('tenant_id', tenantId);
+      await supabase.from('branches').delete().eq('tenant_id', tenantId);
+      await supabase.from('restaurants').delete().eq('tenant_id', tenantId);
+
+      // 5. tenant_members → tenant
+      await supabase.from('tenant_members').delete().eq('tenant_id', tenantId);
+      await supabase.from('tenants').delete().eq('id', tenantId);
+
+      toast({ title: `${tenant.name} eliminado` });
+      setTenants(prev => prev.filter(t => t.id !== tenantId));
+    } catch (e: any) {
+      toast({ title: 'Error eliminando', description: e?.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
   const validateStep1 = (): boolean => {
     if (!newName.trim()) { setWizardError('Nombre del restaurante obligatorio'); return false; }
     if (!newSlug.trim()) { setWizardError('Slug obligatorio'); return false; }
