@@ -19,6 +19,12 @@ import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
 import SucursalPage from "./pages/admin/SucursalPage";
+import { WaitersProvider } from "./contexts/WaitersContext";
+import MozoLoginPage from "./pages/mozo/MozoLoginPage";
+import MozoLayout from "./pages/mozo/MozoLayout";
+import MozoMesasPage from "./pages/mozo/MozoMesasPage";
+import MozoNotificacionesPage from "./pages/mozo/MozoNotificacionesPage";
+import MozoPerfilPage from "./pages/mozo/MozoPerfilPage";
 
 const queryClient = new QueryClient();
 
