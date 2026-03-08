@@ -115,8 +115,8 @@ export default function QRPage() {
         <TabsContent value="mesa">
           <div className="rounded-xl border border-border bg-card p-4 mb-4">
             <p className="text-sm text-muted-foreground">
-              Este QR va <strong>pegado en la mesa</strong>. Al escanearlo, el cliente abre el menú del restaurante.
-              Es el mismo enlace para todas las mesas: <code className="text-xs bg-muted px-1 py-0.5 rounded">{menuUrl}</code>
+              Este QR va <strong>pegado en la mesa</strong>. Al escanearlo, el cliente abre el menú e identifica automáticamente su mesa.
+              Ejemplo: <code className="text-xs bg-muted px-1 py-0.5 rounded">{menuUrlForTable(1)}</code>
             </p>
           </div>
 
