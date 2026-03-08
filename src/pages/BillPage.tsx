@@ -7,6 +7,7 @@ import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
+import { useCartStore } from "@/store/cartStore";
 import { Input } from "@/components/ui/input";
 
 /* ---------- helpers ---------- */
@@ -48,7 +49,9 @@ export default function BillPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tableToken = searchParams.get("t") || "";
+  const tableTokenFromUrl = searchParams.get("t") || "";
+  const storeTableToken = useCartStore((s) => s.tableToken);
+  const tableToken = tableTokenFromUrl || storeTableToken || "";
   const { toast } = useToast();
 
   const [pageState, setPageState] = useState<PageState>("summary");
@@ -193,10 +196,9 @@ export default function BillPage() {
     async (scannedToken: string) => {
       setPageState("processing");
       try {
-        // Validate
         const { data: scannedTable } = await supabase
           .from("tables")
-          .select("id, tenant_id")
+          .select("id, tenant_id, branch_id")
           .eq("qr_token", scannedToken)
           .maybeSingle();
 
@@ -204,12 +206,11 @@ export default function BillPage() {
         if (tenant?.id && scannedTable.tenant_id !== tenant.id) throw new Error("QR incorrecto.");
         if (!session?.id) throw new Error("No se encontró la sesión activa.");
 
-        // Create bill_request
         const { error: billError } = await supabase.from("bill_requests").insert({
           tenant_id: scannedTable.tenant_id,
           session_id: session.id,
           table_id: scannedTable.id,
-          branch_id: tableData!.branch_id,
+          branch_id: scannedTable.branch_id,
           total_amount: subtotal,
           tip_amount: tipAmount,
           tip_percentage: tipPercentage,
@@ -219,7 +220,6 @@ export default function BillPage() {
 
         if (billError) throw new Error("Error al enviar la solicitud.");
 
-        // Update table status
         await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
 
         setFinalTotal(total);
@@ -230,7 +230,7 @@ export default function BillPage() {
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, tableData, subtotal, tipAmount, tipPercentage, total],
+    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total],
   );
 
   // Show "back to start" button after 3s on success
@@ -246,6 +246,8 @@ export default function BillPage() {
     if (!iso) return "";
     return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
   };
+
+  const qs = tableToken ? `?t=${tableToken}` : "";
 
   /* ========== RENDER ========== */
 
@@ -264,7 +266,7 @@ export default function BillPage() {
         <p className="text-base font-bold text-foreground">No encontramos tu sesión</p>
         <p className="mt-1 text-sm text-muted-foreground">Escanea el QR de tu mesa nuevamente.</p>
         <button
-          onClick={() => navigate(`/${slug}/menu${tableToken ? `?t=${tableToken}` : ""}`)}
+          onClick={() => navigate(`/${slug}/menu`)}
           className="mt-6 rounded-2xl px-6 py-3 text-sm font-semibold text-white"
           style={{ backgroundColor: primaryColor }}
         >
@@ -276,7 +278,6 @@ export default function BillPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hidden video for QR scanning */}
       <video
         ref={videoRef}
         className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
@@ -289,7 +290,7 @@ export default function BillPage() {
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
           <button
-            onClick={() => navigate(`/${slug}/tracking?t=${tableToken}`)}
+            onClick={() => navigate(`/${slug}/tracking${qs}`)}
             className="flex h-9 w-9 items-center justify-center rounded-full text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -309,7 +310,6 @@ export default function BillPage() {
             exit={{ opacity: 0 }}
             className="px-4 pt-4 pb-40"
           >
-            {/* Visit summary */}
             <p className="text-sm font-bold text-muted-foreground mb-3">Todo lo que pediste</p>
 
             <div className="rounded-xl border border-border bg-card p-4 mb-4">
@@ -575,7 +575,7 @@ export default function BillPage() {
               <Camera className="h-4 w-4" /> Intentar de nuevo
             </button>
             <button
-              onClick={() => navigate(`/${slug}/tracking?t=${tableToken}`)}
+              onClick={() => navigate(`/${slug}/tracking${qs}`)}
               className="mt-3 text-sm text-muted-foreground underline"
             >
               Volver al tracking

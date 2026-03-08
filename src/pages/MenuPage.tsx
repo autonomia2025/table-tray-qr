@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AnimatePresence } from "framer-motion";
-import { Search, X, ShoppingBag } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import CategoryTabs from "@/components/menu/CategoryTabs";
 import MenuItemCard from "@/components/menu/MenuItemCard";
@@ -51,7 +51,6 @@ async function fetchTenantMini(slug: string): Promise<TenantMini | null> {
 }
 
 async function fetchMenuData(branchId: string): Promise<Category[]> {
-  // 1) active menu
   const { data: menu } = await supabase
     .from("menus")
     .select("id")
@@ -61,7 +60,6 @@ async function fetchMenuData(branchId: string): Promise<Category[]> {
     .maybeSingle();
   if (!menu) return [];
 
-  // 2) categories
   const { data: cats } = await supabase
     .from("categories")
     .select("id, name, emoji, sort_order")
@@ -70,7 +68,6 @@ async function fetchMenuData(branchId: string): Promise<Category[]> {
     .order("sort_order");
   if (!cats || cats.length === 0) return [];
 
-  // 3) items for all categories
   const catIds = cats.map((c) => c.id);
   const { data: items } = await supabase
     .from("menu_items")
@@ -102,8 +99,6 @@ export default function MenuPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const tableToken = searchParams.get("t");
 
   const locState = location.state as { tenantId?: string; branchId?: string } | null;
   const tenantIdFromState = locState?.tenantId;
@@ -138,9 +133,9 @@ export default function MenuPage() {
   // Set cart context once
   useEffect(() => {
     if (tenantId && branchId) {
-      setTableContext(tableToken, tenantId, branchId);
+      setTableContext(tenantId, branchId);
     }
-  }, [tenantId, branchId, tableToken, setTableContext]);
+  }, [tenantId, branchId, setTableContext]);
 
   // Tenant info
   const { data: tenant } = useQuery({
@@ -226,7 +221,6 @@ export default function MenuPage() {
   }, [searchQuery, categories]);
 
   const primaryColor = tenant?.primary_color || "#E8531D";
-  const qs = tableToken ? `?t=${tableToken}` : "";
 
   if (isLoading || !tenant) return <MenuSkeleton />;
 
@@ -253,7 +247,6 @@ export default function MenuPage() {
           </div>
         ) : (
           <>
-            {/* Logo */}
             {tenant.logo_url ? (
               <img src={tenant.logo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
             ) : (
@@ -264,11 +257,7 @@ export default function MenuPage() {
                 {tenant.name.charAt(0)}
               </div>
             )}
-
-            {/* Name */}
             <span className="text-sm font-bold text-foreground truncate max-w-[160px]">{tenant.name}</span>
-
-            {/* Actions */}
             <div className="flex items-center gap-1">
               <button onClick={() => setSearchOpen(true)} className="relative flex h-9 w-9 items-center justify-center rounded-full text-foreground">
                 <Search className="h-5 w-5" />
@@ -298,7 +287,6 @@ export default function MenuPage() {
       {/* Content */}
       <main className="px-4 pt-4">
         {filteredItems !== null ? (
-          /* Search results */
           filteredItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               {filteredItems.map((item) => (
@@ -307,7 +295,7 @@ export default function MenuPage() {
                   item={item}
                   isHot={hotItemIds.has(item.id)}
                   primaryColor={primaryColor}
-                  onTap={() => navigate(`/${slug}/item/${item.id}${qs}`)}
+                  onTap={() => navigate(`/${slug}/item/${item.id}`)}
                 />
               ))}
             </div>
@@ -315,7 +303,6 @@ export default function MenuPage() {
             <p className="py-20 text-center text-sm text-muted-foreground">No se encontraron platos</p>
           )
         ) : (
-          /* Category sections */
           categories?.map((cat) => (
             <section
               key={cat.id}
@@ -333,7 +320,7 @@ export default function MenuPage() {
                     item={item}
                     isHot={hotItemIds.has(item.id)}
                     primaryColor={primaryColor}
-                    onTap={() => navigate(`/${slug}/item/${item.id}${qs}`)}
+                    onTap={() => navigate(`/${slug}/item/${item.id}`)}
                   />
                 ))}
               </div>
@@ -348,7 +335,7 @@ export default function MenuPage() {
           totalItems={totalItems}
           totalPrice={totalPrice}
           primaryColor={primaryColor}
-          onTap={() => navigate(`/${slug}/cart${qs}`)}
+          onTap={() => navigate(`/${slug}/cart`)}
         />
       </AnimatePresence>
     </div>

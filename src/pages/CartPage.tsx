@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Trash2, Minus, Plus, ShoppingCart, ArrowRight } from "lucide-react";
+import { ArrowLeft, Trash2, Minus, Plus, ArrowRight } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { formatCLP } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 /* fetch primary color */
 async function fetchPrimaryColor(slug: string): Promise<string> {
@@ -21,17 +20,12 @@ async function fetchPrimaryColor(slug: string): Promise<string> {
 export default function CartPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const tableToken = searchParams.get("t");
-  const qs = tableToken ? `?t=${tableToken}` : "";
-  const { toast } = useToast();
 
   const items = useCartStore((s) => s.items);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
   const clearCart = useCartStore((s) => s.clearCart);
   const totalPrice = useCartStore((s) => s.getTotalPrice());
-  const storedToken = useCartStore((s) => s.tableToken);
 
   const { data: primaryColor = "#E8531D" } = useQuery({
     queryKey: ["primary-color", slug],
@@ -43,14 +37,8 @@ export default function CartPage() {
   const [orderNotes, setOrderNotes] = useState("");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const hasToken = !!(storedToken || tableToken);
-
   const handleConfirm = () => {
-    if (!hasToken) {
-      toast({ title: "Primero escanea el QR de tu mesa", variant: "destructive" });
-      return;
-    }
-    navigate(`/${slug}/confirm${qs}`, { state: { orderNotes: orderNotes.trim() } });
+    navigate(`/${slug}/confirm`, { state: { orderNotes: orderNotes.trim(), autoScan: true } });
   };
 
   return (
@@ -63,7 +51,7 @@ export default function CartPage() {
     >
       {/* Header */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
-        <button onClick={() => navigate(`/${slug}/menu${qs}`)} className="flex h-9 w-9 items-center justify-center rounded-full text-foreground">
+        <button onClick={() => navigate(`/${slug}/menu`)} className="flex h-9 w-9 items-center justify-center rounded-full text-foreground">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <span className="text-sm font-bold text-foreground">Tu pedido</span>
@@ -75,13 +63,6 @@ export default function CartPage() {
           <div className="w-9" />
         )}
       </header>
-
-      {/* No-token banner */}
-      {!hasToken && items.length > 0 && (
-        <div className="mx-4 mt-3 rounded-xl bg-yellow-50 border border-yellow-200 px-4 py-3 text-xs text-yellow-800 font-medium">
-          ⚠️ Escanea el QR de tu mesa para poder confirmar el pedido
-        </div>
-      )}
 
       {/* Clear confirm modal */}
       <AnimatePresence>
@@ -128,7 +109,7 @@ export default function CartPage() {
           <h2 className="text-lg font-bold text-foreground">Tu carrito está vacío</h2>
           <p className="mt-1 text-sm text-muted-foreground">Agrega platos desde el menú</p>
           <button
-            onClick={() => navigate(`/${slug}/menu${qs}`)}
+            onClick={() => navigate(`/${slug}/menu`)}
             className="mt-6 flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold text-white"
             style={{ backgroundColor: primaryColor }}
           >

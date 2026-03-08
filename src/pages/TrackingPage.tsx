@@ -7,6 +7,7 @@ import { ShoppingBag, Receipt, Bell, ChevronDown, ChevronUp, AlertTriangle } fro
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCartStore } from "@/store/cartStore";
 import {
   Dialog,
   DialogContent,
@@ -52,50 +53,6 @@ const WAITER_REASONS = [
   { key: "change", label: "Quiero cambiar algo" },
 ];
 
-/* ---------- helpers ---------- */
-function groupOrderItems(
-  rawOrders: Array<{
-    id: string;
-    order_number: number;
-    status: string;
-    total_amount: number;
-    confirmed_at: string | null;
-    notes: string | null;
-    item_id: string | null;
-    menu_item_name: string | null;
-    quantity: number | null;
-    subtotal: number | null;
-    selected_modifiers: Json | null;
-    item_notes: string | null;
-  }>
-): Order[] {
-  const map = new Map<string, Order>();
-  for (const row of rawOrders) {
-    if (!map.has(row.id)) {
-      map.set(row.id, {
-        id: row.id,
-        order_number: row.order_number,
-        status: row.status || "confirmed",
-        total_amount: row.total_amount,
-        confirmed_at: row.confirmed_at,
-        notes: row.notes,
-        items: [],
-      });
-    }
-    if (row.item_id) {
-      map.get(row.id)!.items.push({
-        id: row.item_id,
-        menu_item_name: row.menu_item_name || "",
-        quantity: row.quantity || 1,
-        subtotal: row.subtotal || 0,
-        selected_modifiers: row.selected_modifiers || [],
-        item_notes: row.item_notes,
-      });
-    }
-  }
-  return Array.from(map.values());
-}
-
 function formatTime(iso: string | null) {
   if (!iso) return "";
   return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
@@ -130,9 +87,13 @@ export default function TrackingPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const tableToken = searchParams.get("t");
+  const tableTokenFromUrl = searchParams.get("t");
   const orderIdParam = searchParams.get("order");
   const { toast } = useToast();
+
+  // Also read from store as fallback
+  const storeTableToken = useCartStore((s) => s.tableToken);
+  const tableToken = tableTokenFromUrl || storeTableToken;
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -200,7 +161,6 @@ export default function TrackingPage() {
 
       if (!data || data.length === 0) return [];
 
-      // fetch items for all orders
       const orderIds = data.map((o) => o.id);
       const { data: items } = await supabase
         .from("order_items")
@@ -235,7 +195,6 @@ export default function TrackingPage() {
     staleTime: 5_000,
   });
 
-  // Sync raw to local state
   useEffect(() => {
     if (rawOrders) setOrders(rawOrders);
   }, [rawOrders]);
@@ -277,23 +236,18 @@ export default function TrackingPage() {
     return orders[orders.length - 1];
   }, [orders, orderIdParam]);
 
-  // Ready effect: vibrate + confetti
+  // Ready effect
   useEffect(() => {
     if (currentOrder?.status === "ready" && !readyFired) {
       setReadyFired(true);
-      try {
-        navigator.vibrate?.([200, 100, 200]);
-      } catch {}
+      try { navigator.vibrate?.([200, 100, 200]); } catch {}
       spawnConfetti(primaryColor);
     }
-    if (currentOrder?.status !== "ready") {
-      setReadyFired(false);
-    }
+    if (currentOrder?.status !== "ready") setReadyFired(false);
   }, [currentOrder?.status, readyFired, primaryColor]);
 
   const currentStep = currentOrder ? STATUS_MAP[currentOrder.status]?.step ?? 0 : 0;
   const isCancelled = currentOrder?.status === "cancelled";
-
   const hasDelivered = orders.some((o) => o.status === "delivered");
 
   const sessionTotal = useMemo(
@@ -364,7 +318,7 @@ export default function TrackingPage() {
           Escanea el QR de tu mesa nuevamente.
         </p>
         <button
-          onClick={() => navigate(`/${slug}/menu${qs}`)}
+          onClick={() => navigate(`/${slug}/menu`)}
           className="rounded-2xl px-6 py-3 text-sm font-semibold text-primary-foreground"
           style={{ backgroundColor: primaryColor }}
         >
@@ -425,7 +379,6 @@ export default function TrackingPage() {
         {!isCancelled ? (
           <div className="mb-6">
             <div className="flex items-center justify-between relative">
-              {/* Connection line */}
               <div className="absolute top-4 left-[12%] right-[12%] h-0.5 bg-border" />
               <div
                 className="absolute top-4 left-[12%] h-0.5 transition-all duration-700"
@@ -441,16 +394,8 @@ export default function TrackingPage() {
                 return (
                   <div key={label} className="relative z-10 flex flex-col items-center" style={{ width: "25%" }}>
                     <motion.div
-                      animate={
-                        isCurrent
-                          ? { scale: [1, 1.15, 1] }
-                          : { scale: 1 }
-                      }
-                      transition={
-                        isCurrent
-                          ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-                          : {}
-                      }
+                      animate={isCurrent ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+                      transition={isCurrent ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" } : {}}
                       className="flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-bold transition-colors duration-500"
                       style={{
                         borderColor: done ? primaryColor : "hsl(var(--border))",
@@ -471,7 +416,6 @@ export default function TrackingPage() {
               })}
             </div>
 
-            {/* Ready message */}
             <AnimatePresence>
               {currentOrder.status === "ready" && (
                 <motion.p
@@ -527,7 +471,7 @@ export default function TrackingPage() {
             <hr className="border-border" />
 
             <button
-              onClick={() => navigate(`/${slug}/menu${qs}`)}
+              onClick={() => navigate(`/${slug}/menu`)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground transition-colors active:bg-accent"
             >
               <ShoppingBag className="h-4 w-4" />

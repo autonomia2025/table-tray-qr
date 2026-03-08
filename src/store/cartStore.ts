@@ -22,11 +22,14 @@ interface CartState {
   tableToken: string | null;
   tenantId: string | null;
   branchId: string | null;
+  tableNumber: number | null;
   addItem: (item: Omit<CartItem, "id" | "subtotal">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  setTableContext: (tableToken: string | null, tenantId: string | null, branchId: string | null) => void;
+  setTableContext: (tenantId: string | null, branchId: string | null) => void;
+  setTableToken: (token: string) => void;
+  setTableNumber: (num: number) => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
 }
@@ -39,6 +42,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   tableToken: null,
   tenantId: null,
   branchId: null,
+  tableNumber: null,
 
   addItem: (item) => {
     const id = crypto.randomUUID();
@@ -60,9 +64,14 @@ export const useCartStore = create<CartState>((set, get) => ({
     }));
   },
 
+  // Clears items but keeps tableToken, tableNumber (card stays valid for re-ordering)
   clearCart: () => set({ items: [] }),
 
-  setTableContext: (tableToken, tenantId, branchId) => set({ tableToken, tenantId, branchId }),
+  setTableContext: (tenantId, branchId) => set({ tenantId, branchId }),
+
+  setTableToken: (token) => set({ tableToken: token }),
+
+  setTableNumber: (num) => set({ tableNumber: num }),
 
   getTotalItems: () => get().items.reduce((s, i) => s + i.quantity, 0),
 
