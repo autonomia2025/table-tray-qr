@@ -152,7 +152,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     await supabase.auth.signOut();
-    navigate(`/admin/${slug}/login`);
+    navigate(`/admin/login`);
   };
 
   return (

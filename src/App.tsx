@@ -17,7 +17,7 @@ import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminGuard from "./pages/admin/AdminGuard";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
-import AdminGlobalPage from "./pages/admin/AdminGlobalPage";
+import MozoJoinPage from "./pages/mozo/MozoJoinPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
@@ -49,10 +49,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* Admin global selector */}
-          <Route path="/admin" element={<AdminGlobalPage />} />
-          {/* Admin login (outside layout) */}
-          <Route path="/admin/:slug/login" element={<AdminProvider><AdminLoginPage /></AdminProvider>} />
+          {/* Admin login (no slug needed) */}
+          <Route path="/admin" element={<AdminLoginPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           {/* Admin with slug (protected) */}
           <Route path="/admin/:slug" element={<AdminProvider><AdminLayout /></AdminProvider>}>
             <Route element={<AdminGuard />}>
@@ -74,6 +73,7 @@ const App = () => (
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/kds" element={<KDSPage />} />
+          <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
           <Route path="/mozo/login" element={<WaitersProvider><MozoLoginPage /></WaitersProvider>} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
             <Route index element={<Navigate to="/mozo/mesas" replace />} />

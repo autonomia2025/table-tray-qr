@@ -692,6 +692,57 @@ export type Database = {
           },
         ]
       }
+      staff_invitations: {
+        Row: {
+          branch_id: string
+          created_at: string | null
+          created_by: string | null
+          expires_at: string
+          id: string
+          role: string
+          tenant_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          role?: string
+          tenant_id: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          role?: string
+          tenant_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_users: {
         Row: {
           auth_user_id: string | null
