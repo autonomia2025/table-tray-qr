@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Volume2, VolumeX, Wifi, WifiOff } from "lucide-react";
+import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
