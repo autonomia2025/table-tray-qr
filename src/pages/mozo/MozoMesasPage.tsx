@@ -48,6 +48,7 @@ function minutesAgo(dateStr: string) {
 export default function MozoMesasPage() {
   const { branchId, tenantId } = useWaiters();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
