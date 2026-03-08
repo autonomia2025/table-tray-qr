@@ -80,6 +80,7 @@ const App = () => (
             <Route path="mesas" element={<MozoMesasPage />} />
             <Route path="notificaciones" element={<MozoNotificacionesPage />} />
             <Route path="perfil" element={<MozoPerfilPage />} />
+            <Route path="pedido-manual/:tableId" element={<MozoPedidoManualPage />} />
           </Route>
           <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
             <Route index element={<Navigate to="/superadmin/tenants" replace />} />

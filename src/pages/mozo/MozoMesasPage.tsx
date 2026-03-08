@@ -259,8 +259,18 @@ export default function MozoMesasPage() {
                 Entregar pedido ({readyOrders.length})
               </Button>
             )}
+            {selectedTable && (
+              <Button
+                variant="outline"
+                className="w-full h-12"
+                onClick={() => { setSheetOpen(false); navigate(`/mozo/pedido-manual/${selectedTable.id}`); }}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Pedir por cliente
+              </Button>
+            )}
             {(selectedTable?.status === 'occupied' || selectedTable?.status === 'waiting_bill') && (
-              <Button variant="destructive" className="w-full h-12 mt-4" disabled={actionLoading} onClick={closeTable}>
+              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading} onClick={closeTable}>
                 Cerrar mesa
               </Button>
             )}
