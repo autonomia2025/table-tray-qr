@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create user with admin API (auto-confirms email)
+    // Try to create user; if already exists, look up existing user
+    let userId: string;
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -42,10 +43,31 @@ Deno.serve(async (req) => {
     });
 
     if (error) {
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (error.message.includes("already been registered")) {
+        // Find existing user by email
+        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) {
+          return new Response(
+            JSON.stringify({ error: listError.message }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const existingUser = listData.users.find((u) => u.email === email);
+        if (!existingUser) {
+          return new Response(
+            JSON.stringify({ error: "No se pudo encontrar el usuario existente" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        userId = existingUser.id;
+      } else {
+        return new Response(
+          JSON.stringify({ error: error.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      userId = data.user.id;
     }
 
     return new Response(
