@@ -39,8 +39,20 @@ function playSound() {
   } catch {}
 }
 
+/** Returns table IDs assigned to this waiter OR unassigned */
+async function getMyTableIds(branchId: string, staffId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('tables')
+    .select('id, assigned_waiter_id')
+    .eq('branch_id', branchId);
+  if (!data) return [];
+  return data
+    .filter(t => !t.assigned_waiter_id || t.assigned_waiter_id === staffId)
+    .map(t => t.id);
+}
+
 export default function MozoNotificacionesPage() {
-  const { branchId } = useWaiters();
+  const { branchId, staffId } = useWaiters();
   const { toast } = useToast();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,29 +60,36 @@ export default function MozoNotificacionesPage() {
   const soundEnabled = useRef(false);
 
   const fetchAll = async () => {
-    // Waiter calls
-    const { data: calls } = await supabase
-      .from('waiter_calls')
-      .select('id, table_id, created_at, reason, status')
-      .eq('branch_id', branchId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
+    const myTableIds = await getMyTableIds(branchId, staffId);
+    if (myTableIds.length === 0) {
+      setNotifs([]);
+      setLoading(false);
+      return;
+    }
 
-    // Bill requests
-    const { data: bills } = await supabase
-      .from('bill_requests')
-      .select('id, table_id, requested_at, total_amount, tip_amount, status')
-      .eq('branch_id', branchId)
-      .eq('status', 'pending')
-      .order('requested_at', { ascending: false });
-
-    // Confirmed orders
-    const { data: ordersData } = await supabase
-      .from('orders')
-      .select('id, table_id, confirmed_at, order_number, status')
-      .eq('branch_id', branchId)
-      .eq('status', 'confirmed')
-      .order('confirmed_at', { ascending: false });
+    const [{ data: calls }, { data: bills }, { data: ordersData }] = await Promise.all([
+      supabase
+        .from('waiter_calls')
+        .select('id, table_id, created_at, reason, status')
+        .eq('branch_id', branchId)
+        .eq('status', 'pending')
+        .in('table_id', myTableIds)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('bill_requests')
+        .select('id, table_id, requested_at, total_amount, tip_amount, status')
+        .eq('branch_id', branchId)
+        .eq('status', 'pending')
+        .in('table_id', myTableIds)
+        .order('requested_at', { ascending: false }),
+      supabase
+        .from('orders')
+        .select('id, table_id, confirmed_at, order_number, status')
+        .eq('branch_id', branchId)
+        .eq('status', 'confirmed')
+        .in('table_id', myTableIds)
+        .order('confirmed_at', { ascending: false }),
+    ]);
 
     // Get all table IDs to fetch numbers
     const allTableIds = new Set<string>();
@@ -141,9 +160,10 @@ export default function MozoNotificacionesPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
+      // Also re-fetch when table assignments change
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
       .subscribe();
 
-    // Enable sound on first user interaction
     const enableSound = () => { soundEnabled.current = true; };
     document.addEventListener('click', enableSound, { once: true });
 
@@ -151,7 +171,7 @@ export default function MozoNotificacionesPage() {
       supabase.removeChannel(channel);
       document.removeEventListener('click', enableSound);
     };
-  }, [branchId]);
+  }, [branchId, staffId]);
 
   const handleAction = async (n: Notification) => {
     setActionLoading(n.id);

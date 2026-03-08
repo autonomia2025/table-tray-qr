@@ -5,20 +5,32 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function MozoLayout() {
-  const { isLoggedIn, staffName, branchId, logout } = useWaiters();
+  const { isLoggedIn, staffName, branchId, staffId, logout } = useWaiters();
   const navigate = useNavigate();
   const location = useLocation();
   const [notifCount, setNotifCount] = useState(0);
 
-  // Count pending notifications
+  // Count pending notifications for MY tables + unassigned tables
   useEffect(() => {
     if (!isLoggedIn) return;
 
     const fetchCounts = async () => {
+      // First get my table IDs (assigned to me or unassigned)
+      const { data: tablesData } = await supabase
+        .from('tables')
+        .select('id, assigned_waiter_id')
+        .eq('branch_id', branchId);
+
+      const myTableIds = (tablesData ?? [])
+        .filter(t => !t.assigned_waiter_id || t.assigned_waiter_id === staffId)
+        .map(t => t.id);
+
+      if (myTableIds.length === 0) { setNotifCount(0); return; }
+
       const [wc, br, oc] = await Promise.all([
-        supabase.from('waiter_calls').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'pending'),
-        supabase.from('bill_requests').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'pending'),
-        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'confirmed'),
+        supabase.from('waiter_calls').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'pending').in('table_id', myTableIds),
+        supabase.from('bill_requests').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'pending').in('table_id', myTableIds),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('branch_id', branchId).eq('status', 'confirmed').in('table_id', myTableIds),
       ]);
       setNotifCount((wc.count ?? 0) + (br.count ?? 0) + (oc.count ?? 0));
     };
@@ -30,10 +42,11 @@ export default function MozoLayout() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => fetchCounts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => fetchCounts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchCounts())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchCounts())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isLoggedIn, branchId]);
+  }, [isLoggedIn, branchId, staffId]);
 
   if (!isLoggedIn) return <Navigate to="/mozo/login" replace />;
 

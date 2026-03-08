@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, X, PlusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, UserCheck, UserX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TableData {
@@ -15,6 +15,7 @@ interface TableData {
   name: string | null;
   status: string | null;
   capacity: number | null;
+  assigned_waiter_id: string | null;
   sessionTotal?: number;
   sessionOpenedAt?: string;
 }
@@ -46,7 +47,7 @@ function minutesAgo(dateStr: string) {
 }
 
 export default function MozoMesasPage() {
-  const { branchId, tenantId } = useWaiters();
+  const { branchId, tenantId, staffId } = useWaiters();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [tables, setTables] = useState<TableData[]>([]);
@@ -60,7 +61,7 @@ export default function MozoMesasPage() {
   const fetchTables = async () => {
     const { data: tablesData } = await supabase
       .from('tables')
-      .select('id, number, name, status, capacity')
+      .select('id, number, name, status, capacity, assigned_waiter_id')
       .eq('branch_id', branchId)
       .order('number');
 
@@ -103,12 +104,22 @@ export default function MozoMesasPage() {
     return () => { supabase.removeChannel(channel); };
   }, [branchId]);
 
+  const toggleAssignment = async (table: TableData, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isMyTable = table.assigned_waiter_id === staffId;
+    await supabase
+      .from('tables')
+      .update({ assigned_waiter_id: isMyTable ? null : staffId })
+      .eq('id', table.id);
+    toast({ title: isMyTable ? 'Mesa liberada' : `Mesa ${table.number} tomada` });
+    fetchTables();
+  };
+
   const openSheet = async (table: TableData) => {
     setSelectedTable(table);
     setSheetOpen(true);
     setOrdersLoading(true);
 
-    // Get active session
     const { data: session } = await supabase
       .from('table_sessions')
       .select('id')
@@ -153,7 +164,7 @@ export default function MozoMesasPage() {
   const closeTable = async () => {
     if (!selectedTable) return;
     setActionLoading(true);
-    await supabase.from('tables').update({ status: 'free' }).eq('id', selectedTable.id);
+    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', selectedTable.id);
     await supabase.from('table_sessions').update({ is_active: false, closed_at: new Date().toISOString() }).eq('table_id', selectedTable.id).eq('is_active', true);
     toast({ title: 'Mesa cerrada' });
     setSheetOpen(false);
@@ -175,21 +186,49 @@ export default function MozoMesasPage() {
           const st = t.status ?? 'free';
           const colors = STATUS_COLORS[st] ?? STATUS_COLORS.free;
           const isActive = st === 'occupied' || st === 'waiting_bill';
+          const isMine = t.assigned_waiter_id === staffId;
+          const isAssigned = !!t.assigned_waiter_id;
+          const assignedToOther = isAssigned && !isMine;
+
           return (
             <button
               key={t.id}
               onClick={() => isActive ? openSheet(t) : undefined}
               disabled={!isActive}
-              className={`rounded-xl border-2 p-4 text-left transition-all ${colors} ${isActive ? 'active:scale-95' : 'opacity-80'}`}
+              className={`rounded-xl border-2 p-4 text-left transition-all relative ${colors} ${isActive ? 'active:scale-95' : 'opacity-80'} ${isMine ? 'ring-2 ring-primary ring-offset-1' : ''}`}
             >
               <div className="flex items-start justify-between">
                 <span className="text-2xl font-bold">{t.number}</span>
-                {st === 'waiting_bill' && <span className="text-base">🧾</span>}
+                <div className="flex items-center gap-1">
+                  {st === 'waiting_bill' && <span className="text-base">🧾</span>}
+                  <button
+                    onClick={(e) => toggleAssignment(t, e)}
+                    className={`p-1 rounded-full transition-colors ${
+                      isMine
+                        ? 'bg-primary/20 text-primary'
+                        : assignedToOther
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                    disabled={assignedToOther}
+                    title={isMine ? 'Soltar mesa' : assignedToOther ? 'Asignada a otro mozo' : 'Tomar mesa'}
+                  >
+                    {isMine ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               {t.name && <p className="text-xs mt-0.5 truncate opacity-70">{t.name}</p>}
-              <Badge variant="outline" className="mt-2 text-[10px] border-current">
-                {STATUS_LABELS[st] ?? st}
-              </Badge>
+              <div className="flex items-center gap-1.5 mt-2">
+                <Badge variant="outline" className="text-[10px] border-current">
+                  {STATUS_LABELS[st] ?? st}
+                </Badge>
+                {isMine && (
+                  <Badge variant="default" className="text-[10px]">Mía</Badge>
+                )}
+                {assignedToOther && (
+                  <Badge variant="secondary" className="text-[10px]">Otro mozo</Badge>
+                )}
+              </div>
               {isActive && t.sessionTotal !== undefined && (
                 <p className="text-sm font-semibold mt-1">{formatCLP(t.sessionTotal)}</p>
               )}
