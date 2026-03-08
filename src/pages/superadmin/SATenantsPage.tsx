@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, Eye, UserCheck, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { Loader2, Plus, Eye, UserCheck, ChevronRight, ChevronLeft, Check, Trash2 } from 'lucide-react';
 
 interface TenantRow {
   id: string;
