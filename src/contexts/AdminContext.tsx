@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useParams, useNavigate } from "react-router-dom";
 
 interface AdminContextType {
   tenantId: string;
@@ -7,74 +8,158 @@ interface AdminContextType {
   tenantName: string;
   branchName: string;
   primaryColor: string;
-  loading: boolean;
+  slug: string;
+  role: string;
+  userId: string;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  isImpersonating: boolean;
+  logout: () => Promise<void>;
 }
 
 const AdminContext = createContext<AdminContextType | null>(null);
 
-// Hardcoded for now — will be replaced by auth
-const ADMIN_TENANT_ID = "7adf15c6-326b-4820-b2fc-aca7660133a5";
-const ADMIN_BRANCH_ID = "53fd9168-e7b1-4f07-bc1b-a419d6333f6c";
-
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  // Check for SuperAdmin impersonation via sessionStorage
-  const impersonating = sessionStorage.getItem("superadmin_impersonating");
-  const effectiveTenantId = impersonating || ADMIN_TENANT_ID;
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
 
-  const [ctx, setCtx] = useState<Omit<AdminContextType, "loading">>({
-    tenantId: effectiveTenantId,
-    branchId: ADMIN_BRANCH_ID,
+  const [state, setState] = useState<Omit<AdminContextType, "logout" | "isLoading" | "isAuthenticated" | "isImpersonating">>({
+    tenantId: "",
+    branchId: "",
     tenantName: "",
     branchName: "",
     primaryColor: "#E8531D",
+    slug: slug ?? "",
+    role: "",
+    userId: "",
   });
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check for SuperAdmin impersonation
+  const impersonatingTenantId = sessionStorage.getItem("superadmin_impersonating");
+  const impersonatingSlug = sessionStorage.getItem("superadmin_impersonating_slug");
+  const isImpersonating = !!impersonatingTenantId;
+
+  const loadTenantData = useCallback(async (tenantId: string, userId: string, role: string) => {
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("id, name, primary_color, slug")
+      .eq("id", tenantId)
+      .single();
+
+    if (!tenant) return false;
+
+    // Get first branch
+    const { data: branch } = await supabase
+      .from("branches")
+      .select("id, name")
+      .eq("tenant_id", tenantId)
+      .limit(1)
+      .maybeSingle();
+
+    setState({
+      tenantId: tenant.id,
+      branchId: branch?.id ?? "",
+      tenantName: tenant.name,
+      branchName: branch?.name ?? "",
+      primaryColor: tenant.primary_color ?? "#E8531D",
+      slug: tenant.slug,
+      role,
+      userId,
+    });
+    return true;
+  }, []);
+
+  const loadFromAuth = useCallback(async () => {
+    // If impersonating, skip auth check
+    if (impersonatingTenantId) {
+      await loadTenantData(impersonatingTenantId, "superadmin", "owner");
+      setIsAuthenticated(true);
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
+
+    const userId = session.user.id;
+
+    // Find tenant by slug
+    if (!slug) {
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .single();
+
+    if (!tenant) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Check membership
+    const { data: member } = await supabase
+      .from("tenant_members")
+      .select("id, tenant_id, branch_id, role")
+      .eq("user_id", userId)
+      .eq("tenant_id", tenant.id)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (!member) {
+      setIsAuthenticated(false);
+      setIsLoading(false);
+      return;
+    }
+
+    await loadTenantData(tenant.id, userId, member.role);
+    setIsAuthenticated(true);
+    setIsLoading(false);
+  }, [slug, impersonatingTenantId, loadTenantData]);
 
   useEffect(() => {
-    async function load() {
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("name, primary_color")
-        .eq("id", effectiveTenantId)
-        .single();
+    loadFromAuth();
 
-      // If impersonating, get the first branch of that tenant
-      let branchId = ADMIN_BRANCH_ID;
-      let branchName = "";
-
-      if (impersonating) {
-        const { data: branch } = await supabase
-          .from("branches")
-          .select("id, name")
-          .eq("tenant_id", effectiveTenantId)
-          .limit(1)
-          .maybeSingle();
-        if (branch) {
-          branchId = branch.id;
-          branchName = branch.name;
-        }
-      } else {
-        const { data: branch } = await supabase
-          .from("branches")
-          .select("name")
-          .eq("id", ADMIN_BRANCH_ID)
-          .single();
-        branchName = branch?.name ?? "";
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        setState(prev => ({ ...prev, tenantId: "", branchId: "", userId: "", role: "" }));
+        setIsAuthenticated(false);
       }
+      if (event === "SIGNED_IN") {
+        loadFromAuth();
+      }
+    });
 
-      setCtx({
-        tenantId: effectiveTenantId,
-        branchId,
-        tenantName: tenant?.name ?? "",
-        branchName,
-        primaryColor: tenant?.primary_color ?? "#E8531D",
-      });
-      setLoading(false);
+    return () => subscription.unsubscribe();
+  }, [loadFromAuth]);
+
+  const logout = async () => {
+    if (isImpersonating) {
+      sessionStorage.removeItem("superadmin_impersonating");
+      sessionStorage.removeItem("superadmin_impersonating_slug");
+      navigate("/superadmin/tenants");
+      return;
     }
-    load();
-  }, [effectiveTenantId]);
+    await supabase.auth.signOut();
+    navigate(`/admin/${slug}/login`);
+  };
 
-  return <AdminContext.Provider value={{ ...ctx, loading }}>{children}</AdminContext.Provider>;
+  return (
+    <AdminContext.Provider value={{ ...state, isLoading, isAuthenticated, isImpersonating, logout }}>
+      {children}
+    </AdminContext.Provider>
+  );
 }
 
 export function useAdmin() {
