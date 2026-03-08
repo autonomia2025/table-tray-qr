@@ -325,6 +325,9 @@ export default function SATenantsPage() {
                       <Button variant="ghost" size="icon" onClick={() => impersonate(t.id)} title="Impersonar">
                         <UserCheck className="w-4 h-4" />
                       </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t)} title="Eliminar" className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>
