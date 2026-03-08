@@ -1162,6 +1162,7 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
