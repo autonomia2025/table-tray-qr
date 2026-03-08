@@ -14,7 +14,7 @@ export default function AdminGuard() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to={`/admin/${slug}/login`} replace />;
+    return <Navigate to="/admin/login" replace />;
   }
 
   return <Outlet />;
