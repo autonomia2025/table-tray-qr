@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, Eye, UserCheck, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { Loader2, Plus, Eye, UserCheck, ChevronRight, ChevronLeft, Check, Trash2 } from 'lucide-react';
 
 interface TenantRow {
   id: string;
@@ -40,6 +41,10 @@ export default function SATenantsPage() {
   const [detail, setDetail] = useState<TenantDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<TenantRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Wizard state
   const [createOpen, setCreateOpen] = useState(false);
@@ -120,6 +125,63 @@ export default function SATenantsPage() {
     setImpersonating(tenantId);
     sessionStorage.setItem('superadmin_impersonating_slug', t?.slug ?? '');
     navigate(`/admin/${t?.slug ?? ''}/mesas`);
+  };
+
+  const deleteTenant = async (tenant: TenantRow) => {
+    setDeleting(true);
+    try {
+      const tenantId = tenant.id;
+
+      // Delete in dependency order (children first)
+      // 1. modifiers → modifier_groups → menu_items → categories → menus
+      const { data: menuItems } = await supabase.from('menu_items').select('id').eq('tenant_id', tenantId);
+      if (menuItems?.length) {
+        const itemIds = menuItems.map(i => i.id);
+        const { data: groups } = await supabase.from('modifier_groups').select('id').in('menu_item_id', itemIds);
+        if (groups?.length) {
+          await supabase.from('modifiers').delete().in('group_id', groups.map(g => g.id));
+          await supabase.from('modifier_groups').delete().in('id', groups.map(g => g.id));
+        }
+        await supabase.from('menu_items').delete().eq('tenant_id', tenantId);
+      }
+      await supabase.from('categories').delete().eq('tenant_id', tenantId);
+      await supabase.from('menus').delete().eq('tenant_id', tenantId);
+
+      // 2. order_items → orders
+      const { data: orders } = await supabase.from('orders').select('id').eq('tenant_id', tenantId);
+      if (orders?.length) {
+        await supabase.from('order_items').delete().in('order_id', orders.map(o => o.id));
+        await supabase.from('orders').delete().eq('tenant_id', tenantId);
+      }
+
+      // 3. Other tenant-scoped tables
+      await Promise.all([
+        supabase.from('bill_requests').delete().eq('tenant_id', tenantId),
+        supabase.from('waiter_calls').delete().eq('tenant_id', tenantId),
+        supabase.from('table_sessions').delete().eq('tenant_id', tenantId),
+        supabase.from('staff_invitations').delete().eq('tenant_id', tenantId),
+        supabase.from('audit_logs').delete().eq('tenant_id', tenantId),
+        supabase.from('tenant_feature_flags').delete().eq('tenant_id', tenantId),
+        supabase.from('staff_users').delete().eq('tenant_id', tenantId),
+      ]);
+
+      // 4. tables → branches → restaurants
+      await supabase.from('tables').delete().eq('tenant_id', tenantId);
+      await supabase.from('branches').delete().eq('tenant_id', tenantId);
+      await supabase.from('restaurants').delete().eq('tenant_id', tenantId);
+
+      // 5. tenant_members → tenant
+      await supabase.from('tenant_members').delete().eq('tenant_id', tenantId);
+      await supabase.from('tenants').delete().eq('id', tenantId);
+
+      toast({ title: `${tenant.name} eliminado` });
+      setTenants(prev => prev.filter(t => t.id !== tenantId));
+    } catch (e: any) {
+      toast({ title: 'Error eliminando', description: e?.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
   };
 
   const validateStep1 = (): boolean => {
@@ -262,6 +324,9 @@ export default function SATenantsPage() {
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => impersonate(t.id)} title="Impersonar">
                         <UserCheck className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(t)} title="Eliminar" className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>
@@ -450,6 +515,29 @@ export default function SATenantsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar {deleteTarget?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción es irreversible. Se eliminarán todas las mesas, pedidos, menú, staff y datos asociados a este restaurante.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteTarget && deleteTenant(deleteTarget)}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
