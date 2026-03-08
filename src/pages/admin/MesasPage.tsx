@@ -6,7 +6,10 @@ import { formatCLP } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Plus, Users } from "lucide-react";
 
 interface TableRow {
   id: string;
@@ -19,9 +22,9 @@ interface TableRow {
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  free: { label: "Libre", bg: "bg-green-100", text: "text-green-800" },
-  occupied: { label: "Ocupada", bg: "bg-orange-100", text: "text-orange-800" },
-  waiting_bill: { label: "Esperando cuenta", bg: "bg-red-100", text: "text-red-800" },
+  free: { label: "Libre", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-800 dark:text-green-300" },
+  occupied: { label: "Ocupada", bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-800 dark:text-orange-300" },
+  waiting_bill: { label: "Esperando cuenta", bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-800 dark:text-red-300" },
   reserved: { label: "Reservada", bg: "bg-muted", text: "text-muted-foreground" },
 };
 
@@ -30,12 +33,18 @@ function minutesSince(dateStr: string) {
 }
 
 export default function MesasPage() {
-  const { branchId } = useAdmin();
+  const { branchId, tenantId } = useAdmin();
   const { toast } = useToast();
   const [tables, setTables] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [closeTarget, setCloseTarget] = useState<TableRow | null>(null);
   const [closing, setClosing] = useState(false);
+
+  // Create table state
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newCapacity, setNewCapacity] = useState("4");
 
   const fetchTables = async () => {
     const { data, error } = await supabase
@@ -46,7 +55,6 @@ export default function MesasPage() {
 
     if (error || !data) return;
 
-    // For occupied/waiting_bill tables, get session info
     const occupiedIds = data.filter((t) => t.status === "occupied" || t.status === "waiting_bill").map((t) => t.id);
     let sessionMap: Record<string, { total: number; opened: string }> = {};
     if (occupiedIds.length) {
@@ -77,7 +85,7 @@ export default function MesasPage() {
 
     const channel = supabase
       .channel("admin-tables")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "tables", filter: `branch_id=eq.${branchId}` }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "tables", filter: `branch_id=eq.${branchId}` }, () => {
         fetchTables();
       })
       .subscribe();
@@ -105,11 +113,61 @@ export default function MesasPage() {
     }
   };
 
+  const handleCreateTable = async () => {
+    setCreating(true);
+    try {
+      const nextNumber = tables.length > 0 ? Math.max(...tables.map((t) => t.number)) + 1 : 1;
+      const qrToken = crypto.randomUUID();
+
+      const { error } = await supabase.from("tables").insert({
+        number: nextNumber,
+        name: newName.trim() || null,
+        capacity: parseInt(newCapacity) || 4,
+        branch_id: branchId,
+        tenant_id: tenantId,
+        qr_token: qrToken,
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Mesa creada", description: `Mesa ${nextNumber} agregada correctamente` });
+      setShowCreate(false);
+      setNewName("");
+      setNewCapacity("4");
+      fetchTables();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "No se pudo crear la mesa", variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+
+  const freeCount = tables.filter((t) => t.status === "free").length;
+  const occupiedCount = tables.filter((t) => t.status === "occupied" || t.status === "waiting_bill").length;
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">Mesas</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Mesas</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {freeCount} libres · {occupiedCount} ocupadas · {tables.length} total
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowCreate(true)}
+          className="gap-2 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+          size="lg"
+        >
+          <Plus className="h-5 w-5" />
+          Nueva mesa
+        </Button>
+      </div>
+
+      {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {tables.map((t) => {
           const s = STATUS_MAP[t.status ?? "free"] ?? STATUS_MAP.free;
@@ -119,12 +177,20 @@ export default function MesasPage() {
               key={t.id}
               onClick={() => isOccupied ? setCloseTarget(t) : undefined}
               className={cn(
-                "rounded-xl p-5 text-left transition-shadow hover:shadow-lg border border-border",
+                "rounded-xl p-5 text-left transition-all hover:shadow-lg border border-border",
                 s.bg,
-                isOccupied && "cursor-pointer"
+                isOccupied && "cursor-pointer ring-1 ring-orange-300 dark:ring-orange-700"
               )}
             >
-              <div className="text-3xl font-bold text-foreground">{t.number}</div>
+              <div className="flex items-start justify-between">
+                <div className="text-3xl font-bold text-foreground">{t.number}</div>
+                {t.capacity && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="h-3 w-3" />
+                    {t.capacity}
+                  </div>
+                )}
+              </div>
               {t.name && <div className="text-sm text-muted-foreground mt-0.5">{t.name}</div>}
               <Badge variant="outline" className={cn("mt-3", s.text)}>{s.label}</Badge>
               {isOccupied && t.session_total !== undefined && (
@@ -136,8 +202,20 @@ export default function MesasPage() {
             </button>
           );
         })}
+
+        {/* Ghost add button inside grid */}
+        <button
+          onClick={() => setShowCreate(true)}
+          className="rounded-xl p-5 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2 min-h-[140px] group"
+        >
+          <div className="h-10 w-10 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors flex items-center justify-center">
+            <Plus className="h-5 w-5 text-primary" />
+          </div>
+          <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">Agregar</span>
+        </button>
       </div>
 
+      {/* Close table dialog */}
       <Dialog open={!!closeTarget} onOpenChange={() => setCloseTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -148,6 +226,46 @@ export default function MesasPage() {
             <Button variant="outline" onClick={() => setCloseTarget(null)}>Cancelar</Button>
             <Button variant="destructive" onClick={handleCloseTable} disabled={closing}>
               {closing ? "Cerrando..." : "Cerrar mesa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create table dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear nueva mesa</DialogTitle>
+            <DialogDescription>
+              Se asignará automáticamente el número {tables.length > 0 ? Math.max(...tables.map((t) => t.number)) + 1 : 1}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="table-name">Nombre (opcional)</Label>
+              <Input
+                id="table-name"
+                placeholder="Ej: Terraza 1, VIP..."
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="table-capacity">Capacidad</Label>
+              <Input
+                id="table-capacity"
+                type="number"
+                min={1}
+                max={20}
+                value={newCapacity}
+                onChange={(e) => setNewCapacity(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+            <Button onClick={handleCreateTable} disabled={creating}>
+              {creating ? "Creando..." : "Crear mesa"}
             </Button>
           </DialogFooter>
         </DialogContent>
