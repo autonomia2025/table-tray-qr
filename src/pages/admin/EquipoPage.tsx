@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Pencil, Eye, EyeOff, Loader2, Users } from "lucide-react";
+import { Plus, Pencil, Eye, EyeOff, Loader2, Users, Link2, Copy, Check } from "lucide-react";
 
 interface StaffRow {
   id: string;
