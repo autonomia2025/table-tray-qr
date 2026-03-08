@@ -894,6 +894,51 @@ export type Database = {
           },
         ]
       }
+      tenant_members: {
+        Row: {
+          branch_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          role: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           cover_image_url: string | null
