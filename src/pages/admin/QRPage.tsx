@@ -66,7 +66,7 @@ export default function QRPage() {
   };
 
   const getQrValue = () => {
-    if (selectedQrType === "mesa") return menuUrl;
+    if (selectedQrType === "mesa") return menuUrlForTable(selectedTable?.number ?? 0);
     return selectedTable?.qr_token || "";
   };
 
