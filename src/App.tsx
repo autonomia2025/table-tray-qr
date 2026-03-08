@@ -23,12 +23,15 @@ import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
 import SucursalPage from "./pages/admin/SucursalPage";
 import EquipoPage from "./pages/admin/EquipoPage";
+import PedidosPage from "./pages/admin/PedidosPage";
+import ReportesPage from "./pages/admin/ReportesPage";
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLoginPage from "./pages/mozo/MozoLoginPage";
 import MozoLayout from "./pages/mozo/MozoLayout";
 import MozoMesasPage from "./pages/mozo/MozoMesasPage";
 import MozoNotificacionesPage from "./pages/mozo/MozoNotificacionesPage";
 import MozoPerfilPage from "./pages/mozo/MozoPerfilPage";
+import MozoPedidoManualPage from "./pages/mozo/MozoPedidoManualPage";
 import { SuperAdminProvider } from "./contexts/SuperAdminContext";
 import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
 import SATenantsPage from "./pages/superadmin/SATenantsPage";
@@ -59,6 +62,8 @@ const App = () => (
               <Route path="equipo" element={<EquipoPage />} />
               <Route path="qr" element={<QRPage />} />
               <Route path="sucursal" element={<SucursalPage />} />
+              <Route path="pedidos" element={<PedidosPage />} />
+              <Route path="reportes" element={<ReportesPage />} />
             </Route>
           </Route>
           <Route path="/:slug" element={<RestaurantSplash />} />
@@ -75,6 +80,7 @@ const App = () => (
             <Route path="mesas" element={<MozoMesasPage />} />
             <Route path="notificaciones" element={<MozoNotificacionesPage />} />
             <Route path="perfil" element={<MozoPerfilPage />} />
+            <Route path="pedido-manual/:tableId" element={<MozoPedidoManualPage />} />
           </Route>
           <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
             <Route index element={<Navigate to="/superadmin/tenants" replace />} />

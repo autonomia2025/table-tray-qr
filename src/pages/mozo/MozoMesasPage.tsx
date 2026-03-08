@@ -6,7 +6,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, PlusCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface TableData {
   id: string;
@@ -47,6 +48,7 @@ function minutesAgo(dateStr: string) {
 export default function MozoMesasPage() {
   const { branchId, tenantId } = useWaiters();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
@@ -257,8 +259,18 @@ export default function MozoMesasPage() {
                 Entregar pedido ({readyOrders.length})
               </Button>
             )}
+            {selectedTable && (
+              <Button
+                variant="outline"
+                className="w-full h-12"
+                onClick={() => { setSheetOpen(false); navigate(`/mozo/pedido-manual/${selectedTable.id}`); }}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Pedir por cliente
+              </Button>
+            )}
             {(selectedTable?.status === 'occupied' || selectedTable?.status === 'waiting_bill') && (
-              <Button variant="destructive" className="w-full h-12 mt-4" disabled={actionLoading} onClick={closeTable}>
+              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading} onClick={closeTable}>
                 Cerrar mesa
               </Button>
             )}

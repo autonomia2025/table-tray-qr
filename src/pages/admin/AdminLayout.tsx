@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle } from "lucide-react";
+import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3 } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,9 @@ export default function AdminLayout() {
 
   const NAV_ITEMS = [
     { path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid },
+    { path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList },
     { path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen },
+    { path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3 },
     { path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users },
     { path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode },
     { path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings },
