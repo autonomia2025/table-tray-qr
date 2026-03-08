@@ -64,6 +64,13 @@ const App = () => (
             <Route path="notificaciones" element={<MozoNotificacionesPage />} />
             <Route path="perfil" element={<MozoPerfilPage />} />
           </Route>
+          <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
+            <Route index element={<Navigate to="/superadmin/tenants" replace />} />
+            <Route path="tenants" element={<SATenantsPage />} />
+            <Route path="metricas" element={<SAMetricsPage />} />
+            <Route path="flags" element={<SAFlagsPage />} />
+            <Route path="config" element={<SAConfigPage />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
