@@ -81,6 +81,9 @@ export default function ConfirmPage() {
 
   // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
 
+  // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
+  const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
+
   const stopCamera = useCallback(() => {
     // Stop the ZXing scanner controls first
     if (scannerControlsRef.current) {
@@ -107,21 +110,23 @@ export default function ConfirmPage() {
       const controls = await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current!,
-        (result, error) => {
-          // Only process if we got a real result AND we haven't already processed one
-          if (result && !processingRef.current) {
-            const text = result.getText();
-            if (text && text.trim().length > 0) {
-              processingRef.current = true;
-              // Stop scanner before processing
-              if (scannerControlsRef.current) {
-                try { scannerControlsRef.current.stop(); } catch {}
-                scannerControlsRef.current = null;
-              }
-              stopCamera();
-              handleScannedToken(text.trim());
-            }
+        (result) => {
+          // Guard: only process once
+          if (!result || processingRef.current) return;
+          const text = result.getText();
+          if (!text || text.trim().length === 0) return;
+
+          // Lock immediately to prevent any further processing
+          processingRef.current = true;
+
+          // Stop scanner immediately
+          if (scannerControlsRef.current) {
+            try { scannerControlsRef.current.stop(); } catch {}
+            scannerControlsRef.current = null;
           }
+
+          // Call handler via ref (always up-to-date)
+          handleScannedTokenRef.current(text.trim());
         }
       );
 
@@ -146,8 +151,13 @@ export default function ConfirmPage() {
   /* ---------- Order creation ---------- */
   const handleScannedToken = useCallback(
     async (rawScanned: string) => {
+      // Double-check guard
+      if (pageState === "processing" || pageState === "success") return;
+      
       setPageState("processing");
+      stopCamera();
       const scannedToken = extractTokenFromScan(rawScanned);
+
       try {
         // 1. Validate the scanned QR token against tables
         const { data: tableData, error: tableError } = await supabase
@@ -157,18 +167,25 @@ export default function ConfirmPage() {
           .maybeSingle();
 
         if (tableError || !tableData) {
-          throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
+          throw new Error("❌ QR no válido. Este código no corresponde a ninguna mesa. Asegúrate de escanear la tarjeta que está sobre tu mesa.");
         }
 
         if (storedTenantId && tableData.tenant_id !== storedTenantId) {
-          throw new Error("Este QR pertenece a otro restaurante.");
+          throw new Error("❌ Este QR pertenece a otro restaurante. Escanea la tarjeta de tu mesa actual.");
         }
 
-        // 2. Save table info in store
+        // 2. Verify cart has items
+        const currentItems = useCartStore.getState().items;
+        const currentTotalPrice = useCartStore.getState().getTotalPrice();
+        if (currentItems.length === 0) {
+          throw new Error("Tu carrito está vacío. Agrega productos antes de confirmar.");
+        }
+
+        // 3. Save table info in store
         setTableToken(scannedToken);
         setTableNumber(tableData.number);
 
-        // 3. Find or create active table_session
+        // 4. Find or create active table_session
         const { data: existingSession } = await supabase
           .from("table_sessions")
           .select("id, total_amount")
@@ -202,7 +219,7 @@ export default function ConfirmPage() {
           sessionId = newSession.id;
         }
 
-        // 4. Generate order number
+        // 5. Generate order number
         const { count } = await supabase
           .from("orders")
           .select("*", { count: "exact", head: true })
@@ -210,10 +227,7 @@ export default function ConfirmPage() {
 
         const orderNumber = (count || 0) + 1;
 
-        // 5. Create the order
-        const currentItems = useCartStore.getState().items;
-        const currentTotalPrice = useCartStore.getState().getTotalPrice();
-
+        // 6. Create the order
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
@@ -235,7 +249,7 @@ export default function ConfirmPage() {
           throw new Error("Error al crear el pedido. Intenta de nuevo.");
         }
 
-        // 6. Create order_items
+        // 7. Create order_items
         const orderItems = currentItems.map((item) => ({
           tenant_id: tableData.tenant_id,
           order_id: order.id,
@@ -253,7 +267,7 @@ export default function ConfirmPage() {
           throw new Error("Error al guardar los ítems del pedido.");
         }
 
-        // 7. Update table status + session total
+        // 8. Update table status + session total
         await supabase
           .from("tables")
           .update({ status: "occupied" })
@@ -264,7 +278,7 @@ export default function ConfirmPage() {
           .update({ total_amount: existingAmount + currentTotalPrice })
           .eq("id", sessionId);
 
-        // 8. Increment total_orders for each menu item
+        // 9. Increment total_orders for each menu item
         const itemCounts = new Map<string, number>();
         for (const ci of currentItems) {
           itemCounts.set(ci.menuItemId, (itemCounts.get(ci.menuItemId) || 0) + ci.quantity);
@@ -283,7 +297,7 @@ export default function ConfirmPage() {
           }
         }
 
-        // 9. Success — clear cart items (token stays)
+        // 10. Success — clear cart items (token stays)
         setPageState("success");
         clearCart();
 
@@ -292,12 +306,18 @@ export default function ConfirmPage() {
         }, 1500);
       } catch (err: any) {
         console.error("Order creation error:", err);
+        processingRef.current = false; // Allow retry
         setErrorMsg(err.message || "Error desconocido");
         setPageState("error");
       }
     },
-    [storedTenantId, orderNotes, clearCart, navigate, slug, setTableToken, setTableNumber],
+    [storedTenantId, orderNotes, clearCart, navigate, slug, setTableToken, setTableNumber, stopCamera, pageState],
   );
+
+  // Keep the ref always up-to-date
+  useEffect(() => {
+    handleScannedTokenRef.current = handleScannedToken;
+  }, [handleScannedToken]);
 
   /* ========== RENDER ========== */
   return (
