@@ -54,6 +54,8 @@ const App = () => (
           {/* Admin login (no slug needed) */}
           <Route path="/admin" element={<AdminLoginPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           {/* Admin with slug (protected) */}
           <Route path="/admin/:slug" element={<AdminProvider><AdminLayout /></AdminProvider>}>
             <Route element={<AdminGuard />}>
