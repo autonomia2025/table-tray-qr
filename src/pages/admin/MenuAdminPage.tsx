@@ -74,6 +74,8 @@ export default function MenuAdminPage() {
   });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: "cat" | "item"; id: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Load menu & categories
   useEffect(() => {
