@@ -80,13 +80,22 @@ export default function MenuAdminPage() {
   // Load menu & categories
   useEffect(() => {
     async function load() {
-      const { data: menu } = await supabase
+      let { data: menu } = await supabase
         .from("menus")
         .select("id")
         .eq("branch_id", branchId)
         .eq("is_active", true)
         .single();
-      if (!menu) { setLoadingCats(false); return; }
+
+      // Auto-create menu if none exists
+      if (!menu) {
+        const { data: newMenu, error } = await supabase.from("menus").insert({
+          branch_id: branchId, tenant_id: tenantId, name: "Menú Principal", is_active: true,
+        }).select("id").single();
+        if (error || !newMenu) { setLoadingCats(false); return; }
+        menu = newMenu;
+      }
+
       setMenuId(menu.id);
 
       const { data: cats } = await supabase
@@ -99,7 +108,7 @@ export default function MenuAdminPage() {
       setLoadingCats(false);
     }
     load();
-  }, [branchId]);
+  }, [branchId, tenantId]);
 
   // Load items when category selected
   useEffect(() => {
