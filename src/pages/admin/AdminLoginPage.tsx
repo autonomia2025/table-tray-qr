@@ -120,6 +120,11 @@ export default function AdminLoginPage() {
               {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Entrar
             </Button>
+            <div className="text-center">
+              <Link to="/admin/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
