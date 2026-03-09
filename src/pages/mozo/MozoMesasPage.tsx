@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, UserCheck, UserX } from 'lucide-react';
+import { Loader2, PlusCircle, UserCheck, UserX, ChefHat, CheckCircle2, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TableData {
@@ -18,12 +18,13 @@ interface TableData {
   assigned_waiter_id: string | null;
   sessionTotal?: number;
   sessionOpenedAt?: string;
+  activeOrders?: number;
 }
 
 interface OrderWithItems {
   id: string;
   order_number: number;
-  status: string | null;
+  status: string;
   total_amount: number;
   items: { menu_item_name: string; quantity: number }[];
 }
@@ -42,12 +43,18 @@ const STATUS_LABELS: Record<string, string> = {
   reserved: 'Reservada',
 };
 
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  confirmed: 'Nuevo',
+  in_kitchen: 'En cocina',
+  ready: 'Listo',
+};
+
 function minutesAgo(dateStr: string) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
 }
 
 export default function MozoMesasPage() {
-  const { branchId, tenantId, staffId } = useWaiters();
+  const { branchId, staffId } = useWaiters();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [tables, setTables] = useState<TableData[]>([]);
@@ -56,7 +63,7 @@ export default function MozoMesasPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchTables = async () => {
     const { data: tablesData } = await supabase
@@ -67,29 +74,42 @@ export default function MozoMesasPage() {
 
     if (!tablesData) return;
 
-    // Get active sessions for occupied tables
     const occupiedIds = tablesData.filter(t => t.status === 'occupied' || t.status === 'waiting_bill').map(t => t.id);
     let sessionsMap: Record<string, { total: number; opened: string }> = {};
 
     if (occupiedIds.length > 0) {
-      const { data: sessions } = await supabase
-        .from('table_sessions')
-        .select('table_id, total_amount, opened_at')
-        .in('table_id', occupiedIds)
-        .eq('is_active', true);
+      const [{ data: sessions }, { data: orderCounts }] = await Promise.all([
+        supabase
+          .from('table_sessions')
+          .select('table_id, total_amount, opened_at')
+          .in('table_id', occupiedIds)
+          .eq('is_active', true),
+        supabase
+          .from('orders')
+          .select('table_id')
+          .in('table_id', occupiedIds)
+          .in('status', ['confirmed', 'in_kitchen', 'ready']),
+      ]);
 
-      if (sessions) {
-        sessions.forEach(s => {
-          sessionsMap[s.table_id] = { total: s.total_amount ?? 0, opened: s.opened_at ?? '' };
-        });
-      }
+      sessions?.forEach(s => {
+        sessionsMap[s.table_id] = { total: s.total_amount ?? 0, opened: s.opened_at ?? '' };
+      });
+
+      // Count active orders per table
+      const orderCountMap: Record<string, number> = {};
+      orderCounts?.forEach(o => {
+        orderCountMap[o.table_id] = (orderCountMap[o.table_id] ?? 0) + 1;
+      });
+
+      setTables(tablesData.map(t => ({
+        ...t,
+        sessionTotal: sessionsMap[t.id]?.total,
+        sessionOpenedAt: sessionsMap[t.id]?.opened,
+        activeOrders: orderCountMap[t.id] ?? 0,
+      })));
+    } else {
+      setTables(tablesData.map(t => ({ ...t })));
     }
-
-    setTables(tablesData.map(t => ({
-      ...t,
-      sessionTotal: sessionsMap[t.id]?.total,
-      sessionOpenedAt: sessionsMap[t.id]?.opened,
-    })));
     setLoading(false);
   };
 
@@ -98,7 +118,8 @@ export default function MozoMesasPage() {
 
     const channel = supabase
       .channel('mozo-tables')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -107,11 +128,15 @@ export default function MozoMesasPage() {
   const toggleAssignment = async (table: TableData, e: React.MouseEvent) => {
     e.stopPropagation();
     const isMyTable = table.assigned_waiter_id === staffId;
-    await supabase
+    const { error } = await supabase
       .from('tables')
       .update({ assigned_waiter_id: isMyTable ? null : staffId })
       .eq('id', table.id);
-    toast({ title: isMyTable ? 'Mesa liberada' : `Mesa ${table.number} tomada` });
+    if (error) {
+      toast({ title: 'Error al actualizar mesa', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: isMyTable ? 'Mesa liberada' : `Mesa ${table.number} tomada` });
+    }
     fetchTables();
   };
 
@@ -146,35 +171,57 @@ export default function MozoMesasPage() {
 
     setOrders(ordersData.map(o => ({
       ...o,
+      status: o.status ?? 'confirmed',
       items: (items ?? []).filter(i => i.order_id === o.id),
     })));
     setOrdersLoading(false);
   };
 
-  const updateOrderStatus = async (ids: string[], newStatus: string, extra: Record<string, any> = {}) => {
-    setActionLoading(true);
-    for (const id of ids) {
-      await supabase.from('orders').update({ status: newStatus, ...extra }).eq('id', id);
+  const handleOrderAction = async (order: OrderWithItems) => {
+    setActionLoading(order.id);
+    const now = new Date().toISOString();
+    if (order.status === 'confirmed') {
+      await supabase.from('orders').update({ status: 'in_kitchen', kitchen_accepted_at: now }).eq('id', order.id);
+      toast({ title: `Pedido #${order.order_number} → cocina` });
+    } else if (order.status === 'in_kitchen') {
+      await supabase.from('orders').update({ status: 'ready', ready_at: now }).eq('id', order.id);
+      toast({ title: `Pedido #${order.order_number} → listo` });
+    } else if (order.status === 'ready') {
+      await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('id', order.id);
+      toast({ title: `Pedido #${order.order_number} → entregado` });
     }
-    toast({ title: 'Actualizado', description: `Pedido(s) → ${newStatus}` });
     if (selectedTable) openSheet(selectedTable);
-    setActionLoading(false);
+    setActionLoading(null);
   };
 
   const closeTable = async () => {
     if (!selectedTable) return;
-    setActionLoading(true);
+    setActionLoading('close');
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', selectedTable.id);
     await supabase.from('table_sessions').update({ is_active: false, closed_at: new Date().toISOString() }).eq('table_id', selectedTable.id).eq('is_active', true);
     toast({ title: 'Mesa cerrada' });
     setSheetOpen(false);
-    setActionLoading(false);
+    setActionLoading(null);
     fetchTables();
   };
 
-  const confirmedOrders = orders.filter(o => o.status === 'confirmed');
-  const inKitchenOrders = orders.filter(o => o.status === 'in_kitchen');
-  const readyOrders = orders.filter(o => o.status === 'ready');
+  const getActionLabel = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'Enviar a cocina';
+      case 'in_kitchen': return 'Marcar listo';
+      case 'ready': return 'Entregado';
+      default: return '';
+    }
+  };
+
+  const getActionIcon = (status: string) => {
+    switch (status) {
+      case 'confirmed': return <ChefHat className="w-4 h-4" />;
+      case 'in_kitchen': return <CheckCircle2 className="w-4 h-4" />;
+      case 'ready': return <Truck className="w-4 h-4" />;
+      default: return null;
+    }
+  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
@@ -218,7 +265,7 @@ export default function MozoMesasPage() {
                 </div>
               </div>
               {t.name && <p className="text-xs mt-0.5 truncate opacity-70">{t.name}</p>}
-              <div className="flex items-center gap-1.5 mt-2">
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 <Badge variant="outline" className="text-[10px] border-current">
                   {STATUS_LABELS[st] ?? st}
                 </Badge>
@@ -227,6 +274,11 @@ export default function MozoMesasPage() {
                 )}
                 {assignedToOther && (
                   <Badge variant="secondary" className="text-[10px]">Otro mozo</Badge>
+                )}
+                {isActive && (t.activeOrders ?? 0) > 0 && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    {t.activeOrders} pedido{(t.activeOrders ?? 0) > 1 ? 's' : ''}
+                  </Badge>
                 )}
               </div>
               {isActive && t.sessionTotal !== undefined && (
@@ -253,51 +305,39 @@ export default function MozoMesasPage() {
           ) : orders.length === 0 ? (
             <p className="text-muted-foreground text-center py-8 text-sm">Sin pedidos activos</p>
           ) : (
-            <div className="space-y-3 mb-6 max-h-[40vh] overflow-auto">
+            <div className="space-y-3 mb-6 max-h-[45vh] overflow-auto">
               {orders.map(o => (
                 <div key={o.id} className="bg-muted/50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-semibold">Pedido #{o.order_number}</span>
                     <Badge variant={o.status === 'confirmed' ? 'destructive' : o.status === 'ready' ? 'default' : 'secondary'} className="text-[10px]">
-                      {o.status === 'confirmed' ? 'Nuevo' : o.status === 'in_kitchen' ? 'Cocina' : 'Listo'}
+                      {ORDER_STATUS_LABELS[o.status] ?? o.status}
                     </Badge>
                   </div>
                   {o.items.map((it, idx) => (
                     <p key={idx} className="text-sm text-foreground">{it.quantity}× {it.menu_item_name}</p>
                   ))}
+                  <Button
+                    size="sm"
+                    className="w-full mt-2 h-9 gap-1.5"
+                    disabled={actionLoading === o.id}
+                    onClick={() => handleOrderAction(o)}
+                  >
+                    {actionLoading === o.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        {getActionIcon(o.status)}
+                        {getActionLabel(o.status)}
+                      </>
+                    )}
+                  </Button>
                 </div>
               ))}
             </div>
           )}
 
           <div className="space-y-2">
-            {confirmedOrders.length > 0 && (
-              <Button
-                className="w-full h-12"
-                disabled={actionLoading}
-                onClick={() => updateOrderStatus(confirmedOrders.map(o => o.id), 'in_kitchen', { kitchen_accepted_at: new Date().toISOString() })}
-              >
-                Llevar a cocina ({confirmedOrders.length})
-              </Button>
-            )}
-            {inKitchenOrders.length > 0 && (
-              <Button
-                className="w-full h-12 bg-green-600 hover:bg-green-700"
-                disabled={actionLoading}
-                onClick={() => updateOrderStatus(inKitchenOrders.map(o => o.id), 'ready', { ready_at: new Date().toISOString() })}
-              >
-                Marcar como listo ({inKitchenOrders.length})
-              </Button>
-            )}
-            {readyOrders.length > 0 && (
-              <Button
-                className="w-full h-12 bg-green-800 hover:bg-green-900"
-                disabled={actionLoading}
-                onClick={() => updateOrderStatus(readyOrders.map(o => o.id), 'delivered', { delivered_at: new Date().toISOString() })}
-              >
-                Entregar pedido ({readyOrders.length})
-              </Button>
-            )}
             {selectedTable && (
               <Button
                 variant="outline"
@@ -309,7 +349,7 @@ export default function MozoMesasPage() {
               </Button>
             )}
             {(selectedTable?.status === 'occupied' || selectedTable?.status === 'waiting_bill') && (
-              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading} onClick={closeTable}>
+              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading === 'close'} onClick={closeTable}>
                 Cerrar mesa
               </Button>
             )}
