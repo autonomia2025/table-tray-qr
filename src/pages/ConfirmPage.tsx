@@ -88,6 +88,12 @@ export default function ConfirmPage() {
   }, []); // only on mount
 
   const stopCamera = useCallback(() => {
+    // Stop the ZXing scanner controls first
+    if (scannerControlsRef.current) {
+      try { scannerControlsRef.current.stop(); } catch {}
+      scannerControlsRef.current = null;
+    }
+    // Then stop the media stream
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((t) => t.stop());
@@ -97,23 +103,35 @@ export default function ConfirmPage() {
 
   const startScanning = useCallback(async () => {
     setCameraError("");
+    processingRef.current = false;
     setPageState("scanning");
 
     try {
       const reader = new BrowserQRCodeReader();
       codeReaderRef.current = reader;
 
-      await reader.decodeFromVideoDevice(
+      const controls = await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current!,
-        (result) => {
-          if (result) {
-            const token = extractTokenFromScan(result.getText());
-            stopCamera();
-            handleScannedToken(token);
+        (result, error) => {
+          // Only process if we got a real result AND we haven't already processed one
+          if (result && !processingRef.current) {
+            const text = result.getText();
+            if (text && text.trim().length > 0) {
+              processingRef.current = true;
+              // Stop scanner before processing
+              if (scannerControlsRef.current) {
+                try { scannerControlsRef.current.stop(); } catch {}
+                scannerControlsRef.current = null;
+              }
+              stopCamera();
+              handleScannedToken(text.trim());
+            }
           }
         }
       );
+
+      scannerControlsRef.current = controls;
     } catch (err: any) {
       console.error("Camera error:", err);
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
