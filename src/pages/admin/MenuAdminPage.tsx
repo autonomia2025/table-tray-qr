@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, ArrowUp, ArrowDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowUp, ArrowDown, Pencil, Trash2, Upload, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Category {
@@ -74,6 +74,8 @@ export default function MenuAdminPage() {
   });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: "cat" | "item"; id: string; name: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Load menu & categories
   useEffect(() => {
@@ -172,14 +174,65 @@ export default function MenuAdminPage() {
         labels: item.labels ?? [], allergens: item.allergens ?? [],
         prep_time_minutes: item.prep_time_minutes ?? 0,
       });
+      setImagePreview(item.image_url ?? null);
     } else {
       setEditItem(null);
       setItemForm({
         name: "", description_short: "", description_long: "", price: 0,
         image_url: "", status: "available", labels: [], allergens: [], prep_time_minutes: 0,
       });
+      setImagePreview(null);
     }
     setItemSheet(true);
+  };
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast({ title: "Formato no válido", description: "Solo JPG, PNG, WEBP o GIF", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Archivo muy grande", description: "Máximo 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+
+    // Generate unique filename
+    const ext = file.name.split('.').pop();
+    const filename = `${tenantId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from('menu-images')
+      .upload(filename, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      toast({ title: "Error al subir imagen", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(data.path);
+
+    setItemForm((p) => ({ ...p, image_url: publicUrl }));
+    setImagePreview(publicUrl);
+    setUploading(false);
+    toast({ title: "Imagen subida correctamente" });
+  };
+
+  const removeImage = () => {
+    setItemForm((p) => ({ ...p, image_url: "" }));
+    setImagePreview(null);
   };
 
   const saveItem = async () => {
@@ -364,7 +417,56 @@ export default function MenuAdminPage() {
             <div><Label>Descripción corta</Label><Input value={itemForm.description_short} onChange={(e) => setItemForm((p) => ({ ...p, description_short: e.target.value }))} maxLength={120} /></div>
             <div><Label>Descripción larga</Label><Textarea value={itemForm.description_long} onChange={(e) => setItemForm((p) => ({ ...p, description_long: e.target.value }))} maxLength={500} /></div>
             <div><Label>Precio (CLP)</Label><Input type="number" value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: parseInt(e.target.value) || 0 }))} /></div>
-            <div><Label>URL Imagen</Label><Input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} /></div>
+            {/* Image upload section */}
+            <div>
+              <Label className="mb-2 block">Imagen</Label>
+              {imagePreview ? (
+                <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  {uploading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                      <span className="text-sm">Subiendo...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm text-muted-foreground">Click para subir imagen</span>
+                      <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, GIF (máx. 5MB)</span>
+                    </>
+                  )}
+                </label>
+              )}
+              {/* URL fallback */}
+              <div className="mt-2">
+                <Input
+                  placeholder="O pegar URL de imagen..."
+                  value={itemForm.image_url}
+                  onChange={(e) => {
+                    setItemForm((p) => ({ ...p, image_url: e.target.value }));
+                    setImagePreview(e.target.value || null);
+                  }}
+                  className="text-xs"
+                />
+              </div>
+            </div>
             <div>
               <Label>Estado</Label>
               <Select value={itemForm.status} onValueChange={(v) => setItemForm((p) => ({ ...p, status: v }))}>
