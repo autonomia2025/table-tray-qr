@@ -81,6 +81,9 @@ export default function ConfirmPage() {
 
   // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
 
+  // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
+  const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
+
   const stopCamera = useCallback(() => {
     // Stop the ZXing scanner controls first
     if (scannerControlsRef.current) {
@@ -107,21 +110,23 @@ export default function ConfirmPage() {
       const controls = await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current!,
-        (result, error) => {
-          // Only process if we got a real result AND we haven't already processed one
-          if (result && !processingRef.current) {
-            const text = result.getText();
-            if (text && text.trim().length > 0) {
-              processingRef.current = true;
-              // Stop scanner before processing
-              if (scannerControlsRef.current) {
-                try { scannerControlsRef.current.stop(); } catch {}
-                scannerControlsRef.current = null;
-              }
-              stopCamera();
-              handleScannedToken(text.trim());
-            }
+        (result) => {
+          // Guard: only process once
+          if (!result || processingRef.current) return;
+          const text = result.getText();
+          if (!text || text.trim().length === 0) return;
+
+          // Lock immediately to prevent any further processing
+          processingRef.current = true;
+
+          // Stop scanner immediately
+          if (scannerControlsRef.current) {
+            try { scannerControlsRef.current.stop(); } catch {}
+            scannerControlsRef.current = null;
           }
+
+          // Call handler via ref (always up-to-date)
+          handleScannedTokenRef.current(text.trim());
         }
       );
 
