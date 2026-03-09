@@ -144,15 +144,16 @@ export default function ConfirmPage() {
   }, [stopCamera]);
 
   const cancelScanning = useCallback(() => {
+    processingRef.current = false;
     stopCamera();
     setPageState("summary");
   }, [stopCamera]);
 
   /* ---------- Order creation ---------- */
   const handleScannedToken = useCallback(
-    async (scannedToken: string) => {
+    async (rawScanned: string) => {
       setPageState("processing");
-
+      const scannedToken = extractTokenFromScan(rawScanned);
       try {
         // 1. Validate the scanned QR token against tables
         const { data: tableData, error: tableError } = await supabase
