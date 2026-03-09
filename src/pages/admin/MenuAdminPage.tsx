@@ -254,9 +254,11 @@ export default function MenuAdminPage() {
       tenant_id: tenantId,
     };
     if (editItem) {
-      await supabase.from("menu_items").update(payload).eq("id", editItem.id);
+      const { error } = await supabase.from("menu_items").update(payload).eq("id", editItem.id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
     } else {
-      await supabase.from("menu_items").insert({ ...payload, sort_order: items.length });
+      const { error } = await supabase.from("menu_items").insert({ ...payload, sort_order: items.length });
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
     }
     setItemSheet(false);
     setSaving(false);
