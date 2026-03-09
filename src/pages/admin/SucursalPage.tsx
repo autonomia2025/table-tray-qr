@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface TableData {
   id: string;
@@ -127,8 +128,8 @@ export default function SucursalPage() {
               <Input value={tenantForm.primary_color} onChange={(e) => setTenantForm((p) => ({ ...p, primary_color: e.target.value }))} className="w-32" />
             </div>
           </div>
-          <div><Label>URL Logo</Label><Input value={tenantForm.logo_url} onChange={(e) => setTenantForm((p) => ({ ...p, logo_url: e.target.value }))} /></div>
-          <div><Label>URL Imagen de portada</Label><Input value={tenantForm.cover_image_url} onChange={(e) => setTenantForm((p) => ({ ...p, cover_image_url: e.target.value }))} /></div>
+          <ImageUploadField label="Logo" value={tenantForm.logo_url} tenantId={tenantId} folder="logo" onChange={(url) => setTenantForm((p) => ({ ...p, logo_url: url }))} />
+          <ImageUploadField label="Imagen de portada" value={tenantForm.cover_image_url} tenantId={tenantId} folder="cover" onChange={(url) => setTenantForm((p) => ({ ...p, cover_image_url: url }))} />
           <div><Label>Mensaje de bienvenida</Label><Textarea value={tenantForm.welcome_message} onChange={(e) => setTenantForm((p) => ({ ...p, welcome_message: e.target.value }))} /></div>
         </CardContent>
       </Card>
