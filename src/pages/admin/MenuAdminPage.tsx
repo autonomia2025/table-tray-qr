@@ -131,19 +131,21 @@ export default function MenuAdminPage() {
   const saveCat = async () => {
     setSaving(true);
     if (editCat) {
-      await supabase.from("categories").update({
+      const { error } = await supabase.from("categories").update({
         name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible,
       }).eq("id", editCat.id);
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
     } else if (menuId) {
-      await supabase.from("categories").insert({
+      const { error } = await supabase.from("categories").insert({
         name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible,
         menu_id: menuId, tenant_id: tenantId, sort_order: categories.length,
       });
+      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
     }
     setCatModal(false);
     setSaving(false);
     toast({ title: editCat ? "Categoría actualizada" : "Categoría creada" });
-    refreshCats();
+    await refreshCats();
   };
 
   const refreshCats = async () => {
