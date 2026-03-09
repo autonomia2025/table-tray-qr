@@ -81,7 +81,6 @@ export default function EquipoPage() {
     setSaving(true);
 
     if (editingId) {
-      // Update existing staff (only name and role)
       const { error: updateError } = await supabase
         .from("staff_users")
         .update({ name: name.trim(), role })
@@ -94,13 +93,12 @@ export default function EquipoPage() {
       }
       toast({ title: "Mozo actualizado" });
     } else {
-      // Create new staff with auth account
       if (!email.trim()) { setError("Email obligatorio"); setSaving(false); return; }
       if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); setSaving(false); return; }
 
       // Create auth user via edge function
       const { data: userData, error: fnError } = await supabase.functions.invoke("create-tenant-user", {
-        body: { email: email.trim(), password },
+        body: { email: email.trim(), password, tenant_id: tenantId, branch_id: branchId },
       });
 
       if (fnError || userData?.error) {
