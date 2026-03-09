@@ -417,7 +417,56 @@ export default function MenuAdminPage() {
             <div><Label>Descripción corta</Label><Input value={itemForm.description_short} onChange={(e) => setItemForm((p) => ({ ...p, description_short: e.target.value }))} maxLength={120} /></div>
             <div><Label>Descripción larga</Label><Textarea value={itemForm.description_long} onChange={(e) => setItemForm((p) => ({ ...p, description_long: e.target.value }))} maxLength={500} /></div>
             <div><Label>Precio (CLP)</Label><Input type="number" value={itemForm.price} onChange={(e) => setItemForm((p) => ({ ...p, price: parseInt(e.target.value) || 0 }))} /></div>
-            <div><Label>URL Imagen</Label><Input value={itemForm.image_url} onChange={(e) => setItemForm((p) => ({ ...p, image_url: e.target.value }))} /></div>
+            {/* Image upload section */}
+            <div>
+              <Label className="mb-2 block">Imagen</Label>
+              {imagePreview ? (
+                <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-accent/50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  {uploading ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                      <span className="text-sm">Subiendo...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <span className="text-sm text-muted-foreground">Click para subir imagen</span>
+                      <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, GIF (máx. 5MB)</span>
+                    </>
+                  )}
+                </label>
+              )}
+              {/* URL fallback */}
+              <div className="mt-2">
+                <Input
+                  placeholder="O pegar URL de imagen..."
+                  value={itemForm.image_url}
+                  onChange={(e) => {
+                    setItemForm((p) => ({ ...p, image_url: e.target.value }));
+                    setImagePreview(e.target.value || null);
+                  }}
+                  className="text-xs"
+                />
+              </div>
+            </div>
             <div>
               <Label>Estado</Label>
               <Select value={itemForm.status} onValueChange={(v) => setItemForm((p) => ({ ...p, status: v }))}>
