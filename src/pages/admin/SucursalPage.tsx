@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface TableData {
   id: string;
