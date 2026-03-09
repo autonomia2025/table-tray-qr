@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, ArrowUp, ArrowDown, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowUp, ArrowDown, Pencil, Trash2, Upload, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Category {
