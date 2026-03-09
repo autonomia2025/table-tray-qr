@@ -20,7 +20,7 @@ export default function ReportKPICard({ label, value, icon: Icon, subtitle, tren
         </div>
         <p className="text-2xl font-bold text-foreground">{value}</p>
         {trend !== undefined && (
-          <p className={cn("text-xs font-medium mt-1", trend >= 0 ? "text-green-600" : "text-red-500")}>
+          <p className={cn("text-xs font-medium mt-1", trend >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
             {trend >= 0 ? "+" : ""}{trend}% vs período anterior
           </p>
         )}

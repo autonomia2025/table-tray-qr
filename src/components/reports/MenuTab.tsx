@@ -211,7 +211,7 @@ export default function MenuTab({ orderItems, allMenuItems, categories, cancelle
                 {cancelledItems.map(([name, count]) => (
                   <div key={name} className="flex items-center justify-between text-sm">
                     <span className="text-foreground truncate max-w-[200px]">{name}</span>
-                    <span className="font-semibold text-red-500">{count}</span>
+                    <span className="font-semibold text-destructive">{count}</span>
                   </div>
                 ))}
               </div>
