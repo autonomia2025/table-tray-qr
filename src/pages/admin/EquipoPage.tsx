@@ -9,14 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Pencil, Eye, EyeOff, Loader2, Users, Link2, Copy, Check } from "lucide-react";
+import { Plus, Pencil, Loader2, Users, Link2, Copy, Check, Mail } from "lucide-react";
 
 interface StaffRow {
   id: string;
   name: string;
-  pin: string | null;
   role: string;
   is_active: boolean | null;
+  auth_user_id: string | null;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -33,10 +33,10 @@ export default function EquipoPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [pin, setPin] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState("waiter");
   const [saving, setSaving] = useState(false);
-  const [revealedPins, setRevealedPins] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [generatingLink, setGeneratingLink] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -44,7 +44,7 @@ export default function EquipoPage() {
   const fetchStaff = async () => {
     const { data } = await supabase
       .from("staff_users")
-      .select("id, name, pin, role, is_active")
+      .select("id, name, role, is_active, auth_user_id")
       .eq("branch_id", branchId)
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
@@ -57,7 +57,8 @@ export default function EquipoPage() {
   const openCreate = () => {
     setEditingId(null);
     setName("");
-    setPin("");
+    setEmail("");
+    setPassword("");
     setRole("waiter");
     setError("");
     setModalOpen(true);
@@ -66,7 +67,8 @@ export default function EquipoPage() {
   const openEdit = (s: StaffRow) => {
     setEditingId(s.id);
     setName(s.name);
-    setPin(s.pin ?? "");
+    setEmail("");
+    setPassword("");
     setRole(s.role);
     setError("");
     setModalOpen(true);
@@ -75,37 +77,56 @@ export default function EquipoPage() {
   const save = async () => {
     setError("");
     if (!name.trim()) { setError("Nombre obligatorio"); return; }
-    if (!/^\d{4}$/.test(pin)) { setError("PIN debe ser exactamente 4 dígitos"); return; }
 
     setSaving(true);
 
-    // Check PIN collision
-    const { data: collision } = await supabase
-      .from("staff_users")
-      .select("id")
-      .eq("pin", pin)
-      .eq("branch_id", branchId)
-      .eq("is_active", true)
-      .neq("id", editingId ?? "00000000-0000-0000-0000-000000000000")
-      .maybeSingle();
-
-    if (collision) {
-      setError("Este PIN ya está en uso, elige otro");
-      setSaving(false);
-      return;
-    }
-
     if (editingId) {
-      await supabase
+      // Update existing staff (only name and role)
+      const { error: updateError } = await supabase
         .from("staff_users")
-        .update({ name: name.trim(), pin, role })
+        .update({ name: name.trim(), role })
         .eq("id", editingId);
+
+      if (updateError) {
+        setError("Error al actualizar");
+        setSaving(false);
+        return;
+      }
       toast({ title: "Mozo actualizado" });
     } else {
-      await supabase
+      // Create new staff with auth account
+      if (!email.trim()) { setError("Email obligatorio"); setSaving(false); return; }
+      if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); setSaving(false); return; }
+
+      // Create auth user via edge function
+      const { data: userData, error: fnError } = await supabase.functions.invoke("create-tenant-user", {
+        body: { email: email.trim(), password },
+      });
+
+      if (fnError || userData?.error) {
+        setError(userData?.error || fnError?.message || "Error al crear usuario");
+        setSaving(false);
+        return;
+      }
+
+      // Create staff_users record
+      const { error: staffError } = await supabase
         .from("staff_users")
-        .insert({ name: name.trim(), pin, role, branch_id: branchId, tenant_id: tenantId, is_active: true });
-      toast({ title: "Mozo creado" });
+        .insert({
+          name: name.trim(),
+          role,
+          branch_id: branchId,
+          tenant_id: tenantId,
+          is_active: true,
+          auth_user_id: userData.user_id,
+        });
+
+      if (staffError) {
+        setError("Error al crear el mozo");
+        setSaving(false);
+        return;
+      }
+      toast({ title: "Mozo creado con email y contraseña" });
     }
 
     setModalOpen(false);
@@ -117,14 +138,6 @@ export default function EquipoPage() {
     await supabase.from("staff_users").update({ is_active: !s.is_active }).eq("id", s.id);
     toast({ title: `${s.name} ${!s.is_active ? "activado" : "desactivado"}` });
     fetchStaff();
-  };
-
-  const toggleReveal = (id: string) => {
-    setRevealedPins(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
   };
 
   const generateInviteLink = async () => {
@@ -144,7 +157,7 @@ export default function EquipoPage() {
     const link = `${window.location.origin}/mozo/join/${data.token}`;
     await navigator.clipboard.writeText(link);
     setCopiedLink(true);
-    toast({ title: "Link copiado al portapapeles" });
+    toast({ title: "Link copiado al portapapeles", description: "El mozo deberá registrarse con email y contraseña" });
     setGeneratingLink(false);
     setTimeout(() => setCopiedLink(false), 3000);
   };
@@ -172,7 +185,7 @@ export default function EquipoPage() {
       {staff.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <p>No hay mozos registrados</p>
-          <p className="text-sm mt-1">Agrega tu primer mozo para que pueda usar la app</p>
+          <p className="text-sm mt-1">Agrega tu primer mozo o envía un link de invitación</p>
         </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
@@ -180,8 +193,8 @@ export default function EquipoPage() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">PIN</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Rol</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Auth</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Activo</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Acciones</th>
               </tr>
@@ -191,19 +204,18 @@ export default function EquipoPage() {
                 <tr key={s.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 font-medium text-foreground">{s.name}</td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <span className="font-mono text-xs">
-                        {revealedPins.has(s.id) ? s.pin : "••••"}
-                      </span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleReveal(s.id)}>
-                        {revealedPins.has(s.id) ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </Button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
                     <Badge variant="outline" className="text-[10px]">
                       {ROLE_LABELS[s.role] ?? s.role}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    {s.auth_user_id ? (
+                      <Badge variant="secondary" className="text-[10px] gap-1">
+                        <Mail className="h-3 w-3" /> Vinculado
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground">Sin cuenta</Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <Switch checked={!!s.is_active} onCheckedChange={() => toggleActive(s)} />
@@ -230,16 +242,18 @@ export default function EquipoPage() {
               <Label>Nombre</Label>
               <Input value={name} onChange={e => setName(e.target.value)} placeholder="Juan Pérez" />
             </div>
-            <div>
-              <Label>PIN (4 dígitos)</Label>
-              <Input
-                value={pin}
-                onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                placeholder="1234"
-                maxLength={4}
-                inputMode="numeric"
-              />
-            </div>
+            {!editingId && (
+              <>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="juan@email.com" />
+                </div>
+                <div>
+                  <Label>Contraseña</Label>
+                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                </div>
+              </>
+            )}
             <div>
               <Label>Rol</Label>
               <Select value={role} onValueChange={setRole}>
