@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, password } = await req.json();
+    const { email, password, tenant_id, branch_id } = await req.json();
 
     if (!email || !password || password.length < 6) {
       return new Response(
@@ -44,7 +44,6 @@ Deno.serve(async (req) => {
 
     if (error) {
       if (error.message.includes("already been registered")) {
-        // Find existing user by email
         const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
         if (listError) {
           return new Response(
@@ -68,6 +67,29 @@ Deno.serve(async (req) => {
       }
     } else {
       userId = data.user.id;
+    }
+
+    // Add to tenant_members if tenant_id provided (for staff users)
+    if (tenant_id) {
+      // Check if already a member
+      const { data: existing } = await supabaseAdmin
+        .from("tenant_members")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabaseAdmin
+          .from("tenant_members")
+          .insert({
+            user_id: userId,
+            tenant_id,
+            branch_id: branch_id || null,
+            role: "staff",
+            is_active: true,
+          });
+      }
     }
 
     return new Response(
