@@ -60,6 +60,8 @@ export default function ConfirmPage() {
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
+  const processingRef = useRef(false);
 
   const totalPrice = getTotalPrice();
 
