@@ -45,28 +45,33 @@ export function fmtPct(n: number) { return (n >= 0 ? "+" : "") + n + "%"; }
 export function fmtMin(seconds: number) { return Math.round(seconds / 60) + " min"; }
 
 // ── Fetch all rows (bypasses 1000 limit) ──────────────────
-export async function fetchAll<T = Record<string, unknown>>(
-  table: "orders" | "order_items" | "table_sessions" | "waiter_calls" | "bill_requests" | "tenants",
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchAll(
+  table: string,
   select: string,
   filters: { column: string; op: string; value: string | boolean | number }[]
-): Promise<T[]> {
+): Promise<any[]> {
   const PAGE = 1000;
-  const all: T[] = [];
+  const all: any[] = [];
   let page = 0;
   let hasMore = true;
+  
+  // Cast to any to avoid deep type instantiation
+  const client = supabase as any;
+  
   while (hasMore) {
     const from = page * PAGE;
     const to = from + PAGE - 1;
-    let query = supabase.from(table).select(select).range(from, to);
+    let query = client.from(table).select(select).range(from, to);
     for (const f of filters) {
-      if (f.op === "eq") query = query.eq(f.column, f.value as string);
-      else if (f.op === "gte") query = query.gte(f.column, f.value as string);
-      else if (f.op === "lte") query = query.lte(f.column, f.value as string);
-      else if (f.op === "neq") query = query.neq(f.column, f.value as string);
+      if (f.op === "eq") query = query.eq(f.column, f.value);
+      else if (f.op === "gte") query = query.gte(f.column, f.value);
+      else if (f.op === "lte") query = query.lte(f.column, f.value);
+      else if (f.op === "neq") query = query.neq(f.column, f.value);
     }
     const { data } = await query;
     if (!data || data.length === 0) { hasMore = false; break; }
-    all.push(...(data as T[]));
+    all.push(...data);
     if (data.length < PAGE) hasMore = false;
     page++;
   }
