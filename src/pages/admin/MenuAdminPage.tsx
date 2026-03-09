@@ -174,14 +174,65 @@ export default function MenuAdminPage() {
         labels: item.labels ?? [], allergens: item.allergens ?? [],
         prep_time_minutes: item.prep_time_minutes ?? 0,
       });
+      setImagePreview(item.image_url ?? null);
     } else {
       setEditItem(null);
       setItemForm({
         name: "", description_short: "", description_long: "", price: 0,
         image_url: "", status: "available", labels: [], allergens: [], prep_time_minutes: 0,
       });
+      setImagePreview(null);
     }
     setItemSheet(true);
+  };
+
+  // Image upload handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+      toast({ title: "Formato no válido", description: "Solo JPG, PNG, WEBP o GIF", variant: "destructive" });
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Archivo muy grande", description: "Máximo 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+
+    // Generate unique filename
+    const ext = file.name.split('.').pop();
+    const filename = `${tenantId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from('menu-images')
+      .upload(filename, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      toast({ title: "Error al subir imagen", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('menu-images')
+      .getPublicUrl(data.path);
+
+    setItemForm((p) => ({ ...p, image_url: publicUrl }));
+    setImagePreview(publicUrl);
+    setUploading(false);
+    toast({ title: "Imagen subida correctamente" });
+  };
+
+  const removeImage = () => {
+    setItemForm((p) => ({ ...p, image_url: "" }));
+    setImagePreview(null);
   };
 
   const saveItem = async () => {
