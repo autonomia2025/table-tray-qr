@@ -79,13 +79,7 @@ export default function ConfirmPage() {
     };
   }, []);
 
-  // Auto-scan when arriving from cart
-  useEffect(() => {
-    if (autoScan && items.length > 0 && pageState === "summary") {
-      const timer = setTimeout(() => startScanning(), 300);
-      return () => clearTimeout(timer);
-    }
-  }, []); // only on mount
+  // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
 
   const stopCamera = useCallback(() => {
     // Stop the ZXing scanner controls first
