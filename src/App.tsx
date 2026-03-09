@@ -38,6 +38,8 @@ import SATenantsPage from "./pages/superadmin/SATenantsPage";
 import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
 import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
+import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
