@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Mail, Lock, User } from "lucide-react";
 
 export default function MozoJoinPage() {
   const { token } = useParams<{ token: string }>();
@@ -21,7 +21,8 @@ export default function MozoJoinPage() {
   const [expired, setExpired] = useState(false);
   const [used, setUsed] = useState(false);
   const [name, setName] = useState("");
-  const [pin, setPin] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -53,7 +54,6 @@ export default function MozoJoinPage() {
         return;
       }
 
-      // Get tenant name
       const { data: tenant } = await supabase
         .from("tenants")
         .select("name")
@@ -74,55 +74,32 @@ export default function MozoJoinPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invitation) return;
+    if (!invitation || !token) return;
     setError("");
 
     if (!name.trim()) { setError("Nombre obligatorio"); return; }
-    if (!/^\d{4}$/.test(pin)) { setError("PIN debe ser exactamente 4 dígitos"); return; }
+    if (!email.trim()) { setError("Email obligatorio"); return; }
+    if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
 
     setSaving(true);
 
-    // Check PIN collision
-    const { data: collision } = await supabase
-      .from("staff_users")
-      .select("id")
-      .eq("pin", pin)
-      .eq("branch_id", invitation.branch_id)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (collision) {
-      setError("Este PIN ya está en uso, elige otro");
-      setSaving(false);
-      return;
-    }
-
-    // Create staff user
-    const { error: insertError } = await supabase
-      .from("staff_users")
-      .insert({
-        name: name.trim(),
-        pin,
-        role: invitation.role,
-        branch_id: invitation.branch_id,
-        tenant_id: invitation.tenant_id,
-        is_active: true,
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("register-waiter", {
+        body: { email: email.trim(), password, name: name.trim(), token },
       });
 
-    if (insertError) {
-      setError("Error al registrarse");
+      if (fnError || data?.error) {
+        setError(data?.error || fnError?.message || "Error al registrarse");
+        setSaving(false);
+        return;
+      }
+
+      setSuccess(true);
       setSaving(false);
-      return;
+    } catch {
+      setError("Error de conexión. Intenta de nuevo.");
+      setSaving(false);
     }
-
-    // Mark invitation as used
-    await supabase
-      .from("staff_invitations")
-      .update({ used_at: new Date().toISOString() })
-      .eq("id", invitation.id);
-
-    setSuccess(true);
-    setSaving(false);
   };
 
   if (loading) {
@@ -157,7 +134,7 @@ export default function MozoJoinPage() {
           <CardContent className="pt-6 text-center space-y-4">
             <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
             <p className="text-lg font-semibold text-foreground">¡Registro exitoso!</p>
-            <p className="text-sm text-muted-foreground">Ya puedes ingresar a la app de mozo con tu PIN.</p>
+            <p className="text-sm text-muted-foreground">Ya puedes ingresar con tu email y contraseña.</p>
             <Button onClick={() => navigate("/mozo/login")} className="w-full">
               Ir al login de mozo
             </Button>
@@ -178,17 +155,24 @@ export default function MozoJoinPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Tu nombre</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="Juan Pérez" />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="Juan Pérez" className="pl-9" />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>Elige un PIN (4 dígitos)</Label>
-              <Input
-                value={pin}
-                onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                placeholder="1234"
-                maxLength={4}
-                inputMode="numeric"
-              />
+              <Label>Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="juan@email.com" className="pl-9" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Contraseña</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="pl-9" />
+              </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={saving}>

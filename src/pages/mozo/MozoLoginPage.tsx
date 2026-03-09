@@ -1,127 +1,122 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useWaiters, WAITER_BRANCH_ID } from '@/contexts/WaitersContext';
-import { supabase } from '@/integrations/supabase/client';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Delete } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useWaiters } from "@/contexts/WaitersContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Loader2, Mail, Lock } from "lucide-react";
 
 export default function MozoLoginPage() {
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useWaiters();
 
-  const handleDigit = useCallback((d: string) => {
-    if (pin.length >= 4 || loading) return;
-    const newPin = pin + d;
-    setPin(newPin);
-    setError(false);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
 
-    if (newPin.length === 4) {
-      attemptLogin(newPin);
+    if (!email.trim() || !password) {
+      setError("Email y contraseña son obligatorios");
+      return;
     }
-  }, [pin, loading]);
 
-  const handleDelete = useCallback(() => {
-    setPin(p => p.slice(0, -1));
-    setError(false);
-  }, []);
-
-  const attemptLogin = async (code: string) => {
     setLoading(true);
-    try {
-      const { data, error: err } = await supabase
-        .from('staff_users')
-        .select('id, name, role, branch_id, tenant_id')
-        .eq('pin', code)
-        .eq('branch_id', WAITER_BRANCH_ID)
-        .eq('is_active', true)
-        .limit(1)
-        .single();
 
-      if (err || !data) {
-        setError(true);
-        setPin('');
+    try {
+      // 1. Sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (authError || !authData.user) {
+        setError("Email o contraseña incorrectos");
+        setLoading(false);
         return;
       }
 
+      // 2. Find staff_users record linked to this auth user
+      const { data: staffData, error: staffError } = await supabase
+        .from("staff_users")
+        .select("id, name, role, branch_id, tenant_id, is_active")
+        .eq("auth_user_id", authData.user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (staffError || !staffData) {
+        await supabase.auth.signOut();
+        setError("No tienes una cuenta de mozo activa. Contacta a tu administrador.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Login in context
       login({
-        staffId: data.id,
-        staffName: data.name,
-        role: data.role,
-        branchId: data.branch_id!,
-        tenantId: data.tenant_id,
+        staffId: staffData.id,
+        staffName: staffData.name,
+        role: staffData.role,
+        branchId: staffData.branch_id!,
+        tenantId: staffData.tenant_id,
       });
-      navigate('/mozo/mesas', { replace: true });
+
+      navigate("/mozo/mesas", { replace: true });
     } catch {
-      setError(true);
-      setPin('');
+      setError("Error de conexión. Intenta de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
-  const digits = ['1','2','3','4','5','6','7','8','9','','0','del'];
-
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-foreground mb-1">MenuQR Mozo</h1>
-        <p className="text-muted-foreground text-sm">Ingresa tu PIN para continuar</p>
-      </div>
-
-      {/* PIN dots */}
-      <motion.div
-        className="flex gap-4 mb-10"
-        animate={error ? { x: [0, -12, 12, -12, 12, 0] } : {}}
-        transition={{ duration: 0.4 }}
-      >
-        {[0,1,2,3].map(i => (
-          <div
-            key={i}
-            className={`w-4 h-4 rounded-full border-2 transition-all duration-150 ${
-              i < pin.length
-                ? 'bg-primary border-primary scale-110'
-                : error
-                  ? 'border-destructive'
-                  : 'border-muted-foreground/40'
-            }`}
-          />
-        ))}
-      </motion.div>
-
-      {error && (
-        <p className="text-destructive text-sm mb-4 font-medium">PIN incorrecto</p>
-      )}
-
-      {/* Numpad */}
-      <div className="grid grid-cols-3 gap-3 w-full max-w-[280px]">
-        {digits.map((d, i) => {
-          if (d === '') return <div key={i} />;
-          if (d === 'del') {
-            return (
-              <button
-                key={i}
-                onClick={handleDelete}
-                className="h-16 rounded-xl flex items-center justify-center text-muted-foreground active:bg-muted transition-colors"
-              >
-                <Delete className="w-6 h-6" />
-              </button>
-            );
-          }
-          return (
-            <button
-              key={i}
-              onClick={() => handleDigit(d)}
-              disabled={loading}
-              className="h-16 rounded-xl bg-card border border-border text-xl font-semibold text-foreground active:bg-muted transition-colors disabled:opacity-50"
-            >
-              {d}
-            </button>
-          );
-        })}
-      </div>
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center space-y-2 pb-2">
+          <h1 className="text-2xl font-bold text-foreground">MenuQR Mozo</h1>
+          <p className="text-sm text-muted-foreground">Ingresa con tu email y contraseña</p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  className="pl-9"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Contraseña</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••"
+                  className="pl-9"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Iniciar sesión
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
