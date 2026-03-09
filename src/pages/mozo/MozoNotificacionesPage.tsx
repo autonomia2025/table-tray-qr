@@ -2,21 +2,39 @@ import { useEffect, useState, useRef } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Receipt, ChefHat, Loader2 } from 'lucide-react';
+import { Bell, Receipt, ChefHat, Loader2, UtensilsCrossed, CheckCircle2, Truck } from 'lucide-react';
 import { formatCLP } from '@/lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Notification {
-  id: string;
-  type: 'call' | 'bill' | 'order';
+interface TableGroup {
+  tableId: string;
   tableNumber: number;
+  calls: CallNotif[];
+  billRequests: BillNotif[];
+  orders: OrderNotif[];
+}
+
+interface CallNotif {
+  id: string;
   createdAt: string;
-  reason?: string;
-  totalAmount?: number;
-  tipAmount?: number;
-  items?: { menu_item_name: string; quantity: number }[];
-  orderNumber?: number;
+  reason: string;
+}
+
+interface BillNotif {
+  id: string;
+  createdAt: string;
+  totalAmount: number;
+  tipAmount: number;
+}
+
+interface OrderNotif {
+  id: string;
+  orderNumber: number;
+  status: string;
+  createdAt: string;
+  items: { menu_item_name: string; quantity: number }[];
 }
 
 function minutesAgo(d: string) {
@@ -39,7 +57,6 @@ function playSound() {
   } catch {}
 }
 
-/** Returns table IDs assigned to this waiter OR unassigned */
 async function getMyTableIds(branchId: string, staffId: string): Promise<string[]> {
   const { data } = await supabase
     .from('tables')
@@ -51,10 +68,23 @@ async function getMyTableIds(branchId: string, staffId: string): Promise<string[
     .map(t => t.id);
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  confirmed: 'Nuevo',
+  in_kitchen: 'En cocina',
+  ready: 'Listo para entregar',
+  delivered: 'Entregado',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: 'bg-red-100 text-red-700 border-red-200',
+  in_kitchen: 'bg-amber-100 text-amber-700 border-amber-200',
+  ready: 'bg-green-100 text-green-700 border-green-200',
+};
+
 export default function MozoNotificacionesPage() {
   const { branchId, staffId } = useWaiters();
   const { toast } = useToast();
-  const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [groups, setGroups] = useState<TableGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const soundEnabled = useRef(false);
@@ -62,10 +92,18 @@ export default function MozoNotificacionesPage() {
   const fetchAll = async () => {
     const myTableIds = await getMyTableIds(branchId, staffId);
     if (myTableIds.length === 0) {
-      setNotifs([]);
+      setGroups([]);
       setLoading(false);
       return;
     }
+
+    // Fetch table numbers
+    const { data: tablesData } = await supabase
+      .from('tables')
+      .select('id, number')
+      .in('id', myTableIds);
+    const tableMap: Record<string, number> = {};
+    tablesData?.forEach(t => { tableMap[t.id] = t.number; });
 
     const [{ data: calls }, { data: bills }, { data: ordersData }] = await Promise.all([
       supabase
@@ -86,27 +124,12 @@ export default function MozoNotificacionesPage() {
         .from('orders')
         .select('id, table_id, confirmed_at, order_number, status')
         .eq('branch_id', branchId)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'in_kitchen', 'ready'])
         .in('table_id', myTableIds)
         .order('confirmed_at', { ascending: false }),
     ]);
 
-    // Get all table IDs to fetch numbers
-    const allTableIds = new Set<string>();
-    calls?.forEach(c => allTableIds.add(c.table_id));
-    bills?.forEach(b => allTableIds.add(b.table_id));
-    ordersData?.forEach(o => allTableIds.add(o.table_id));
-
-    let tableMap: Record<string, number> = {};
-    if (allTableIds.size > 0) {
-      const { data: tables } = await supabase
-        .from('tables')
-        .select('id, number')
-        .in('id', Array.from(allTableIds));
-      tables?.forEach(t => { tableMap[t.id] = t.number; });
-    }
-
-    // Get order items for confirmed orders
+    // Get order items
     let orderItemsMap: Record<string, { menu_item_name: string; quantity: number }[]> = {};
     if (ordersData && ordersData.length > 0) {
       const { data: items } = await supabase
@@ -119,33 +142,57 @@ export default function MozoNotificacionesPage() {
       });
     }
 
-    const result: Notification[] = [
-      ...(calls ?? []).map(c => ({
+    // Group by table
+    const groupMap: Record<string, TableGroup> = {};
+
+    const ensureGroup = (tableId: string) => {
+      if (!groupMap[tableId]) {
+        groupMap[tableId] = {
+          tableId,
+          tableNumber: tableMap[tableId] ?? 0,
+          calls: [],
+          billRequests: [],
+          orders: [],
+        };
+      }
+      return groupMap[tableId];
+    };
+
+    calls?.forEach(c => {
+      ensureGroup(c.table_id).calls.push({
         id: c.id,
-        type: 'call' as const,
-        tableNumber: tableMap[c.table_id] ?? 0,
         createdAt: c.created_at ?? '',
         reason: c.reason ?? 'help',
-      })),
-      ...(bills ?? []).map(b => ({
+      });
+    });
+
+    bills?.forEach(b => {
+      ensureGroup(b.table_id).billRequests.push({
         id: b.id,
-        type: 'bill' as const,
-        tableNumber: tableMap[b.table_id] ?? 0,
         createdAt: b.requested_at ?? '',
         totalAmount: b.total_amount,
         tipAmount: b.tip_amount ?? 0,
-      })),
-      ...(ordersData ?? []).map(o => ({
-        id: o.id,
-        type: 'order' as const,
-        tableNumber: tableMap[o.table_id] ?? 0,
-        createdAt: o.confirmed_at ?? '',
-        orderNumber: o.order_number,
-        items: orderItemsMap[o.id] ?? [],
-      })),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      });
+    });
 
-    setNotifs(result);
+    ordersData?.forEach(o => {
+      ensureGroup(o.table_id).orders.push({
+        id: o.id,
+        orderNumber: o.order_number,
+        status: o.status ?? 'confirmed',
+        createdAt: o.confirmed_at ?? '',
+        items: orderItemsMap[o.id] ?? [],
+      });
+    });
+
+    // Sort groups: tables with urgent items first
+    const sorted = Object.values(groupMap).sort((a, b) => {
+      const aUrgent = a.calls.length + a.billRequests.length + a.orders.filter(o => o.status === 'confirmed').length;
+      const bUrgent = b.calls.length + b.billRequests.length + b.orders.filter(o => o.status === 'confirmed').length;
+      return bUrgent - aUrgent || a.tableNumber - b.tableNumber;
+    });
+
+    setGroups(sorted);
     setLoading(false);
   };
 
@@ -154,13 +201,9 @@ export default function MozoNotificacionesPage() {
 
     const channel = supabase
       .channel('mozo-notifs')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
-      // Also re-fetch when table assignments change
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => { fetchAll(); if (soundEnabled.current) { playSound(); navigator.vibrate?.(200); } })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchAll())
       .subscribe();
 
@@ -173,92 +216,210 @@ export default function MozoNotificacionesPage() {
     };
   }, [branchId, staffId]);
 
-  const handleAction = async (n: Notification) => {
-    setActionLoading(n.id);
-    try {
-      if (n.type === 'call') {
-        await supabase.from('waiter_calls').update({ status: 'attended' }).eq('id', n.id);
-      } else if (n.type === 'bill') {
-        await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', n.id);
-      } else if (n.type === 'order') {
-        await supabase.from('orders').update({ status: 'in_kitchen', kitchen_accepted_at: new Date().toISOString() }).eq('id', n.id);
-      }
-      toast({ title: 'Atendido' });
-      fetchAll();
-    } finally {
-      setActionLoading(null);
+  const handleCallAttend = async (id: string) => {
+    setActionLoading(id);
+    await supabase.from('waiter_calls').update({ status: 'attended' }).eq('id', id);
+    toast({ title: 'Llamada atendida' });
+    fetchAll();
+    setActionLoading(null);
+  };
+
+  const handleBillAttend = async (id: string) => {
+    setActionLoading(id);
+    await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', id);
+    toast({ title: 'Cuenta en camino' });
+    fetchAll();
+    setActionLoading(null);
+  };
+
+  const handleOrderAction = async (order: OrderNotif) => {
+    setActionLoading(order.id);
+    const now = new Date().toISOString();
+    if (order.status === 'confirmed') {
+      await supabase.from('orders').update({ status: 'in_kitchen', kitchen_accepted_at: now }).eq('id', order.id);
+      toast({ title: `Pedido #${order.orderNumber} enviado a cocina` });
+    } else if (order.status === 'in_kitchen') {
+      await supabase.from('orders').update({ status: 'ready', ready_at: now }).eq('id', order.id);
+      toast({ title: `Pedido #${order.orderNumber} listo` });
+    } else if (order.status === 'ready') {
+      await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('id', order.id);
+      toast({ title: `Pedido #${order.orderNumber} entregado` });
+    }
+    fetchAll();
+    setActionLoading(null);
+  };
+
+  const getOrderActionLabel = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'Enviar a cocina';
+      case 'in_kitchen': return 'Marcar listo';
+      case 'ready': return 'Marcar entregado';
+      default: return '';
+    }
+  };
+
+  const getOrderActionIcon = (status: string) => {
+    switch (status) {
+      case 'confirmed': return <ChefHat className="w-4 h-4 mr-1.5" />;
+      case 'in_kitchen': return <CheckCircle2 className="w-4 h-4 mr-1.5" />;
+      case 'ready': return <Truck className="w-4 h-4 mr-1.5" />;
+      default: return null;
+    }
+  };
+
+  const getOrderActionStyle = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'bg-primary hover:bg-primary/90 text-primary-foreground';
+      case 'in_kitchen': return 'bg-amber-600 hover:bg-amber-700 text-white';
+      case 'ready': return 'bg-green-600 hover:bg-green-700 text-white';
+      default: return '';
     }
   };
 
   const REASON_MAP: Record<string, string> = { help: 'Necesita ayuda', problem: 'Problema', change: 'Cambio' };
 
+  const totalNotifs = groups.reduce((acc, g) => acc + g.calls.length + g.billRequests.length + g.orders.length, 0);
+
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold text-foreground mb-4">Notificaciones</h2>
-      {notifs.length === 0 ? (
+      <h2 className="text-lg font-bold text-foreground mb-4">
+        Notificaciones
+        {totalNotifs > 0 && (
+          <Badge variant="destructive" className="ml-2 text-xs">{totalNotifs}</Badge>
+        )}
+      </h2>
+
+      {groups.length === 0 ? (
         <div className="text-center py-16">
           <Bell className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-muted-foreground text-sm">Sin notificaciones pendientes</p>
+          <p className="text-muted-foreground/60 text-xs mt-1">Las alertas aparecerán aquí agrupadas por mesa</p>
         </div>
       ) : (
         <AnimatePresence mode="popLayout">
-          <div className="space-y-3">
-            {notifs.map(n => (
+          <div className="space-y-4">
+            {groups.map(group => (
               <motion.div
-                key={`${n.type}-${n.id}`}
+                key={group.tableId}
                 layout
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: 100 }}
-                className="bg-card border border-border rounded-xl p-4"
+                className="bg-card border border-border rounded-xl overflow-hidden"
               >
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    n.type === 'call' ? 'bg-amber-100 text-amber-700'
-                    : n.type === 'bill' ? 'bg-red-100 text-red-700'
-                    : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {n.type === 'call' ? <Bell className="w-5 h-5" /> : n.type === 'bill' ? <Receipt className="w-5 h-5" /> : <ChefHat className="w-5 h-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-sm">
-                      {n.type === 'call' ? `🛎 Mesa ${n.tableNumber} te llama`
-                       : n.type === 'bill' ? `🧾 Mesa ${n.tableNumber} pide la cuenta`
-                       : `🍳 Nuevo pedido - Mesa ${n.tableNumber}`}
-                    </p>
-                    {n.type === 'call' && n.reason && (
-                      <p className="text-xs text-muted-foreground">{REASON_MAP[n.reason] ?? n.reason}</p>
-                    )}
-                    {n.type === 'bill' && (
-                      <p className="text-xs text-muted-foreground">
-                        Total: {formatCLP(n.totalAmount ?? 0)}
-                        {(n.tipAmount ?? 0) > 0 && ` · Propina: ${formatCLP(n.tipAmount!)}`}
-                      </p>
-                    )}
-                    {n.type === 'order' && n.items && n.items.length > 0 && (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {n.items.slice(0, 3).map((it, i) => (
-                          <span key={i}>{it.quantity}× {it.menu_item_name}{i < Math.min(n.items!.length, 3) - 1 ? ', ' : ''}</span>
-                        ))}
-                        {n.items.length > 3 && <span> +{n.items.length - 3} más</span>}
-                      </div>
-                    )}
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      hace {minutesAgo(n.createdAt)} min
-                    </p>
+                {/* Table header */}
+                <div className="bg-muted/50 px-4 py-2.5 flex items-center justify-between border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-foreground">Mesa {group.tableNumber}</span>
+                    <div className="flex gap-1">
+                      {group.calls.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                          🛎 {group.calls.length}
+                        </Badge>
+                      )}
+                      {group.billRequests.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">
+                          🧾 {group.billRequests.length}
+                        </Badge>
+                      )}
+                      {group.orders.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                          🍳 {group.orders.length}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  className="w-full mt-3 h-10"
-                  disabled={actionLoading === n.id}
-                  onClick={() => handleAction(n)}
-                >
-                  {actionLoading === n.id ? <Loader2 className="w-4 h-4 animate-spin" /> :
-                    n.type === 'call' ? 'Atender' : n.type === 'bill' ? 'En camino' : 'Llevar a cocina'}
-                </Button>
+
+                <div className="p-3 space-y-2.5">
+                  {/* Calls */}
+                  {group.calls.map(call => (
+                    <div key={`call-${call.id}`} className="flex items-center gap-3 bg-amber-50 rounded-lg p-3 border border-amber-100">
+                      <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                        <Bell className="w-4 h-4 text-amber-700" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground">Llamada de mozo</p>
+                        <p className="text-xs text-muted-foreground">{REASON_MAP[call.reason] ?? call.reason} · hace {minutesAgo(call.createdAt)} min</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 h-8"
+                        disabled={actionLoading === call.id}
+                        onClick={() => handleCallAttend(call.id)}
+                      >
+                        {actionLoading === call.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Atender'}
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Bill requests */}
+                  {group.billRequests.map(bill => (
+                    <div key={`bill-${bill.id}`} className="flex items-center gap-3 bg-red-50 rounded-lg p-3 border border-red-100">
+                      <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <Receipt className="w-4 h-4 text-red-700" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCLP(bill.totalAmount)}
+                          {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
+                          {' · hace '}{minutesAgo(bill.createdAt)} min
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 h-8"
+                        disabled={actionLoading === bill.id}
+                        onClick={() => handleBillAttend(bill.id)}
+                      >
+                        {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'En camino'}
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Orders grouped by status */}
+                  {group.orders.map(order => (
+                    <div key={`order-${order.id}`} className={`rounded-lg p-3 border ${STATUS_COLORS[order.status] ?? 'bg-muted/50 border-border'}`}>
+                      <div className="flex items-start justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <UtensilsCrossed className="w-4 h-4" />
+                          <span className="text-sm font-bold">Pedido #{order.orderNumber}</span>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] border-current">
+                          {STATUS_LABELS[order.status] ?? order.status}
+                        </Badge>
+                      </div>
+                      <div className="text-xs space-y-0.5 mb-2">
+                        {order.items.map((it, idx) => (
+                          <p key={idx}>{it.quantity}× {it.menu_item_name}</p>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground">hace {minutesAgo(order.createdAt)} min</span>
+                        <Button
+                          size="sm"
+                          className={`h-8 ${getOrderActionStyle(order.status)}`}
+                          disabled={actionLoading === order.id}
+                          onClick={() => handleOrderAction(order)}
+                        >
+                          {actionLoading === order.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              {getOrderActionIcon(order.status)}
+                              {getOrderActionLabel(order.status)}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </motion.div>
             ))}
           </div>
