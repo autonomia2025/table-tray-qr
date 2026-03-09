@@ -60,6 +60,8 @@ export default function ConfirmPage() {
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
+  const processingRef = useRef(false);
 
   const totalPrice = getTotalPrice();
 
@@ -77,15 +79,15 @@ export default function ConfirmPage() {
     };
   }, []);
 
-  // Auto-scan when arriving from cart
-  useEffect(() => {
-    if (autoScan && items.length > 0 && pageState === "summary") {
-      const timer = setTimeout(() => startScanning(), 300);
-      return () => clearTimeout(timer);
-    }
-  }, []); // only on mount
+  // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
 
   const stopCamera = useCallback(() => {
+    // Stop the ZXing scanner controls first
+    if (scannerControlsRef.current) {
+      try { scannerControlsRef.current.stop(); } catch {}
+      scannerControlsRef.current = null;
+    }
+    // Then stop the media stream
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((t) => t.stop());
@@ -95,23 +97,35 @@ export default function ConfirmPage() {
 
   const startScanning = useCallback(async () => {
     setCameraError("");
+    processingRef.current = false;
     setPageState("scanning");
 
     try {
       const reader = new BrowserQRCodeReader();
       codeReaderRef.current = reader;
 
-      await reader.decodeFromVideoDevice(
+      const controls = await reader.decodeFromVideoDevice(
         undefined,
         videoRef.current!,
-        (result) => {
-          if (result) {
-            const token = extractTokenFromScan(result.getText());
-            stopCamera();
-            handleScannedToken(token);
+        (result, error) => {
+          // Only process if we got a real result AND we haven't already processed one
+          if (result && !processingRef.current) {
+            const text = result.getText();
+            if (text && text.trim().length > 0) {
+              processingRef.current = true;
+              // Stop scanner before processing
+              if (scannerControlsRef.current) {
+                try { scannerControlsRef.current.stop(); } catch {}
+                scannerControlsRef.current = null;
+              }
+              stopCamera();
+              handleScannedToken(text.trim());
+            }
           }
         }
       );
+
+      scannerControlsRef.current = controls;
     } catch (err: any) {
       console.error("Camera error:", err);
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
@@ -124,15 +138,16 @@ export default function ConfirmPage() {
   }, [stopCamera]);
 
   const cancelScanning = useCallback(() => {
+    processingRef.current = false;
     stopCamera();
     setPageState("summary");
   }, [stopCamera]);
 
   /* ---------- Order creation ---------- */
   const handleScannedToken = useCallback(
-    async (scannedToken: string) => {
+    async (rawScanned: string) => {
       setPageState("processing");
-
+      const scannedToken = extractTokenFromScan(rawScanned);
       try {
         // 1. Validate the scanned QR token against tables
         const { data: tableData, error: tableError } = await supabase
