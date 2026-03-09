@@ -95,9 +95,9 @@ export default function ResetPasswordPage() {
   if (success) {
     return (
       <div className="flex h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm">
           <CardContent className="pt-6 text-center">
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <CheckCircle className="h-12 w-12 text-primary mx-auto mb-4" />
             <h2 className="text-xl font-bold text-foreground mb-2">¡Contraseña actualizada!</h2>
             <p className="text-muted-foreground text-sm">
               Tu contraseña ha sido cambiada exitosamente. Serás redirigido al login...
