@@ -1,218 +1,162 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/integrations/supabase/client";
-import { formatCLP } from "@/lib/format";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, DollarSign, ShoppingBag, Receipt, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-
-const PIE_COLORS = ["hsl(var(--primary))", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4"];
-
-function startOfDay(date: Date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date: Date) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
+import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import PeriodSelector from "@/components/reports/PeriodSelector";
+import SalesTab from "@/components/reports/SalesTab";
+import OrdersTab from "@/components/reports/OrdersTab";
+import MenuTab from "@/components/reports/MenuTab";
+import TablesTab from "@/components/reports/TablesTab";
+import KitchenTab from "@/components/reports/KitchenTab";
+import TeamTab from "@/components/reports/TeamTab";
+import ClientsTab from "@/components/reports/ClientsTab";
+import { periodRange, fetchAll, type Period } from "@/lib/report-utils";
 
 export default function ReportesPage() {
   const { branchId } = useAdmin();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(() => startOfDay(new Date()));
+  const [period, setPeriod] = useState<Period>("day");
 
-  // Raw data
-  const [orders, setOrders] = useState<{ total_amount: number; confirmed_at: string; status: string }[]>([]);
-  const [orderItems, setOrderItems] = useState<{ menu_item_name: string; quantity: number }[]>([]);
-  const [yesterdayTotal, setYesterdayTotal] = useState(0);
+  // Data
+  const [orders, setOrders] = useState<any[]>([]);
+  const [prevOrders, setPrevOrders] = useState<any[]>([]);
+  const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [cancelledOrderItems, setCancelledOrderItems] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [tables, setTables] = useState<any[]>([]);
+  const [allMenuItems, setAllMenuItems] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [waiterCalls, setWaiterCalls] = useState<any[]>([]);
+  const [billRequests, setBillRequests] = useState<any[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!branchId) return;
     setLoading(true);
-    const from = startOfDay(date).toISOString();
-    const to = endOfDay(date).toISOString();
 
-    const yesterday = new Date(date);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const { from, to } = periodRange(period);
+    const prev = periodRange(period, -1);
+    const fromStr = from.toISOString();
+    const toStr = to.toISOString();
+    const prevFromStr = prev.from.toISOString();
+    const prevToStr = prev.to.toISOString();
 
-    const [ordersRes, yesterdayRes] = await Promise.all([
-      supabase
-        .from("orders")
-        .select("id, total_amount, confirmed_at, status")
-        .eq("branch_id", branchId)
-        .gte("confirmed_at", from)
-        .lte("confirmed_at", to)
-        .neq("status", "cancelled"),
-      supabase
-        .from("orders")
-        .select("total_amount")
-        .eq("branch_id", branchId)
-        .gte("confirmed_at", startOfDay(yesterday).toISOString())
-        .lte("confirmed_at", endOfDay(yesterday).toISOString())
-        .neq("status", "cancelled"),
+    const f = (col: string, op: string, val: string | boolean) => ({ column: col, op, value: val });
+
+    const [
+      ordersData, prevOrdersData, sessionsData, tablesData,
+      menuItemsData, categoriesData, waiterCallsData, billData, staffData,
+    ] = await Promise.all([
+      fetchAll("orders", "id, total_amount, confirmed_at, status, table_id, session_id, cancelled_reason, notes, kitchen_accepted_at, ready_at, delivered_at", [
+        f("branch_id", "eq", branchId), f("confirmed_at", "gte", fromStr), f("confirmed_at", "lte", toStr),
+      ]),
+      fetchAll("orders", "id, total_amount, confirmed_at, status, table_id, session_id", [
+        f("branch_id", "eq", branchId), f("confirmed_at", "gte", prevFromStr), f("confirmed_at", "lte", prevToStr),
+      ]),
+      fetchAll("table_sessions", "id, table_id, opened_at, closed_at, total_amount", [
+        f("branch_id", "eq", branchId), f("opened_at", "gte", fromStr), f("opened_at", "lte", toStr),
+      ]),
+      supabase.from("tables").select("id, number, name, assigned_waiter_id, capacity").eq("branch_id", branchId).then(r => r.data ?? []),
+      supabase.from("menu_items").select("id, name, category_id").then(r => r.data ?? []),
+      supabase.from("categories").select("id, name, emoji").then(r => r.data ?? []),
+      fetchAll("waiter_calls", "id, table_id, status, created_at", [
+        f("branch_id", "eq", branchId), f("created_at", "gte", fromStr), f("created_at", "lte", toStr),
+      ]),
+      fetchAll("bill_requests", "id, table_id, status, requested_at, attended_at, tip_percentage, tip_amount, total_amount", [
+        f("branch_id", "eq", branchId), f("requested_at", "gte", fromStr), f("requested_at", "lte", toStr),
+      ]),
+      supabase.from("staff_users").select("id, name").eq("branch_id", branchId).eq("is_active", true).eq("role", "waiter").then(r => r.data ?? []),
     ]);
 
-    const ordersData = ordersRes.data ?? [];
-    setOrders(ordersData.map(o => ({ total_amount: o.total_amount, confirmed_at: o.confirmed_at ?? "", status: o.status ?? "" })));
-    setYesterdayTotal((yesterdayRes.data ?? []).reduce((s, o) => s + o.total_amount, 0));
+    setOrders(ordersData);
+    setPrevOrders(prevOrdersData);
+    setSessions(sessionsData);
+    setTables(tablesData);
+    setAllMenuItems(menuItemsData);
+    setCategories(categoriesData);
+    setWaiterCalls(waiterCallsData);
+    setBillRequests(billData);
+    setStaff(staffData);
 
-    if (ordersData.length > 0) {
-      const { data: items } = await supabase
-        .from("order_items")
-        .select("menu_item_name, quantity")
-        .in("order_id", ordersData.map(o => o.id));
-      setOrderItems(items ?? []);
+    // Fetch order items for current period orders
+    const activeOrders = (ordersData as any[]).filter((o: any) => o.status !== "cancelled");
+    const cancelledOrders = (ordersData as any[]).filter((o: any) => o.status === "cancelled");
+
+    if (activeOrders.length > 0) {
+      const ids = activeOrders.map((o: any) => o.id);
+      // Batch in chunks of 100
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100));
+      const allItems: any[] = [];
+      for (const chunk of chunks) {
+        const { data } = await supabase.from("order_items").select("menu_item_name, menu_item_id, quantity, unit_price, subtotal, selected_modifiers").in("order_id", chunk);
+        if (data) allItems.push(...data);
+      }
+      setOrderItems(allItems);
     } else {
       setOrderItems([]);
     }
 
+    if (cancelledOrders.length > 0) {
+      const ids = cancelledOrders.map((o: any) => o.id);
+      const { data } = await supabase.from("order_items").select("menu_item_name, quantity").in("order_id", ids.slice(0, 100));
+      setCancelledOrderItems(data ?? []);
+    } else {
+      setCancelledOrderItems([]);
+    }
+
     setLoading(false);
-  };
+  }, [branchId, period]);
 
-  useEffect(() => {
-    if (!branchId) return;
-    fetchData();
-  }, [branchId, date]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const totalSales = useMemo(() => orders.reduce((s, o) => s + o.total_amount, 0), [orders]);
-  const totalOrders = orders.length;
-  const avgTicket = totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0;
-  const vsYesterday = yesterdayTotal > 0 ? Math.round(((totalSales - yesterdayTotal) / yesterdayTotal) * 100) : 0;
-
-  // Hourly chart
-  const hourlyData = useMemo(() => {
-    const hours: Record<number, number> = {};
-    for (let h = 8; h <= 23; h++) hours[h] = 0;
-    orders.forEach(o => {
-      const h = new Date(o.confirmed_at).getHours();
-      hours[h] = (hours[h] ?? 0) + o.total_amount;
-    });
-    return Object.entries(hours).map(([h, v]) => ({ hora: `${h}:00`, ventas: v }));
-  }, [orders]);
-
-  // Top 5 items
-  const topItems = useMemo(() => {
-    const map: Record<string, number> = {};
-    orderItems.forEach(i => { map[i.menu_item_name] = (map[i.menu_item_name] ?? 0) + i.quantity; });
-    return Object.entries(map)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, qty]) => ({ name, qty }));
-  }, [orderItems]);
-
-  const changeDay = (delta: number) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + delta);
-    if (d <= new Date()) setDate(startOfDay(d));
-  };
-
-  const isToday = startOfDay(new Date()).getTime() === date.getTime();
-  const dateLabel = date.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
+  const daysInPeriod = period === "day" ? 1 : period === "week" ? 7 : period === "month" ? 30 : 365;
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
-    <div>
-      {/* Date nav */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-foreground">Reportes</h1>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => changeDay(-1)}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="text-sm font-medium capitalize min-w-[160px] text-center">{dateLabel}</span>
-          <Button variant="ghost" size="icon" disabled={isToday} onClick={() => changeDay(1)}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
+        <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Ventas del día</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><p className="text-xl font-bold">{formatCLP(totalSales)}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Pedidos</CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><p className="text-xl font-bold">{totalOrders}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Ticket promedio</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><p className="text-xl font-bold">{formatCLP(avgTicket)}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">vs Ayer</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className={`text-xl font-bold ${vsYesterday >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {vsYesterday >= 0 ? "+" : ""}{vsYesterday}%
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="ventas" className="space-y-4">
+        <TabsList className="grid grid-cols-4 lg:grid-cols-7 h-auto">
+          <TabsTrigger value="ventas" className="text-xs">Ventas</TabsTrigger>
+          <TabsTrigger value="pedidos" className="text-xs">Pedidos</TabsTrigger>
+          <TabsTrigger value="menu" className="text-xs">Menú</TabsTrigger>
+          <TabsTrigger value="mesas" className="text-xs">Mesas</TabsTrigger>
+          <TabsTrigger value="cocina" className="text-xs">Cocina</TabsTrigger>
+          <TabsTrigger value="equipo" className="text-xs">Equipo</TabsTrigger>
+          <TabsTrigger value="clientes" className="text-xs">Clientes</TabsTrigger>
+        </TabsList>
 
-      {/* Charts row */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Hourly sales */}
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Ventas por hora</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={hourlyData}>
-                <XAxis dataKey="hora" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => formatCLP(v)} labelFormatter={(l) => `${l}`} />
-                <Bar dataKey="ventas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Top 5 items */}
-        <Card>
-          <CardHeader><CardTitle className="text-sm">Top 5 platos</CardTitle></CardHeader>
-          <CardContent>
-            {topItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>
-            ) : (
-              <div className="space-y-3">
-                {topItems.map((item, i) => {
-                  const maxQty = topItems[0]?.qty ?? 1;
-                  return (
-                    <div key={item.name} className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-muted-foreground w-5">{i + 1}</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
-                        <div className="h-2 bg-muted rounded-full mt-1 overflow-hidden">
-                          <div
-                            className="h-full rounded-full"
-                            style={{ width: `${(item.qty / maxQty) * 100}%`, backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
-                          />
-                        </div>
-                      </div>
-                      <span className="text-sm font-semibold">{item.qty}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="ventas">
+          <SalesTab orders={orders} prevOrders={prevOrders} daysInPeriod={daysInPeriod} />
+        </TabsContent>
+        <TabsContent value="pedidos">
+          <OrdersTab orders={orders} prevOrders={prevOrders} />
+        </TabsContent>
+        <TabsContent value="menu">
+          <MenuTab orderItems={orderItems} allMenuItems={allMenuItems} categories={categories} cancelledOrderItems={cancelledOrderItems} />
+        </TabsContent>
+        <TabsContent value="mesas">
+          <TablesTab sessions={sessions} orders={orders} tables={tables} totalTables={tables.length} />
+        </TabsContent>
+        <TabsContent value="cocina">
+          <KitchenTab orders={orders} />
+        </TabsContent>
+        <TabsContent value="equipo">
+          <TeamTab waiterCalls={waiterCalls} billRequests={billRequests} orders={orders} staff={staff} tables={tables} sessions={sessions} />
+        </TabsContent>
+        <TabsContent value="clientes">
+          <ClientsTab sessions={sessions} orders={orders} billRequests={billRequests} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
