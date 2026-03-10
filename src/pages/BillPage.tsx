@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
-import { BrowserQRCodeReader } from "@zxing/browser";
+import jsQR from "jsqr";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useCartStore } from "@/store/cartStore";
@@ -57,6 +57,7 @@ export default function BillPage() {
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
   const [cameraError, setCameraError] = useState("");
+  const [cameraStarting, setCameraStarting] = useState(false);
   const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
   const [showBackBtn, setShowBackBtn] = useState(false);
@@ -64,9 +65,9 @@ export default function BillPage() {
   const [finalTip, setFinalTip] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
-  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
   const processingRef = useRef(false);
   const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
 
@@ -156,14 +157,9 @@ export default function BillPage() {
 
   /* ---- camera ---- */
   const stopCamera = useCallback(() => {
-    // Stop the ZXing scanner controls first
-    if (scannerControlsRef.current) {
-      try {
-        scannerControlsRef.current.stop();
-      } catch {
-        // ignore
-      }
-      scannerControlsRef.current = null;
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
     }
     // Stop raw stream tracks
     if (streamRef.current) {
@@ -183,9 +179,9 @@ export default function BillPage() {
   const startScanning = useCallback(async () => {
     setCameraError("");
     processingRef.current = false;
+    setCameraStarting(true);
 
     try {
-      // Step 1: Request camera access BEFORE mounting video element
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
@@ -195,61 +191,58 @@ export default function BillPage() {
         audio: false,
       });
 
-      // Store stream for cleanup
       streamRef.current = stream;
-
-      // Step 2: Mount the video element by changing state
       setPageState("scanning");
 
-      // Step 3: Attach stream to video element after it mounts
-      // Use setTimeout to ensure the DOM has updated
-      setTimeout(async () => {
-        if (!videoRef.current) return;
+      // Wait one frame for video element to mount in DOM
+      await new Promise((resolve) => setTimeout(resolve, 80));
 
-        // Attach stream directly to video element
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", "true");
-        videoRef.current.setAttribute("webkit-playsinline", "true");
+      if (!videoRef.current) {
+        setCameraStarting(false);
+        return;
+      }
+      videoRef.current.srcObject = stream;
 
-        try {
-          await videoRef.current.play();
-        } catch {
-          // ignore (autoplay can be blocked until user gesture)
+      await new Promise<void>((resolve) => {
+        if (!videoRef.current) return resolve();
+        videoRef.current.onloadedmetadata = () => resolve();
+        setTimeout(resolve, 3000);
+      });
+
+      await videoRef.current.play().catch(() => undefined);
+      setCameraStarting(false);
+
+      const tick = () => {
+        if (!videoRef.current || !canvasRef.current || processingRef.current) return;
+        const video = videoRef.current;
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+          animFrameRef.current = requestAnimationFrame(tick);
+          return;
         }
-
-        // Step 4: Start ZXing AFTER video is playing
-        const reader = new BrowserQRCodeReader(undefined, {
-          delayBetweenScanAttempts: 200,
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
         });
-        codeReaderRef.current = reader;
-
-        // Use decodeFromVideoElement since we already have the stream attached
-        const controls = await reader.decodeFromVideoElement(
-          videoRef.current,
-          (result, err) => {
-            if (!result || processingRef.current) return;
-            const text = result.getText();
-            if (!text || text.trim().length === 0) return;
-
-            processingRef.current = true;
-            if (scannerControlsRef.current) {
-              try {
-                scannerControlsRef.current.stop();
-              } catch {
-                // ignore
-              }
-              scannerControlsRef.current = null;
-            }
-            const token = extractTokenFromScan(text.trim());
-            handleScannedTokenRef.current(token);
-          }
-        );
-        scannerControlsRef.current = controls;
-      }, 50);
+        if (code && code.data && code.data.trim().length > 0) {
+          processingRef.current = true;
+          stopCamera();
+          handleScannedTokenRef.current(code.data.trim());
+          return;
+        }
+        animFrameRef.current = requestAnimationFrame(tick);
+      };
+      animFrameRef.current = requestAnimationFrame(tick);
 
     } catch (err: unknown) {
       console.error("Camera error:", err);
       processingRef.current = false;
+      setCameraStarting(false);
       const name = typeof err === "object" && err && "name" in err ? String((err as { name?: unknown }).name) : "";
       const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
       if (name === "NotAllowedError" || name === "PermissionDeniedError" || message.includes("Permission")) {
@@ -261,20 +254,23 @@ export default function BillPage() {
       }
       setPageState("summary");
     }
-  }, []);
+  }, [stopCamera]);
 
   const cancelScanning = useCallback(() => {
     processingRef.current = false;
+    setCameraStarting(false);
     stopCamera();
     setPageState("summary");
   }, [stopCamera]);
 
   /* ---- bill creation ---- */
   const handleScannedToken = useCallback(
-    async (scannedToken: string) => {
+    async (rawScanned: string) => {
       if (pageState === "processing" || pageState === "success") return;
       setPageState("processing");
       stopCamera();
+
+      const scannedToken = extractTokenFromScan(rawScanned);
 
       try {
         const { data: scannedTable } = await supabase
@@ -562,6 +558,13 @@ export default function BillPage() {
               muted
               webkit-playsinline=""
             />
+            <canvas ref={canvasRef} className="hidden" />
+            {cameraStarting && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-white text-sm font-medium">Iniciando cámara...</p>
+              </div>
+            )}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
               <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
