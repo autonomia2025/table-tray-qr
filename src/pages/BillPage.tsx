@@ -31,7 +31,7 @@ interface OrderWithItems {
     quantity: number;
     unit_price: number;
     subtotal: number;
-    selected_modifiers: any;
+    selected_modifiers: unknown;
   }[];
 }
 
@@ -64,6 +64,7 @@ export default function BillPage() {
   const [finalTip, setFinalTip] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
   const processingRef = useRef(false);
@@ -154,65 +155,113 @@ export default function BillPage() {
   const total = subtotal + tipAmount;
 
   /* ---- camera ---- */
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
   const stopCamera = useCallback(() => {
+    // Stop the ZXing scanner controls first
     if (scannerControlsRef.current) {
       try {
         scannerControlsRef.current.stop();
-      } catch {}
+      } catch {
+        // ignore
+      }
       scannerControlsRef.current = null;
     }
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((t) => t.stop());
+    // Stop raw stream tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    // Clear video srcObject
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
   }, []);
 
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
+
   const startScanning = useCallback(async () => {
     setCameraError("");
     processingRef.current = false;
-    setPageState("scanning");
+
     try {
-      const reader = new BrowserQRCodeReader();
-      codeReaderRef.current = reader;
-      const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
-        if (!result || processingRef.current) return;
-        const text = result.getText();
-        if (!text || text.trim().length === 0) return;
-
-        processingRef.current = true;
-        if (scannerControlsRef.current) {
-          try {
-            scannerControlsRef.current.stop();
-          } catch {}
-          scannerControlsRef.current = null;
-        }
-        const token = extractTokenFromScan(text.trim());
-        handleScannedTokenRef.current(token);
+      // Step 1: Request camera access BEFORE mounting video element
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
-      scannerControlsRef.current = controls;
 
-      // Force video render on iOS Safari
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.play().catch(() => {});
+      // Store stream for cleanup
+      streamRef.current = stream;
+
+      // Step 2: Mount the video element by changing state
+      setPageState("scanning");
+
+      // Step 3: Attach stream to video element after it mounts
+      // Use setTimeout to ensure the DOM has updated
+      setTimeout(async () => {
+        if (!videoRef.current) return;
+
+        // Attach stream directly to video element
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute("webkit-playsinline", "true");
+
+        try {
+          await videoRef.current.play();
+        } catch {
+          // ignore (autoplay can be blocked until user gesture)
         }
-      }, 100);
-    } catch (err: any) {
+
+        // Step 4: Start ZXing AFTER video is playing
+        const reader = new BrowserQRCodeReader(undefined, {
+          delayBetweenScanAttempts: 200,
+        });
+        codeReaderRef.current = reader;
+
+        // Use decodeFromVideoElement since we already have the stream attached
+        const controls = await reader.decodeFromVideoElement(
+          videoRef.current,
+          (result, err) => {
+            if (!result || processingRef.current) return;
+            const text = result.getText();
+            if (!text || text.trim().length === 0) return;
+
+            processingRef.current = true;
+            if (scannerControlsRef.current) {
+              try {
+                scannerControlsRef.current.stop();
+              } catch {
+                // ignore
+              }
+              scannerControlsRef.current = null;
+            }
+            const token = extractTokenFromScan(text.trim());
+            handleScannedTokenRef.current(token);
+          }
+        );
+        scannerControlsRef.current = controls;
+      }, 50);
+
+    } catch (err: unknown) {
       console.error("Camera error:", err);
       processingRef.current = false;
-      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
+      const name = typeof err === "object" && err && "name" in err ? String((err as { name?: unknown }).name) : "";
+      const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || message.includes("Permission")) {
         setCameraError("camera_denied");
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setCameraError("no_camera");
       } else {
         setCameraError("camera_error");
       }
       setPageState("summary");
     }
-  }, [stopCamera]);
+  }, []);
 
   const cancelScanning = useCallback(() => {
     processingRef.current = false;
@@ -268,28 +317,21 @@ export default function BillPage() {
         setFinalTotal(total);
         setFinalTip(tipAmount);
         setPageState("success");
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Bill request error:", err);
         processingRef.current = false;
-        setErrorMsg(err.message || "Error desconocido");
+        const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
+        setErrorMsg(message || "Error desconocido");
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, session?.id, subtotal, tipAmount, tipPercentage, total, stopCamera, pageState],
+    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total, stopCamera, pageState],
   );
 
   // Keep the ref always up-to-date
   useEffect(() => {
     handleScannedTokenRef.current = handleScannedToken;
   }, [handleScannedToken]);
-
-  // Ensure iOS compatibility for video
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.setAttribute("webkit-playsinline", "true");
-      videoRef.current.setAttribute("playsinline", "true");
-    }
-  }, []);
 
   // Show "back to start" button after 3s on success
   useEffect(() => {
@@ -336,19 +378,6 @@ export default function BillPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <video
-        ref={videoRef}
-        className="fixed inset-0 z-50 h-full w-full object-cover"
-        style={{
-          opacity: pageState === "scanning" ? 1 : 0,
-          pointerEvents: pageState === "scanning" ? "auto" : "none",
-          visibility: pageState === "scanning" ? "visible" : "hidden",
-        }}
-        autoPlay
-        playsInline
-        muted
-      />
-
       {/* Header */}
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -495,7 +524,9 @@ export default function BillPage() {
                 <div className="mx-auto mb-4 max-w-[300px] rounded-xl bg-yellow-50 border border-yellow-200 p-3">
                   <p className="text-xs text-yellow-800 font-medium">
                     {cameraError === "camera_denied"
-                      ? "Necesitamos acceso a la cámara. Habilita el permiso en la configuración de tu navegador."
+                      ? "Necesitamos acceso a la cámara. Ve a Configuración y permite el acceso."
+                      : cameraError === "no_camera"
+                      ? "No encontramos una cámara en este dispositivo."
                       : "Error al acceder a la cámara. Intenta de nuevo."}
                   </p>
                 </div>
@@ -522,6 +553,15 @@ export default function BillPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black"
           >
+            {/* Mount video INSIDE the visible container */}
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
+              playsInline
+              muted
+              webkit-playsinline=""
+            />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
               <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />

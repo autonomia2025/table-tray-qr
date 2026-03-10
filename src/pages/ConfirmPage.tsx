@@ -8,6 +8,7 @@ import { BrowserQRCodeReader } from "@zxing/browser";
 import { useCartStore } from "@/store/cartStore";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
+import type { Json } from "@/integrations/supabase/types";
 
 /* ---------- helpers ---------- */
 function extractTokenFromScan(raw: string): string {
@@ -61,6 +62,7 @@ export default function ConfirmPage() {
   const [cameraStarting, setCameraStarting] = useState(false);
   const [isExistingSession, setIsExistingSession] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
   const processingRef = useRef(false);
@@ -74,98 +76,121 @@ export default function ConfirmPage() {
     }
   }, [items.length, pageState, slug, navigate]);
 
+  // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
+
+  // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
+  const handleScannedTokenRef = useRef<(raw: string) => void>(() => undefined);
+
+  const stopCamera = useCallback(() => {
+    // Stop the ZXing scanner controls first
+    if (scannerControlsRef.current) {
+      try { scannerControlsRef.current.stop(); } catch { /* ignore */ }
+      scannerControlsRef.current = null;
+    }
+    // Stop raw stream tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    // Clear video srcObject
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
   // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
-  }, []);
-
-  // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
-
-  // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
-  const handleScannedTokenRef = useRef<(raw: string) => void>(() => { });
-
-  const stopCamera = useCallback(() => {
-    // Stop the ZXing scanner controls first
-    if (scannerControlsRef.current) {
-      try { scannerControlsRef.current.stop(); } catch { }
-      scannerControlsRef.current = null;
-    }
-    // Then stop the media stream
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((t) => t.stop());
-      videoRef.current.srcObject = null;
-    }
-  }, []);
+  }, [stopCamera]);
 
   const startScanning = useCallback(async () => {
     setCameraError("");
     processingRef.current = false;
     setIsExistingSession(false);
     setCameraStarting(true);
-    setPageState("scanning");
 
     try {
-      const reader = new BrowserQRCodeReader(undefined, {
-        delayBetweenScanAttempts: 150,
-        delayBetweenScanSuccess: 3000,
-      });
-      codeReaderRef.current = reader;
-
-      const constraints: MediaStreamConstraints = {
+      // Step 1: Request camera access BEFORE mounting video element
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
         audio: false,
-      };
+      });
 
-      const controls = await reader.decodeFromConstraints(
-        constraints,
-        videoRef.current!,
-        (result) => {
-          // Guard: only process once
-          if (!result || processingRef.current) return;
-          const text = result.getText();
-          if (!text || text.trim().length === 0) return;
+      // Store stream for cleanup
+      streamRef.current = stream;
 
-          // Lock immediately to prevent any further processing
-          processingRef.current = true;
+      // Step 2: Mount the video element by changing state
+      setPageState("scanning");
 
-          // Stop scanner immediately
-          if (scannerControlsRef.current) {
-            try { scannerControlsRef.current.stop(); } catch { }
-            scannerControlsRef.current = null;
+      // Step 3: Attach stream to video element after it mounts
+      // Use setTimeout to ensure the DOM has updated
+      setTimeout(async () => {
+        if (!videoRef.current) return;
+
+        // Attach stream directly to video element
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute("webkit-playsinline", "true");
+
+          try {
+            await videoRef.current.play();
+          } catch {
+            // ignore (autoplay can be blocked until user gesture)
           }
 
-          // Call handler via ref (always up-to-date)
-          handleScannedTokenRef.current(text.trim());
-        }
-      );
+        // Step 4: Start ZXing AFTER video is playing
+        const reader = new BrowserQRCodeReader(undefined, {
+          delayBetweenScanAttempts: 200,
+        });
+        codeReaderRef.current = reader;
 
-      scannerControlsRef.current = controls;
-      setCameraStarting(false);
+        // Use decodeFromVideoElement since we already have the stream attached
+        const controls = await reader.decodeFromVideoElement(
+          videoRef.current,
+          (result, err) => {
+            if (!result || processingRef.current) return;
+            const text = result.getText();
+            if (!text || text.trim().length === 0) return;
 
-      // Force video render on iOS Safari
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.play().catch(() => { });
-        }
-      }, 100);
-    } catch (err: any) {
+            // Lock immediately to prevent any further processing
+            processingRef.current = true;
+
+            // Stop scanner immediately
+            if (scannerControlsRef.current) {
+              try { scannerControlsRef.current.stop(); } catch { /* ignore */ }
+              scannerControlsRef.current = null;
+            }
+
+            // Call handler via ref (always up-to-date)
+            handleScannedTokenRef.current(text.trim());
+          }
+        );
+        scannerControlsRef.current = controls;
+        setCameraStarting(false);
+      }, 50);
+
+    } catch (err: unknown) {
       console.error("Camera error:", err);
+      processingRef.current = false;
       setCameraStarting(false);
-      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
+      const name = typeof err === "object" && err && "name" in err ? String((err as { name?: unknown }).name) : "";
+      const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || message.includes("Permission")) {
         setCameraError("camera_denied");
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setCameraError("no_camera");
       } else {
         setCameraError("camera_error");
       }
       setPageState("summary");
     }
-  }, [stopCamera]);
+  }, []);
 
   const cancelScanning = useCallback(() => {
     processingRef.current = false;
@@ -284,7 +309,7 @@ export default function ConfirmPage() {
           unit_price: item.unitPrice,
           quantity: item.quantity,
           subtotal: item.subtotal,
-          selected_modifiers: item.selectedModifiers as any,
+          selected_modifiers: item.selectedModifiers as unknown as Json,
           item_notes: item.itemNotes || null,
         }));
 
@@ -330,41 +355,25 @@ export default function ConfirmPage() {
         setTimeout(() => {
           navigate(`/${slug}/tracking?t=${scannedToken}&order=${order.id}`, { replace: true });
         }, 1500);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Order creation error:", err);
         processingRef.current = false; // Allow retry
-        setErrorMsg(err.message || "Error desconocido");
+        const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
+        setErrorMsg(message || "Error desconocido");
         setPageState("error");
       }
     },
     [storedTenantId, orderNotes, clearCart, navigate, slug, setTableToken, setTableNumber, stopCamera, pageState],
   );
 
-  // Ensure iOS compatibility for video
+  // Keep the ref always up-to-date
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.setAttribute("webkit-playsinline", "true");
-      videoRef.current.setAttribute("playsinline", "true");
-    }
-  }, []);
+    handleScannedTokenRef.current = handleScannedToken;
+  }, [handleScannedToken]);
 
   /* ========== RENDER ========== */
   return (
     <div className="min-h-screen bg-background">
-      {/* Video element */}
-      <video
-        ref={videoRef}
-        className="fixed inset-0 z-50 h-full w-full object-cover"
-        style={{
-          opacity: pageState === "scanning" ? 1 : 0,
-          pointerEvents: pageState === "scanning" ? "auto" : "none",
-          visibility: pageState === "scanning" ? "visible" : "hidden",
-        }}
-        autoPlay
-        playsInline
-        muted
-      />
-
       {/* Header */}
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -444,7 +453,9 @@ export default function ConfirmPage() {
                 <div className="mx-auto mb-4 max-w-[300px] rounded-xl bg-yellow-50 border border-yellow-200 p-3">
                   <p className="text-xs text-yellow-800 font-medium">
                     {cameraError === "camera_denied"
-                      ? "Necesitamos acceso a la cámara para escanear el QR. Habilita el permiso en la configuración de tu navegador."
+                      ? "Necesitamos acceso a la cámara. Ve a Configuración y permite el acceso."
+                      : cameraError === "no_camera"
+                      ? "No encontramos una cámara en este dispositivo."
                       : "Error al acceder a la cámara. Intenta de nuevo."}
                   </p>
                 </div>
@@ -471,6 +482,15 @@ export default function ConfirmPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center"
           >
+            {/* Mount video INSIDE the visible container */}
+            <video
+              ref={videoRef}
+              className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
+              playsInline
+              muted
+              webkit-playsinline=""
+            />
             {cameraStarting ? (
               <div className="flex flex-col items-center gap-4">
                 <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
