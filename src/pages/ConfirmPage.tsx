@@ -58,6 +58,7 @@ export default function ConfirmPage() {
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
   const [cameraError, setCameraError] = useState("");
+  const [cameraStarting, setCameraStarting] = useState(false);
   const [isExistingSession, setIsExistingSession] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
@@ -103,6 +104,7 @@ export default function ConfirmPage() {
     setCameraError("");
     processingRef.current = false;
     setIsExistingSession(false);
+    setCameraStarting(true);
     setPageState("scanning");
 
     try {
@@ -133,6 +135,7 @@ export default function ConfirmPage() {
       );
 
       scannerControlsRef.current = controls;
+      setCameraStarting(false);
 
       // Force video render on iOS Safari
       setTimeout(() => {
@@ -142,6 +145,7 @@ export default function ConfirmPage() {
       }, 100);
     } catch (err: any) {
       console.error("Camera error:", err);
+      setCameraStarting(false);
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
         setCameraError("camera_denied");
       } else {
@@ -453,39 +457,48 @@ export default function ConfirmPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black"
+            className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center"
           >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
-              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
-
-              <div className="relative h-[260px] w-[260px]">
-                <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
-                <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
-                <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
-                <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
-
-                <motion.div
-                  className="absolute left-2 right-2 h-0.5 rounded-full"
-                  style={{ backgroundColor: primaryColor }}
-                  animate={{ top: ["10%", "90%", "10%"] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                />
+            {cameraStarting ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-white text-sm font-medium">Iniciando cámara...</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+                  <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
+                  <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
 
-            <div className="absolute bottom-32 left-0 right-0 text-center">
-              <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
-            </div>
+                  <div className="relative h-[260px] w-[260px]">
+                    <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
+                    <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
+                    <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
+                    <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
 
-            <button
-              onClick={cancelScanning}
-              className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
-            >
-              <X className="h-4 w-4" /> Cancelar
-            </button>
+                    <motion.div
+                      className="absolute left-2 right-2 h-0.5 rounded-full"
+                      style={{ backgroundColor: primaryColor }}
+                      animate={{ top: ["10%", "90%", "10%"] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="absolute bottom-32 left-0 right-0 text-center">
+                  <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
+                </div>
+
+                <button
+                  onClick={cancelScanning}
+                  className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
+                >
+                  <X className="h-4 w-4" /> Cancelar
+                </button>
+              </>
+            )}
           </motion.div>
         )}
 
