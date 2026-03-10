@@ -103,17 +103,28 @@ export default function MesasPage() {
     if (!closeTarget) return;
     setClosing(true);
     try {
-      await supabase.from("tables").update({ status: "free" }).eq("id", closeTarget.id);
+      await supabase
+        .from("tables")
+        .update({ status: "free", assigned_waiter_id: null })
+        .eq("id", closeTarget.id);
+
       await supabase
         .from("table_sessions")
-        .update({ is_active: false, closed_at: new Date().toISOString() } as any)
+        .update({ is_active: false, closed_at: new Date().toISOString() })
         .eq("table_id", closeTarget.id)
         .eq("is_active", true);
-      toast({ title: "Mesa cerrada", description: `Mesa ${closeTarget.number} liberada` });
+
+      await supabase
+        .from("bill_requests")
+        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .eq("table_id", closeTarget.id)
+        .in("status", ["pending", "attending"]);
+
+      toast({ title: "✅ Mesa liberada", description: `Mesa ${closeTarget.number} lista para el siguiente cliente` });
       setCloseTarget(null);
       fetchTables();
     } catch {
-      toast({ title: "Error", description: "No se pudo cerrar la mesa", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo liberar la mesa", variant: "destructive" });
     } finally {
       setClosing(false);
     }

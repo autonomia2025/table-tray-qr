@@ -341,21 +341,22 @@ export default function MozoMesasPage() {
           const isAssigned = !!t.assigned_waiter_id;
           const assignedToOther = isAssigned && !isMine;
 
+          const CardElement = isActive ? 'button' : 'div';
+
           return (
-            <button
+            <CardElement
               key={t.id}
-              onClick={() => {
-                if (isActive) openSheet(t);
-              }}
-              disabled={!isActive}
-              className={`min-h-[140px] rounded-xl p-3 text-left transition-all relative flex flex-col justify-between ${!isActive ? 'cursor-default' : ''} ${
-                st === 'free' ? 'bg-white border-l-4 border-green-400' : ''
+              onClick={isActive ? () => openSheet(t) : undefined}
+              className={`min-h-[140px] rounded-xl p-3 text-left transition-all relative flex flex-col justify-between ${
+                isActive ? 'cursor-pointer active:scale-95' : 'cursor-default'
               } ${
-                st === 'occupied' && isMine ? 'bg-white border-l-4 border-primary' : ''
+                st === 'free' ? 'bg-card border-l-4 border-green-400' : ''
               } ${
-                st === 'occupied' && assignedToOther ? 'bg-white border-l-4 border-orange-400 opacity-80' : ''
+                st === 'occupied' && isMine ? 'bg-card border-l-4 border-primary' : ''
               } ${
-                st === 'waiting_bill' ? 'bg-red-50 border-l-4 border-red-500' : ''
+                st === 'occupied' && assignedToOther ? 'bg-card border-l-4 border-orange-400 opacity-80' : ''
+              } ${
+                st === 'waiting_bill' ? 'bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500' : ''
               }`}
             >
               {st === 'waiting_bill' && (
@@ -366,7 +367,7 @@ export default function MozoMesasPage() {
 
               {/* Top row: Table number + status emoji */}
               <div className="flex items-start justify-between">
-                <span className="text-4xl font-black text-gray-800">{t.number}</span>
+                <span className="text-4xl font-black text-foreground">{t.number}</span>
                 <div className="flex items-center gap-1">
                   {st === 'waiting_bill' && <span className="text-xl">🧾</span>}
                   {st === 'occupied' && !isMine && <span className="w-2 h-2 rounded-full bg-orange-400"></span>}
@@ -377,17 +378,17 @@ export default function MozoMesasPage() {
               {/* Middle: Status pill */}
               <div>
                 {st === 'free' && (
-                  <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full">
+                  <span className="inline-block bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2 py-1 rounded-full">
                     Libre
                   </span>
                 )}
                 {st === 'occupied' && t.sessionOpenedAt && (
-                  <span className="inline-block bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded-full">
+                  <span className="inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-xs font-semibold px-2 py-1 rounded-full">
                     Ocupada · {minutesAgo(t.sessionOpenedAt)}min
                   </span>
                 )}
                 {st === 'waiting_bill' && (
-                  <span className="inline-block bg-red-100 text-red-700 text-xs font-semibold px-2 py-1 rounded-full">
+                  <span className="inline-block bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs font-semibold px-2 py-1 rounded-full">
                     🧾 Pide la cuenta
                   </span>
                 )}
@@ -396,7 +397,7 @@ export default function MozoMesasPage() {
               {/* Bottom row */}
               {isActive ? (
                 <div className="flex items-end justify-between mt-2">
-                  <span className="text-lg font-bold text-gray-800">
+                  <span className="text-lg font-bold text-foreground">
                     {t.sessionTotal !== undefined ? formatCLP(t.sessionTotal) : ''}
                   </span>
                   {(t.activeOrders ?? 0) > 0 && (
@@ -417,7 +418,7 @@ export default function MozoMesasPage() {
                   {isMine ? '✓ Asignada a mí' : 'Tomar mesa →'}
                 </button>
               )}
-            </button>
+            </CardElement>
           );
         })}
       </div>

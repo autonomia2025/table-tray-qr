@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
@@ -462,7 +463,17 @@ export default function KDSPage() {
 
   if (!branchId) return <BranchSelector tenantId={tenantId} />;
 
-  return <KDSBoard branchId={branchId} />;
+  return (
+    <ErrorBoundary
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-black text-white text-2xl">
+          ⚠️ Error en KDS — recarga la página
+        </div>
+      }
+    >
+      <KDSBoard branchId={branchId} />
+    </ErrorBoundary>
+  );
 }
 
 function KDSBoard({ branchId }: { branchId: string }) {
