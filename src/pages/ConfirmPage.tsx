@@ -108,11 +108,23 @@ export default function ConfirmPage() {
     setPageState("scanning");
 
     try {
-      const reader = new BrowserQRCodeReader();
+      const reader = new BrowserQRCodeReader(undefined, {
+        delayBetweenScanAttempts: 150,
+        delayBetweenScanSuccess: 3000,
+      });
       codeReaderRef.current = reader;
 
-      const controls = await reader.decodeFromVideoDevice(
-        undefined,
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+
+      const controls = await reader.decodeFromConstraints(
+        constraints,
         videoRef.current!,
         (result) => {
           // Guard: only process once
