@@ -344,14 +344,19 @@ export default function MozoMesasPage() {
           return (
             <button
               key={t.id}
-              onClick={() => isActive ? openSheet(t) : toggleAssignment(t)}
-              className={`
-                min-h-[140px] rounded-xl p-3 text-left transition-all relative flex flex-col justify-between
-                ${st === 'free' ? 'bg-white border-l-4 border-green-400' : ''}
-                ${st === 'occupied' && isMine ? 'bg-white border-l-4 border-primary' : ''}
-                ${st === 'occupied' && assignedToOther ? 'bg-white border-l-4 border-orange-400 opacity-80' : ''}
-                ${st === 'waiting_bill' ? 'bg-red-50 border-l-4 border-red-500' : ''}
-              `}
+              onClick={() => {
+                if (isActive) openSheet(t);
+              }}
+              disabled={!isActive}
+              className={`min-h-[140px] rounded-xl p-3 text-left transition-all relative flex flex-col justify-between ${!isActive ? 'cursor-default' : ''} ${
+                st === 'free' ? 'bg-white border-l-4 border-green-400' : ''
+              } ${
+                st === 'occupied' && isMine ? 'bg-white border-l-4 border-primary' : ''
+              } ${
+                st === 'occupied' && assignedToOther ? 'bg-white border-l-4 border-orange-400 opacity-80' : ''
+              } ${
+                st === 'waiting_bill' ? 'bg-red-50 border-l-4 border-red-500' : ''
+              }`}
             >
               {st === 'waiting_bill' && (
                 <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
@@ -446,6 +451,15 @@ export default function MozoMesasPage() {
                     <span className="text-2xl">🧾</span>
                     <div>
                       <p className="text-sm font-bold text-red-800">Pidió la cuenta — verifica el pago</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedTable.assigned_waiter_id && selectedTable.assigned_waiter_id !== staffId && (
+                  <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-3">
+                    <span className="text-xl">⚠️</span>
+                    <div>
+                      <p className="text-sm font-bold text-orange-800">Esta mesa está asignada a otro mozo</p>
                     </div>
                   </div>
                 )}

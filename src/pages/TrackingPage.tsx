@@ -752,7 +752,7 @@ export default function TrackingPage() {
         </div>
 
         {/* ── ACTION BUTTONS ── */}
-        {!isCancelled && (
+        {!isCancelled && session && (
           <div className="space-y-3 mb-6">
             <hr className="border-border" />
 
@@ -761,8 +761,11 @@ export default function TrackingPage() {
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground transition-colors active:bg-accent"
             >
               <ShoppingBag className="h-4 w-4" />
-              Agregar más 🍽
+              🍽️ Pedir más
             </button>
+            <p className="text-xs text-muted-foreground text-center -mt-2">
+              Tu mesa sigue abierta — puedes pedir más cuando quieras
+            </p>
 
             <button
               onClick={() => {

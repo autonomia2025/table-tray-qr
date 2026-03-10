@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAdmin } from "@/contexts/AdminContext";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCLP } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -58,8 +59,9 @@ function timeAgo(dateStr: string | null) {
 }
 
 export default function PedidosPage() {
-  const { branchId, tenantId } = useAdmin();
+  const { branchId, tenantId, slug } = useAdmin();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [tableMap, setTableMap] = useState<TableMap>({});
   const [itemsMap, setItemsMap] = useState<Record<string, OrderItem[]>>({});
@@ -69,6 +71,7 @@ export default function PedidosPage() {
   const [activeTab, setActiveTab] = useState<"active" | "history">("active");
   const [mobileTab, setMobileTab] = useState("confirmed");
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [pendingBills, setPendingBills] = useState(0);
 
   // Update current time every second for countdowns
   useEffect(() => {
@@ -89,7 +92,7 @@ export default function PedidosPage() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [ordersRes, tablesRes] = await Promise.all([
+    const [ordersRes, tablesRes, billsRes] = await Promise.all([
       supabase
         .from("orders")
         .select("id, order_number, status, total_amount, notes, source, confirmed_at, kitchen_accepted_at, ready_at, delivered_at, cancelled_reason, table_id")
@@ -100,10 +103,16 @@ export default function PedidosPage() {
         .from("tables")
         .select("id, number")
         .eq("branch_id", branchId),
+      supabase
+        .from("bill_requests")
+        .select("id, table_id, total_amount")
+        .eq("branch_id", branchId)
+        .eq("status", "pending"),
     ]);
 
     const ordersData = ordersRes.data ?? [];
     const tablesData = tablesRes.data ?? [];
+    const billsData = billsRes.data ?? [];
 
     const tMap: TableMap = {};
     tablesData.forEach(t => { tMap[t.id] = t.number; });
@@ -124,6 +133,7 @@ export default function PedidosPage() {
     }
 
     setOrders(ordersData);
+    setPendingBills(billsData.length);
     setLoading(false);
   };
 
@@ -162,10 +172,45 @@ export default function PedidosPage() {
       )
       .subscribe();
 
+    const billChannel = supabase
+      .channel("admin-bill-requests")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "bill_requests",
+          filter: `branch_id=eq.${branchId}`,
+        },
+        (payload) => {
+          const tableNum = tableMap[payload.new.table_id] ?? '?';
+          toast({
+            title: `🧾 Mesa ${tableNum} pide la cuenta`,
+            description: formatCLP(payload.new.total_amount),
+            duration: 10000,
+          });
+          setPendingBills(prev => prev + 1);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "bill_requests",
+          filter: `branch_id=eq.${branchId}`,
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(billChannel);
     };
-  }, [branchId]);
+  }, [branchId, tableMap]);
 
   const filteredOrders = useMemo(() => {
     let list = orders;
@@ -286,6 +331,26 @@ export default function PedidosPage() {
 
   return (
     <div>
+      {/* Pending bills banner */}
+      {pendingBills > 0 && (
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🧾</span>
+            <span className="text-sm font-semibold text-red-800">
+              {pendingBills} mesa{pendingBills > 1 ? 's' : ''} esperando{pendingBills === 1 ? '' : 'n'} pagar
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/${slug}/mesas`)}
+            className="text-red-700 border-red-300 hover:bg-red-100"
+          >
+            Ver en Mesas →
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-foreground">Centro de Pedidos</h1>
