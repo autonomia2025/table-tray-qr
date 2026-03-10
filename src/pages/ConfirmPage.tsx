@@ -58,6 +58,7 @@ export default function ConfirmPage() {
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
   const [cameraError, setCameraError] = useState("");
+  const [isExistingSession, setIsExistingSession] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
@@ -101,6 +102,7 @@ export default function ConfirmPage() {
   const startScanning = useCallback(async () => {
     setCameraError("");
     processingRef.current = false;
+    setIsExistingSession(false);
     setPageState("scanning");
 
     try {
@@ -206,6 +208,7 @@ export default function ConfirmPage() {
         if (existingSession) {
           sessionId = existingSession.id;
           existingAmount = existingSession.total_amount || 0;
+          setIsExistingSession(true);
         } else {
           const { data: newSession, error: sessionError } = await supabase
             .from("table_sessions")
@@ -520,7 +523,9 @@ export default function ConfirmPage() {
               <Check className="h-12 w-12 text-white" />
             </motion.div>
             <p className="mt-5 text-xl font-bold text-foreground">¡Pedido enviado! 🎉</p>
-            <p className="mt-1 text-sm text-muted-foreground">Tu pedido ya está en cocina</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isExistingSession ? "Se agregó a tu pedido anterior" : "Tu pedido ya está en cocina"}
+            </p>
           </motion.div>
         )}
 

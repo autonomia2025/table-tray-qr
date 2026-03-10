@@ -109,6 +109,8 @@ export default function TrackingPage() {
   const [waiterModalOpen, setWaiterModalOpen] = useState(false);
   const [waiterSending, setWaiterSending] = useState(false);
   const [readyFired, setReadyFired] = useState(false);
+  const [waiterCallId, setWaiterCallId] = useState<string | null>(null);
+  const [waiterCallStatus, setWaiterCallStatus] = useState<string | null>(null);
 
   // QR scanner state for waiter call
   const [waiterScanOpen, setWaiterScanOpen] = useState(false);
@@ -213,7 +215,7 @@ export default function TrackingPage() {
     if (rawOrders) setOrders(rawOrders);
   }, [rawOrders]);
 
-  // Realtime subscription
+  // Realtime subscription for orders
   useEffect(() => {
     if (!session?.id) return;
     const channel = supabase
@@ -239,6 +241,33 @@ export default function TrackingPage() {
       supabase.removeChannel(channel);
     };
   }, [session?.id]);
+
+  // Realtime subscription for session status
+  useEffect(() => {
+    if (!tableData?.id) return;
+    const channel = supabase
+      .channel("session-status")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "table_sessions",
+          filter: `table_id=eq.${tableData.id}`,
+        },
+        (payload) => {
+          if (payload.new.is_active === false) {
+            toast({ title: "✅ Cuenta procesada", description: "¡Gracias por tu visita!" });
+            setTimeout(() => navigate(`/${slug}`), 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tableData?.id, slug, toast, navigate]);
 
   // Current order
   const currentOrder = useMemo(() => {
@@ -349,15 +378,25 @@ export default function TrackingPage() {
       }
 
       try {
-        await supabase.from("waiter_calls").insert({
-          tenant_id: tableData.tenant_id,
-          table_id: tableData.id,
-          branch_id: tableData.branch_id,
-          session_id: session.id,
-          reason: waiterReason,
-          status: "pending",
-        });
-        toast({ title: "El mozo fue notificado 👍" });
+        const { data: newCall, error } = await supabase
+          .from("waiter_calls")
+          .insert({
+            tenant_id: tableData.tenant_id,
+            table_id: tableData.id,
+            branch_id: tableData.branch_id,
+            session_id: session.id,
+            reason: waiterReason,
+            status: "pending",
+          })
+          .select("id")
+          .single();
+
+        if (error) throw error;
+
+        if (newCall) {
+          setWaiterCallId(newCall.id);
+          setWaiterCallStatus("pending");
+        }
       } catch {
         toast({ title: "Error al llamar al mozo", variant: "destructive" });
       } finally {
@@ -366,6 +405,67 @@ export default function TrackingPage() {
     },
     [tableData, session, toast, waiterReason]
   );
+
+  // Subscribe to waiter call status updates
+  useEffect(() => {
+    if (!waiterCallId) return;
+
+    const channel = supabase
+      .channel("my-waiter-call")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "waiter_calls",
+          filter: `id=eq.${waiterCallId}`,
+        },
+        (payload) => {
+          if (payload.new.status === "attended") {
+            setWaiterCallStatus("attended");
+            setTimeout(() => {
+              setWaiterCallId(null);
+              setWaiterCallStatus(null);
+            }, 4000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [waiterCallId]);
+
+  // Check for existing pending waiter call on mount
+  useEffect(() => {
+    if (!session?.id) return;
+
+    supabase
+      .from("waiter_calls")
+      .select("id, status")
+      .eq("session_id", session.id)
+      .eq("status", "pending")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setWaiterCallId(data.id);
+          setWaiterCallStatus(data.status);
+        }
+      });
+  }, [session?.id]);
+
+  // Auto-hide banner after 8 seconds if still pending
+  useEffect(() => {
+    if (waiterCallId && waiterCallStatus === "pending") {
+      const timer = setTimeout(() => {
+        setWaiterCallId(null);
+        setWaiterCallStatus(null);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [waiterCallId, waiterCallStatus]);
 
   /* ---------- LOADING ---------- */
   if (isLoading || !tenant) {
@@ -385,8 +485,41 @@ export default function TrackingPage() {
     );
   }
 
+  /* ---------- SESSION ENDED ---------- */
+  const sessionEnded = !isLoading && !session && tableData;
+
+  if (sessionEnded) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className="flex h-24 w-24 items-center justify-center rounded-full bg-green-100 mb-6"
+        >
+          <span className="text-5xl">✅</span>
+        </motion.div>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Tu sesión ha terminado</h2>
+        <p className="text-sm text-muted-foreground mb-8 max-w-[250px]">
+          Gracias por visitarnos. ¡ Esperamos verte pronto!
+        </p>
+        <button
+          onClick={() => navigate(`/${slug}/menu`)}
+          className="rounded-2xl px-8 py-3 text-sm font-semibold text-white"
+          style={{ backgroundColor: primaryColor }}
+        >
+          Volver al menú
+        </button>
+      </motion.div>
+    );
+  }
+
   /* ---------- ERROR ---------- */
-  if (isError || (!isLoading && session && orders.length === 0) || (!isLoading && !session && tableData)) {
+  if (isError || (!isLoading && session && orders.length === 0)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
         <AlertTriangle className="h-16 w-16 text-muted-foreground mb-4" />
@@ -487,6 +620,29 @@ export default function TrackingPage() {
         <span className="text-sm font-bold text-foreground">{tenant.name}</span>
         <div className="w-8" />
       </header>
+
+      {/* Waiter call banner */}
+      <AnimatePresence>
+        {waiterCallId && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`mx-4 mt-3 rounded-xl px-4 py-3 flex items-center justify-center gap-2 ${
+              waiterCallStatus === "attended" ? "bg-green-100" : "bg-green-100 animate-pulse"
+            }`}
+          >
+            <span className="text-lg">
+              {waiterCallStatus === "attended" ? "✅" : "🙋"}
+            </span>
+            <span className="text-sm font-medium text-green-800">
+              {waiterCallStatus === "attended"
+                ? "El mozo ya está al tanto"
+                : "Mozo notificado — viene en camino"}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="px-4 pt-5">
         {/* ── CURRENT ORDER ── */}
@@ -626,10 +782,11 @@ export default function TrackingPage() {
 
             <button
               onClick={() => setWaiterModalOpen(true)}
-              className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-muted-foreground transition-colors active:text-foreground"
+              disabled={!!waiterCallId}
+              className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Bell className="h-3.5 w-3.5" />
-              Llamar al mozo 🛎
+              {waiterCallId ? "Mozo notificado..." : "Llamar al mozo 🛎"}
             </button>
           </div>
         )}

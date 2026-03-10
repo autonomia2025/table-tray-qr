@@ -78,12 +78,25 @@ export default function RestaurantSplash() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Clear cart on mount to ensure a fresh session
+  // Clear cart on mount only if session is no longer active
   useEffect(() => {
-    const store = useCartStore.getState();
-    store.clearCart();
-    store.setTableToken("");
-    store.setTableNumber(null);
+    const token = useCartStore.getState().tableToken;
+    if (!token) return;
+    
+    supabase
+      .from("tables")
+      .select("id, table_sessions!inner(is_active)")
+      .eq("qr_token", token)
+      .eq("table_sessions.is_active", true)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) {
+          const store = useCartStore.getState();
+          store.clearCart();
+          store.setTableToken("");
+          store.setTableNumber(null);
+        }
+      });
   }, []);
 
   if (isLoading) {

@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Bell, Receipt, ChefHat, Loader2, UtensilsCrossed, CheckCircle2, Truck } from 'lucide-react';
 import { formatCLP } from '@/lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
+import { confirmPaymentAndRelease } from '@/lib/waiter-actions';
 
 interface TableGroup {
   tableId: string;
@@ -27,6 +28,7 @@ interface BillNotif {
   createdAt: string;
   totalAmount: number;
   tipAmount: number;
+  status: string;
 }
 
 interface OrderNotif {
@@ -172,6 +174,7 @@ export default function MozoNotificacionesPage() {
         createdAt: b.requested_at ?? '',
         totalAmount: b.total_amount,
         tipAmount: b.tip_amount ?? 0,
+        status: b.status ?? 'pending',
       });
     });
 
@@ -224,12 +227,38 @@ export default function MozoNotificacionesPage() {
     setActionLoading(null);
   };
 
-  const handleBillAttend = async (id: string) => {
-    setActionLoading(id);
-    await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', id);
-    toast({ title: 'Cuenta en camino' });
-    fetchAll();
-    setActionLoading(null);
+  const handleBillAttend = async (bill: BillNotif) => {
+    if (bill.status === 'attending') {
+      setActionLoading(bill.id);
+      try {
+        const { data: session } = await supabase
+          .from('table_sessions')
+          .select('id')
+          .eq('table_id', groups.find(g => g.billRequests.some(b => b.id === bill.id))?.tableId ?? '')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+
+        await confirmPaymentAndRelease(
+          groups.find(g => g.billRequests.some(b => b.id === bill.id))?.tableId ?? '',
+          session?.id ?? null,
+          bill.id,
+          branchId
+        );
+        toast({ title: '✅ Pago confirmado y mesa liberada' });
+      } catch (err) {
+        console.error(err);
+        toast({ title: 'Error al confirmar pago', variant: 'destructive' });
+      }
+      fetchAll();
+      setActionLoading(null);
+    } else {
+      setActionLoading(bill.id);
+      await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', bill.id);
+      toast({ title: 'Cuenta en camino' });
+      fetchAll();
+      setActionLoading(null);
+    }
   };
 
   const handleOrderAction = async (order: OrderNotif) => {
@@ -375,9 +404,9 @@ export default function MozoNotificacionesPage() {
                         variant="outline"
                         className="shrink-0 h-8"
                         disabled={actionLoading === bill.id}
-                        onClick={() => handleBillAttend(bill.id)}
+                        onClick={() => handleBillAttend(bill)}
                       >
-                        {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'En camino'}
+                        {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : bill.status === 'attending' ? 'Confirmar pago recibido' : 'En camino'}
                       </Button>
                     </div>
                   ))}
