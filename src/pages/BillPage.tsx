@@ -65,6 +65,9 @@ export default function BillPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
+  const processingRef = useRef(false);
+  const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
 
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
@@ -156,6 +159,12 @@ export default function BillPage() {
   }, []);
 
   const stopCamera = useCallback(() => {
+    if (scannerControlsRef.current) {
+      try {
+        scannerControlsRef.current.stop();
+      } catch {}
+      scannerControlsRef.current = null;
+    }
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach((t) => t.stop());
@@ -165,18 +174,37 @@ export default function BillPage() {
 
   const startScanning = useCallback(async () => {
     setCameraError("");
+    processingRef.current = false;
     setPageState("scanning");
     try {
       const reader = new BrowserQRCodeReader();
       codeReaderRef.current = reader;
-      await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
-        if (result) {
-          const token = extractTokenFromScan(result.getText());
-          stopCamera();
-          handleScannedToken(token);
+      const controls = await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
+        if (!result || processingRef.current) return;
+        const text = result.getText();
+        if (!text || text.trim().length === 0) return;
+
+        processingRef.current = true;
+        if (scannerControlsRef.current) {
+          try {
+            scannerControlsRef.current.stop();
+          } catch {}
+          scannerControlsRef.current = null;
         }
+        const token = extractTokenFromScan(text.trim());
+        handleScannedTokenRef.current(token);
       });
+      scannerControlsRef.current = controls;
+
+      // Force video render on iOS Safari
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play().catch(() => {});
+        }
+      }, 100);
     } catch (err: any) {
+      console.error("Camera error:", err);
+      processingRef.current = false;
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
         setCameraError("camera_denied");
       } else {
@@ -187,6 +215,7 @@ export default function BillPage() {
   }, [stopCamera]);
 
   const cancelScanning = useCallback(() => {
+    processingRef.current = false;
     stopCamera();
     setPageState("summary");
   }, [stopCamera]);
@@ -194,7 +223,10 @@ export default function BillPage() {
   /* ---- bill creation ---- */
   const handleScannedToken = useCallback(
     async (scannedToken: string) => {
+      if (pageState === "processing" || pageState === "success") return;
       setPageState("processing");
+      stopCamera();
+
       try {
         const { data: scannedTable } = await supabase
           .from("tables")
@@ -220,18 +252,44 @@ export default function BillPage() {
 
         if (billError) throw new Error("Error al enviar la solicitud.");
 
+        // Update table status
         await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
+
+        // Close table session immediately
+        await supabase
+          .from("table_sessions")
+          .update({
+            is_active: false,
+            closed_at: new Date().toISOString(),
+            close_reason: "bill_requested",
+          })
+          .eq("id", session.id);
 
         setFinalTotal(total);
         setFinalTip(tipAmount);
         setPageState("success");
       } catch (err: any) {
+        console.error("Bill request error:", err);
+        processingRef.current = false;
         setErrorMsg(err.message || "Error desconocido");
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total],
+    [tenant?.id, session?.id, session?.id, subtotal, tipAmount, tipPercentage, total, stopCamera, pageState],
   );
+
+  // Keep the ref always up-to-date
+  useEffect(() => {
+    handleScannedTokenRef.current = handleScannedToken;
+  }, [handleScannedToken]);
+
+  // Ensure iOS compatibility for video
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.setAttribute("webkit-playsinline", "true");
+      videoRef.current.setAttribute("playsinline", "true");
+    }
+  }, []);
 
   // Show "back to start" button after 3s on success
   useEffect(() => {
@@ -280,7 +338,12 @@ export default function BillPage() {
     <div className="min-h-screen bg-background">
       <video
         ref={videoRef}
-        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        className="fixed inset-0 z-50 h-full w-full object-cover"
+        style={{
+          opacity: pageState === "scanning" ? 1 : 0,
+          pointerEvents: pageState === "scanning" ? "auto" : "none",
+          visibility: pageState === "scanning" ? "visible" : "hidden",
+        }}
         autoPlay
         playsInline
         muted

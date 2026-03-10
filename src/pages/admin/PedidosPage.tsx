@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Clock, ChefHat, Check, Truck, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Clock, ChefHat, Check, Truck, XCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 interface OrderRow {
   id: string;
@@ -64,8 +64,17 @@ export default function PedidosPage() {
   const [tableMap, setTableMap] = useState<TableMap>({});
   const [itemsMap, setItemsMap] = useState<Record<string, OrderItem[]>>({});
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [filterTable, setFilterTable] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<"active" | "history">("active");
   const [mobileTab, setMobileTab] = useState("confirmed");
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  // Update current time every second for countdowns
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Detail dialog
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
@@ -123,19 +132,66 @@ export default function PedidosPage() {
     fetchData();
 
     const channel = supabase
-      .channel("admin-pedidos")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` }, () => fetchData())
+      .channel("admin-pedidos-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `branch_id=eq.${branchId}`,
+        },
+        async (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newOrder = payload.new as OrderRow;
+            // Fetch items for new order
+            const { data: items } = await supabase
+              .from("order_items")
+              .select("id, order_id, menu_item_name, quantity, unit_price, subtotal, item_notes, selected_modifiers")
+              .eq("order_id", newOrder.id);
+
+            setItemsMap(prev => ({ ...prev, [newOrder.id]: items || [] }));
+            setOrders(prev => [newOrder, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            const updatedOrder = payload.new as OrderRow;
+            setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+          } else if (payload.eventType === "DELETE") {
+            setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+          }
+        }
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [branchId]);
 
   const filteredOrders = useMemo(() => {
-    if (filterTable === "all") return orders;
-    return orders.filter(o => o.table_id === filterTable);
-  }, [orders, filterTable]);
+    let list = orders;
+    if (filterTable !== "all") {
+      list = list.filter((o) => o.table_id === filterTable);
+    }
+
+    if (activeTab === "active") {
+      // "Ready" orders stay in active list for 2 mins (120000ms) after delivery
+      return list.filter((o) => {
+        if (["confirmed", "in_kitchen", "ready"].includes(o.status || "")) return true;
+        if (o.status === "delivered" && o.delivered_at) {
+          const deliveredAt = new Date(o.delivered_at).getTime();
+          return currentTime - deliveredAt < 120000;
+        }
+        return false;
+      });
+    } else {
+      return list.filter((o) => ["delivered", "cancelled"].includes(o.status || ""));
+    }
+  }, [orders, filterTable, activeTab, currentTime]);
 
   const columnOrders = (status: string) => filteredOrders.filter(o => o.status === status);
+
+  const activeColumns = COLUMNS.filter(c => ["confirmed", "in_kitchen", "ready", "delivered"].includes(c.key));
+  const historyColumns = COLUMNS.filter(c => ["delivered", "cancelled"].includes(c.key));
 
   const uniqueTables = useMemo(() => {
     const ids = [...new Set(orders.map(o => o.table_id))];
@@ -174,36 +230,55 @@ export default function PedidosPage() {
     setDetailItems(itemsMap[order.id] ?? []);
   };
 
-  const OrderCard = ({ order }: { order: OrderRow }) => (
-    <button
-      onClick={() => openDetail(order)}
-      className="w-full text-left bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow"
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="font-bold text-sm">#{order.order_number}</span>
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          {timeAgo(order.confirmed_at)}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 mb-2">
-        <Badge variant="outline" className="text-[10px]">Mesa {tableMap[order.table_id] ?? "?"}</Badge>
-        {order.source === "waiter" && <Badge variant="secondary" className="text-[10px]">Mozo</Badge>}
-      </div>
-      <div className="space-y-0.5">
-        {(itemsMap[order.id] ?? []).slice(0, 3).map((item, i) => (
-          <p key={i} className="text-xs text-foreground truncate">{item.quantity}× {item.menu_item_name}</p>
-        ))}
-        {(itemsMap[order.id]?.length ?? 0) > 3 && (
-          <p className="text-xs text-muted-foreground">+{(itemsMap[order.id]?.length ?? 0) - 3} más</p>
+  const OrderCard = ({ order }: { order: OrderRow }) => {
+    const isRecentlyDelivered = order.status === "delivered" && activeTab === "active";
+    let countdownText = "";
+
+    if (isRecentlyDelivered && order.delivered_at) {
+      const deliveredAt = new Date(order.delivered_at).getTime();
+      const diff = 120000 - (currentTime - deliveredAt);
+      if (diff > 0) {
+        const secs = Math.floor(diff / 1000);
+        countdownText = `Se ocultará en ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+      }
+    }
+
+    return (
+      <button
+        onClick={() => openDetail(order)}
+        className={`w-full text-left bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow relative ${isRecentlyDelivered ? 'opacity-70' : ''}`}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-bold text-sm">#{order.order_number}</span>
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {timeAgo(order.confirmed_at)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <Badge variant="outline" className="text-[10px]">Mesa {tableMap[order.table_id] ?? "?"}</Badge>
+          {order.source === "waiter" && <Badge variant="secondary" className="text-[10px]">Mozo</Badge>}
+          {countdownText && (
+            <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700 animate-pulse border-amber-200">
+              {countdownText}
+            </Badge>
+          )}
+        </div>
+        <div className="space-y-0.5">
+          {(itemsMap[order.id] ?? []).slice(0, 3).map((item, i) => (
+            <p key={i} className="text-xs text-foreground truncate">{item.quantity}× {item.menu_item_name}</p>
+          ))}
+          {(itemsMap[order.id]?.length ?? 0) > 3 && (
+            <p className="text-xs text-muted-foreground">+{(itemsMap[order.id]?.length ?? 0) - 3} más</p>
+          )}
+        </div>
+        {order.notes && (
+          <p className="text-xs text-destructive mt-1 truncate">📝 {order.notes}</p>
         )}
-      </div>
-      {order.notes && (
-        <p className="text-xs text-destructive mt-1 truncate">📝 {order.notes}</p>
-      )}
-      <p className="text-sm font-semibold mt-2">{formatCLP(order.total_amount)}</p>
-    </button>
-  );
+        <p className="text-sm font-semibold mt-2">{formatCLP(order.total_amount)}</p>
+      </button>
+    );
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -212,7 +287,16 @@ export default function PedidosPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="text-xl font-bold text-foreground">Centro de Pedidos</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-foreground">Centro de Pedidos</h1>
+          <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-[300px]">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="active">En curso</TabsTrigger>
+              <TabsTrigger value="history">Historial</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
         <Select value={filterTable} onValueChange={setFilterTable}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Todas las mesas" />
@@ -227,18 +311,28 @@ export default function PedidosPage() {
       </div>
 
       {/* Desktop: horizontal columns */}
-      <div className="hidden md:grid md:grid-cols-5 gap-3">
-        {COLUMNS.map(col => {
+      <div className={`hidden md:grid gap-3 ${activeTab === 'active' ? 'md:grid-cols-4' : 'md:grid-cols-2 scrollbar-hide'}`}>
+        {(activeTab === "active" ? activeColumns : historyColumns).map(col => {
           const colOrders = columnOrders(col.key);
           return (
-            <div key={col.key} className={`rounded-xl border p-3 min-h-[200px] ${col.color}`}>
+            <div key={col.key} className={`rounded-xl border p-3 min-h-[400px] flex flex-col ${col.color}`}>
               <div className="flex items-center gap-2 mb-3">
                 <col.icon className="h-4 w-4" />
                 <span className="text-sm font-semibold">{col.label}</span>
                 <Badge variant="secondary" className="text-[10px] ml-auto">{colOrders.length}</Badge>
               </div>
-              <div className="space-y-2">
-                {colOrders.map(o => <OrderCard key={o.id} order={o} />)}
+              <div className="space-y-2 flex-1 relative">
+                {colOrders.length === 0 ? (
+                  activeTab === 'active' && col.key === 'confirmed' ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                      <CheckCircle2 className="h-10 w-10 text-green-500 mb-2 opacity-40" />
+                      <p className="text-xs font-medium text-muted-foreground">Todo al día 🎉</p>
+                      <p className="text-[10px] text-muted-foreground/60">No hay pedidos pendientes</p>
+                    </div>
+                  ) : null
+                ) : (
+                  colOrders.map(o => <OrderCard key={o.id} order={o} />)
+                )}
               </div>
             </div>
           );
@@ -248,8 +342,8 @@ export default function PedidosPage() {
       {/* Mobile: tabs */}
       <div className="md:hidden">
         <Tabs value={mobileTab} onValueChange={setMobileTab}>
-          <TabsList className="w-full grid grid-cols-5 mb-3">
-            {COLUMNS.map(col => (
+          <TabsList className={`w-full grid mb-3 ${activeTab === 'active' ? 'grid-cols-4' : 'grid-cols-2'}`}>
+            {(activeTab === "active" ? activeColumns : historyColumns).map(col => (
               <TabsTrigger key={col.key} value={col.key} className="text-xs px-1">
                 {col.label.split(" ")[0]}
                 {columnOrders(col.key).length > 0 && (
@@ -261,7 +355,10 @@ export default function PedidosPage() {
         </Tabs>
         <div className="space-y-2">
           {columnOrders(mobileTab).length === 0 ? (
-            <p className="text-center text-muted-foreground text-sm py-8">Sin pedidos</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <CheckCircle2 className="h-12 w-12 text-green-500 mb-3 opacity-30" />
+              <p className="text-sm font-medium text-muted-foreground">Sin pedidos</p>
+            </div>
           ) : (
             columnOrders(mobileTab).map(o => <OrderCard key={o.id} order={o} />)
           )}

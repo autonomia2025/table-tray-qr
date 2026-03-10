@@ -9,6 +9,21 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, UserCheck, UserX, ChefHat, CheckCircle2, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch { }
+}
+
 interface TableData {
   id: string;
   number: number;
@@ -117,13 +132,26 @@ export default function MozoMesasPage() {
     fetchTables();
 
     const channel = supabase
-      .channel('mozo-tables')
+      .channel('mozo-tables-all')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, (payload) => {
+        fetchTables();
+        const tableId = payload.new.table_id;
+        const table = tables.find(t => t.id === tableId);
+        const tableNum = table ? table.number : '?';
+
+        toast({
+          title: "🧾 ¡Piden la cuenta!",
+          description: `Mesa ${tableNum} está esperando pagar`,
+          duration: 8000,
+        });
+        playBeep();
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [branchId]);
+  }, [branchId, tables]);
 
   const toggleAssignment = async (table: TableData, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -197,12 +225,43 @@ export default function MozoMesasPage() {
   const closeTable = async () => {
     if (!selectedTable) return;
     setActionLoading('close');
-    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', selectedTable.id);
-    await supabase.from('table_sessions').update({ is_active: false, closed_at: new Date().toISOString() }).eq('table_id', selectedTable.id).eq('is_active', true);
-    toast({ title: 'Mesa cerrada' });
-    setSheetOpen(false);
-    setActionLoading(null);
-    fetchTables();
+
+    try {
+      // 1. Update table status and unassign waiter
+      await supabase
+        .from('tables')
+        .update({ status: 'free', assigned_waiter_id: null })
+        .eq('id', selectedTable.id);
+
+      // 2. Close active session
+      await supabase
+        .from('table_sessions')
+        .update({
+          is_active: false,
+          closed_at: new Date().toISOString()
+        })
+        .eq('table_id', selectedTable.id)
+        .eq('is_active', true);
+
+      // 3. Mark bill requests as paid
+      await supabase
+        .from('bill_requests')
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString()
+        })
+        .eq('table_id', selectedTable.id)
+        .eq('status', 'pending');
+
+      toast({ title: `✅ Mesa ${selectedTable.number} liberada y lista` });
+      setSheetOpen(false);
+      fetchTables();
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'Error al cerrar mesa', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const getActionLabel = (status: string) => {
@@ -244,19 +303,23 @@ export default function MozoMesasPage() {
               disabled={!isActive}
               className={`rounded-xl border-2 p-4 text-left transition-all relative ${colors} ${isActive ? 'active:scale-95' : 'opacity-80'} ${isMine ? 'ring-2 ring-primary ring-offset-1' : ''}`}
             >
+              {st === 'waiting_bill' && (
+                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                  <div className="absolute inset-0 border-2 border-red-500 animate-pulse-ring rounded-xl" />
+                </div>
+              )}
               <div className="flex items-start justify-between">
                 <span className="text-2xl font-bold">{t.number}</span>
                 <div className="flex items-center gap-1">
                   {st === 'waiting_bill' && <span className="text-base">🧾</span>}
                   <button
                     onClick={(e) => toggleAssignment(t, e)}
-                    className={`p-1 rounded-full transition-colors ${
-                      isMine
+                    className={`p-1 rounded-full transition-colors ${isMine
                         ? 'bg-primary/20 text-primary'
                         : assignedToOther
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                    }`}
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                      }`}
                     disabled={assignedToOther}
                     title={isMine ? 'Soltar mesa' : assignedToOther ? 'Asignada a otro mozo' : 'Tomar mesa'}
                   >
@@ -298,6 +361,15 @@ export default function MozoMesasPage() {
             <SheetTitle>
               Mesa {selectedTable?.number}{selectedTable?.name ? ` · ${selectedTable.name}` : ''}
             </SheetTitle>
+            {selectedTable?.status === 'waiting_bill' && (
+              <div className="mt-2 bg-red-100 border border-red-200 rounded-lg p-3 flex items-center gap-3">
+                <span className="text-2xl">🧾</span>
+                <div>
+                  <p className="text-sm font-bold text-red-800">Este cliente pidió la cuenta</p>
+                  <p className="text-xs text-red-600">Verifica el pago antes de liberar la mesa</p>
+                </div>
+              </div>
+            )}
           </SheetHeader>
 
           {ordersLoading ? (
@@ -349,8 +421,13 @@ export default function MozoMesasPage() {
               </Button>
             )}
             {(selectedTable?.status === 'occupied' || selectedTable?.status === 'waiting_bill') && (
-              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading === 'close'} onClick={closeTable}>
-                Cerrar mesa
+              <Button
+                variant={selectedTable?.status === 'waiting_bill' ? 'default' : 'destructive'}
+                className={`w-full h-12 mt-2 ${selectedTable?.status === 'waiting_bill' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                disabled={actionLoading === 'close'}
+                onClick={closeTable}
+              >
+                {selectedTable?.status === 'waiting_bill' ? 'Confirmar Pago y Liberar' : 'Cerrar mesa'}
               </Button>
             )}
           </div>

@@ -82,12 +82,12 @@ export default function ConfirmPage() {
   // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
 
   // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
-  const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
+  const handleScannedTokenRef = useRef<(raw: string) => void>(() => { });
 
   const stopCamera = useCallback(() => {
     // Stop the ZXing scanner controls first
     if (scannerControlsRef.current) {
-      try { scannerControlsRef.current.stop(); } catch {}
+      try { scannerControlsRef.current.stop(); } catch { }
       scannerControlsRef.current = null;
     }
     // Then stop the media stream
@@ -121,7 +121,7 @@ export default function ConfirmPage() {
 
           // Stop scanner immediately
           if (scannerControlsRef.current) {
-            try { scannerControlsRef.current.stop(); } catch {}
+            try { scannerControlsRef.current.stop(); } catch { }
             scannerControlsRef.current = null;
           }
 
@@ -131,6 +131,13 @@ export default function ConfirmPage() {
       );
 
       scannerControlsRef.current = controls;
+
+      // Force video render on iOS Safari
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.play().catch(() => { });
+        }
+      }, 100);
     } catch (err: any) {
       console.error("Camera error:", err);
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
@@ -153,7 +160,7 @@ export default function ConfirmPage() {
     async (rawScanned: string) => {
       // Double-check guard
       if (pageState === "processing" || pageState === "success") return;
-      
+
       setPageState("processing");
       stopCamera();
       const scannedToken = extractTokenFromScan(rawScanned);
@@ -314,10 +321,13 @@ export default function ConfirmPage() {
     [storedTenantId, orderNotes, clearCart, navigate, slug, setTableToken, setTableNumber, stopCamera, pageState],
   );
 
-  // Keep the ref always up-to-date
+  // Ensure iOS compatibility for video
   useEffect(() => {
-    handleScannedTokenRef.current = handleScannedToken;
-  }, [handleScannedToken]);
+    if (videoRef.current) {
+      videoRef.current.setAttribute("webkit-playsinline", "true");
+      videoRef.current.setAttribute("playsinline", "true");
+    }
+  }, []);
 
   /* ========== RENDER ========== */
   return (
@@ -325,7 +335,12 @@ export default function ConfirmPage() {
       {/* Video element */}
       <video
         ref={videoRef}
-        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        className="fixed inset-0 z-50 h-full w-full object-cover"
+        style={{
+          opacity: pageState === "scanning" ? 1 : 0,
+          pointerEvents: pageState === "scanning" ? "auto" : "none",
+          visibility: pageState === "scanning" ? "visible" : "hidden",
+        }}
         autoPlay
         playsInline
         muted
