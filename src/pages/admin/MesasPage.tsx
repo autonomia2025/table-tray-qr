@@ -17,7 +17,6 @@ interface TableRow {
   name: string | null;
   status: string | null;
   capacity: number | null;
-  assigned_waiter_id: string | null;
   session_total?: number;
   session_opened_at?: string;
 }
@@ -37,7 +36,6 @@ export default function MesasPage() {
   const { branchId, tenantId } = useAdmin();
   const { toast } = useToast();
   const [tables, setTables] = useState<TableRow[]>([]);
-  const [waiterMap, setWaiterMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [closeTarget, setCloseTarget] = useState<TableRow | null>(null);
   const [closing, setClosing] = useState(false);
@@ -51,7 +49,7 @@ export default function MesasPage() {
   const fetchTables = async () => {
     const { data, error } = await supabase
       .from("tables")
-      .select("id, number, name, status, capacity, assigned_waiter_id")
+      .select("id, number, name, status, capacity")
       .eq("branch_id", branchId)
       .order("number");
 
@@ -72,19 +70,6 @@ export default function MesasPage() {
       }
     }
 
-    // Fetch waiter names
-    const waiterIds = [...new Set(data.filter(t => t.assigned_waiter_id).map(t => t.assigned_waiter_id))];
-    let waiterMap: Record<string, string> = {};
-    if (waiterIds.length > 0) {
-      const { data: staff } = await supabase
-        .from("staff_users")
-        .select("id, name")
-        .in("id", waiterIds);
-      staff?.forEach(s => {
-        waiterMap[s.id] = s.name || 'Mozo';
-      });
-    }
-
     setTables(
       data.map((t) => ({
         ...t,
@@ -92,7 +77,6 @@ export default function MesasPage() {
         session_opened_at: sessionMap[t.id]?.opened,
       }))
     );
-    setWaiterMap(waiterMap);
     setLoading(false);
   };
 
@@ -254,13 +238,6 @@ export default function MesasPage() {
                   <Badge variant="outline" className={cn(s.text)}>{s.label}</Badge>
                 )}
               </div>
-              
-              {/* Assigned waiter */}
-              {t.assigned_waiter_id && (
-                <div className="mt-2 text-xs font-medium text-primary">
-                  👤 {waiterMap[t.assigned_waiter_id] || 'Mozo'}
-                </div>
-              )}
               
               {isOccupied && t.session_total !== undefined && (
                 <div className="mt-2 text-lg font-bold text-foreground">{formatCLP(t.session_total)}</div>

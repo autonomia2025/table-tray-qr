@@ -133,17 +133,11 @@ export default function MozoMesasPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [branchId]);
+  }, [branchId, tables]);
 
   const toggleAssignment = async (table: TableData, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const isMyTable = table.assigned_waiter_id === staffId;
-    
-    if (!isMyTable && table.assigned_waiter_id) {
-      toast({ title: 'Esta mesa está asignada a otro mozo', variant: 'destructive' });
-      return;
-    }
-    
     const { error } = await supabase
       .from('tables')
       .update({ assigned_waiter_id: isMyTable ? null : staffId })
