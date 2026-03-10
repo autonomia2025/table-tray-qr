@@ -8,22 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, UserCheck, UserX, ChefHat, CheckCircle2, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { confirmPaymentAndRelease } from '@/lib/waiter-actions';
-
-function playBeep() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.5);
-  } catch { }
-}
 
 interface TableData {
   id: string;
@@ -45,6 +29,26 @@ interface OrderWithItems {
   items: { menu_item_name: string; quantity: number }[];
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  free: 'bg-green-100 border-green-300 text-green-800',
+  occupied: 'bg-orange-100 border-orange-300 text-orange-800',
+  waiting_bill: 'bg-red-100 border-red-300 text-red-800',
+  reserved: 'bg-muted border-border text-muted-foreground',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  free: 'Libre',
+  occupied: 'Ocupada',
+  waiting_bill: 'Cuenta pedida',
+  reserved: 'Reservada',
+};
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  confirmed: 'Nuevo',
+  in_kitchen: 'En cocina',
+  ready: 'Listo',
+};
+
 function minutesAgo(dateStr: string) {
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
 }
@@ -60,8 +64,6 @@ export default function MozoMesasPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [showMyTables, setShowMyTables] = useState(false);
-  const [confirmClose, setConfirmClose] = useState(false);
 
   const fetchTables = async () => {
     const { data: tablesData } = await supabase
@@ -93,6 +95,7 @@ export default function MozoMesasPage() {
         sessionsMap[s.table_id] = { total: s.total_amount ?? 0, opened: s.opened_at ?? '' };
       });
 
+      // Count active orders per table
       const orderCountMap: Record<string, number> = {};
       orderCounts?.forEach(o => {
         orderCountMap[o.table_id] = (orderCountMap[o.table_id] ?? 0) + 1;
@@ -114,29 +117,16 @@ export default function MozoMesasPage() {
     fetchTables();
 
     const channel = supabase
-      .channel('mozo-tables-all')
+      .channel('mozo-tables')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, (payload) => {
-        fetchTables();
-        const tableId = payload.new.table_id;
-        const table = tables.find(t => t.id === tableId);
-        const tableNum = table ? table.number : '?';
-
-        toast({
-          title: "🧾 ¡Piden la cuenta!",
-          description: `Mesa ${tableNum} está esperando pagar`,
-          duration: 8000,
-        });
-        playBeep();
-      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [branchId, tables]);
+  }, [branchId]);
 
-  const toggleAssignment = async (table: TableData, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const toggleAssignment = async (table: TableData, e: React.MouseEvent) => {
+    e.stopPropagation();
     const isMyTable = table.assigned_waiter_id === staffId;
     const { error } = await supabase
       .from('tables')
@@ -154,7 +144,6 @@ export default function MozoMesasPage() {
     setSelectedTable(table);
     setSheetOpen(true);
     setOrdersLoading(true);
-    setConfirmClose(false);
 
     const { data: session } = await supabase
       .from('table_sessions')
@@ -207,326 +196,164 @@ export default function MozoMesasPage() {
 
   const closeTable = async () => {
     if (!selectedTable) return;
-
-    if (selectedTable.status === 'waiting_bill' && !confirmClose) {
-      setConfirmClose(true);
-      setTimeout(() => setConfirmClose(false), 3000);
-      return;
-    }
-
     setActionLoading('close');
-
-    try {
-      const { data: session } = await supabase
-        .from('table_sessions')
-        .select('id')
-        .eq('table_id', selectedTable.id)
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-
-      const { data: billRequest } = await supabase
-        .from('bill_requests')
-        .select('id')
-        .eq('table_id', selectedTable.id)
-        .eq('status', 'pending')
-        .limit(1)
-        .maybeSingle();
-
-      if (billRequest) {
-        await confirmPaymentAndRelease(
-          selectedTable.id,
-          session?.id ?? null,
-          billRequest.id,
-          branchId
-        );
-      } else {
-        await supabase
-          .from('tables')
-          .update({ status: 'free', assigned_waiter_id: null })
-          .eq('id', selectedTable.id);
-
-        await supabase
-          .from('table_sessions')
-          .update({
-            is_active: false,
-            closed_at: new Date().toISOString()
-          })
-          .eq('table_id', selectedTable.id)
-          .eq('is_active', true);
-      }
-
-      toast({ title: `✅ Mesa ${selectedTable.number} liberada` });
-      setSheetOpen(false);
-      fetchTables();
-    } catch (err) {
-      console.error(err);
-      toast({ title: 'Error al cerrar mesa', variant: 'destructive' });
-    } finally {
-      setActionLoading(null);
-      setConfirmClose(false);
-    }
+    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', selectedTable.id);
+    await supabase.from('table_sessions').update({ is_active: false, closed_at: new Date().toISOString() }).eq('table_id', selectedTable.id).eq('is_active', true);
+    toast({ title: 'Mesa cerrada' });
+    setSheetOpen(false);
+    setActionLoading(null);
+    fetchTables();
   };
 
-  const getOrderActionLabel = (status: string) => {
+  const getActionLabel = (status: string) => {
     switch (status) {
-      case 'confirmed': return '→ Enviar a Cocina';
-      case 'in_kitchen': return '→ Marcar Listo';
-      case 'ready': return '✓ Entregado';
+      case 'confirmed': return 'Enviar a cocina';
+      case 'in_kitchen': return 'Marcar listo';
+      case 'ready': return 'Entregado';
       default: return '';
     }
   };
 
-  const getOrderActionStyle = (status: string) => {
+  const getActionIcon = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'bg-amber-500 hover:bg-amber-600 text-white';
-      case 'in_kitchen': return 'bg-blue-500 hover:bg-blue-600 text-white';
-      case 'ready': return 'bg-green-500 hover:bg-green-600 text-white';
-      default: return '';
+      case 'confirmed': return <ChefHat className="w-4 h-4" />;
+      case 'in_kitchen': return <CheckCircle2 className="w-4 h-4" />;
+      case 'ready': return <Truck className="w-4 h-4" />;
+      default: return null;
     }
   };
-
-  const getOrderBorderColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'border-l-amber-400';
-      case 'in_kitchen': return 'border-l-blue-400';
-      case 'ready': return 'border-l-green-400';
-      default: return 'border-l-gray-400';
-    }
-  };
-
-  const filteredTables = showMyTables 
-    ? tables.filter(t => t.assigned_waiter_id === staffId)
-    : tables;
-
-  const freeCount = filteredTables.filter(t => t.status === 'free').length;
-  const occupiedCount = filteredTables.filter(t => t.status === 'occupied' || t.status === 'waiting_bill').length;
-  const myCount = filteredTables.filter(t => t.assigned_waiter_id === staffId).length;
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="p-4">
-      {/* Summary bar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            <span className="text-sm font-medium">{freeCount} libres</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-            <span className="text-sm font-medium">{occupiedCount} ocupadas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary"></span>
-            <span className="text-sm font-medium">{myCount} mías</span>
-          </div>
-        </div>
-        <Button
-          variant={showMyTables ? "default" : "outline"}
-          size="sm"
-          onClick={() => setShowMyTables(!showMyTables)}
-        >
-          {showMyTables ? "Mis mesas" : "Todas"}
-        </Button>
-      </div>
-
-      {/* Grid */}
+      <h2 className="text-lg font-bold text-foreground mb-4">Mesas</h2>
       <div className="grid grid-cols-2 gap-3">
-        {filteredTables.map(t => {
+        {tables.map(t => {
           const st = t.status ?? 'free';
+          const colors = STATUS_COLORS[st] ?? STATUS_COLORS.free;
           const isActive = st === 'occupied' || st === 'waiting_bill';
           const isMine = t.assigned_waiter_id === staffId;
           const isAssigned = !!t.assigned_waiter_id;
           const assignedToOther = isAssigned && !isMine;
 
-          const CardElement = isActive ? 'button' : 'div';
-
           return (
-            <CardElement
+            <button
               key={t.id}
-              onClick={isActive ? () => openSheet(t) : undefined}
-              className={`min-h-[140px] rounded-xl p-3 text-left transition-all relative flex flex-col justify-between ${
-                isActive ? 'cursor-pointer active:scale-95' : 'cursor-default'
-              } ${
-                st === 'free' ? 'bg-card border-l-4 border-green-400' : ''
-              } ${
-                st === 'occupied' && isMine ? 'bg-card border-l-4 border-primary' : ''
-              } ${
-                st === 'occupied' && assignedToOther ? 'bg-card border-l-4 border-orange-400 opacity-80' : ''
-              } ${
-                st === 'waiting_bill' ? 'bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500' : ''
-              }`}
+              onClick={() => isActive ? openSheet(t) : undefined}
+              disabled={!isActive}
+              className={`rounded-xl border-2 p-4 text-left transition-all relative ${colors} ${isActive ? 'active:scale-95' : 'opacity-80'} ${isMine ? 'ring-2 ring-primary ring-offset-1' : ''}`}
             >
-              {st === 'waiting_bill' && (
-                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                  <div className="absolute inset-0 border-2 border-red-500 animate-pulse-ring rounded-xl" />
-                </div>
-              )}
-
-              {/* Top row: Table number + status emoji */}
               <div className="flex items-start justify-between">
-                <span className="text-4xl font-black text-foreground">{t.number}</span>
+                <span className="text-2xl font-bold">{t.number}</span>
                 <div className="flex items-center gap-1">
-                  {st === 'waiting_bill' && <span className="text-xl">🧾</span>}
-                  {st === 'occupied' && !isMine && <span className="w-2 h-2 rounded-full bg-orange-400"></span>}
-                  {isMine && <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded font-bold">YO</span>}
+                  {st === 'waiting_bill' && <span className="text-base">🧾</span>}
+                  <button
+                    onClick={(e) => toggleAssignment(t, e)}
+                    className={`p-1 rounded-full transition-colors ${
+                      isMine
+                        ? 'bg-primary/20 text-primary'
+                        : assignedToOther
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                    disabled={assignedToOther}
+                    title={isMine ? 'Soltar mesa' : assignedToOther ? 'Asignada a otro mozo' : 'Tomar mesa'}
+                  >
+                    {isMine ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
-
-              {/* Middle: Status pill */}
-              <div>
-                {st === 'free' && (
-                  <span className="inline-block bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-semibold px-2 py-1 rounded-full">
-                    Libre
-                  </span>
+              {t.name && <p className="text-xs mt-0.5 truncate opacity-70">{t.name}</p>}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <Badge variant="outline" className="text-[10px] border-current">
+                  {STATUS_LABELS[st] ?? st}
+                </Badge>
+                {isMine && (
+                  <Badge variant="default" className="text-[10px]">Mía</Badge>
                 )}
-                {st === 'occupied' && t.sessionOpenedAt && (
-                  <span className="inline-block bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 text-xs font-semibold px-2 py-1 rounded-full">
-                    Ocupada · {minutesAgo(t.sessionOpenedAt)}min
-                  </span>
+                {assignedToOther && (
+                  <Badge variant="secondary" className="text-[10px]">Otro mozo</Badge>
                 )}
-                {st === 'waiting_bill' && (
-                  <span className="inline-block bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs font-semibold px-2 py-1 rounded-full">
-                    🧾 Pide la cuenta
-                  </span>
+                {isActive && (t.activeOrders ?? 0) > 0 && (
+                  <Badge variant="destructive" className="text-[10px]">
+                    {t.activeOrders} pedido{(t.activeOrders ?? 0) > 1 ? 's' : ''}
+                  </Badge>
                 )}
               </div>
-
-              {/* Bottom row */}
-              {isActive ? (
-                <div className="flex items-end justify-between mt-2">
-                  <span className="text-lg font-bold text-foreground">
-                    {t.sessionTotal !== undefined ? formatCLP(t.sessionTotal) : ''}
-                  </span>
-                  {(t.activeOrders ?? 0) > 0 && (
-                    <span className="bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded">
-                      {t.activeOrders} pedido{t.activeOrders! > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={(e) => toggleAssignment(t, e)}
-                  className={`w-full mt-2 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    isMine 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-green-100 text-green-700 hover:bg-green-200'
-                  }`}
-                >
-                  {isMine ? '✓ Asignada a mí' : 'Tomar mesa →'}
-                </button>
+              {isActive && t.sessionTotal !== undefined && (
+                <p className="text-sm font-semibold mt-1">{formatCLP(t.sessionTotal)}</p>
               )}
-            </CardElement>
+              {isActive && t.sessionOpenedAt && (
+                <p className="text-xs opacity-60 mt-0.5">{minutesAgo(t.sessionOpenedAt)} min</p>
+              )}
+            </button>
           );
         })}
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl px-4 pb-8">
-          {selectedTable && (
-            <>
-              <SheetHeader className="mb-4">
-                {/* Horizontal info strip */}
-                <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-                  <span className="font-bold text-foreground text-lg">Mesa {selectedTable.number}</span>
-                  <span>·</span>
-                  {selectedTable.sessionOpenedAt && (
-                    <>
-                      <span>{minutesAgo(selectedTable.sessionOpenedAt)}min abierta</span>
-                      <span>·</span>
-                    </>
-                  )}
-                  {selectedTable.sessionTotal !== undefined && (
-                    <>
-                      <span className="font-semibold text-foreground">{formatCLP(selectedTable.sessionTotal)}</span>
-                      <span>·</span>
-                    </>
-                  )}
-                  <span>{selectedTable.activeOrders} pedidos activos</span>
-                </div>
+          <SheetHeader className="mb-4">
+            <SheetTitle>
+              Mesa {selectedTable?.number}{selectedTable?.name ? ` · ${selectedTable.name}` : ''}
+            </SheetTitle>
+          </SheetHeader>
 
-                {selectedTable.status === 'waiting_bill' && (
-                  <div className="mt-3 bg-red-100 border border-red-200 rounded-lg p-3 flex items-center gap-3">
-                    <span className="text-2xl">🧾</span>
-                    <div>
-                      <p className="text-sm font-bold text-red-800">Pidió la cuenta — verifica el pago</p>
-                    </div>
+          {ordersLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : orders.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8 text-sm">Sin pedidos activos</p>
+          ) : (
+            <div className="space-y-3 mb-6 max-h-[45vh] overflow-auto">
+              {orders.map(o => (
+                <div key={o.id} className="bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold">Pedido #{o.order_number}</span>
+                    <Badge variant={o.status === 'confirmed' ? 'destructive' : o.status === 'ready' ? 'default' : 'secondary'} className="text-[10px]">
+                      {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                    </Badge>
                   </div>
-                )}
-
-                {selectedTable.assigned_waiter_id && selectedTable.assigned_waiter_id !== staffId && (
-                  <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-3">
-                    <span className="text-xl">⚠️</span>
-                    <div>
-                      <p className="text-sm font-bold text-orange-800">Esta mesa está asignada a otro mozo</p>
-                    </div>
-                  </div>
-                )}
-              </SheetHeader>
-
-              {ordersLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
-              ) : orders.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8 text-sm">Sin pedidos activos</p>
-              ) : (
-                <div className="space-y-3 mb-6 max-h-[45vh] overflow-auto">
-                  {orders.map(o => (
-                    <div key={o.id} className={`bg-muted/30 rounded-lg p-3 border-l-4 ${getOrderBorderColor(o.status)}`}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-sm font-semibold">Pedido #{o.order_number}</span>
-                        <Badge variant="outline" className="text-[10px]">
-                          {o.status === 'confirmed' ? 'Nuevo' : o.status === 'in_kitchen' ? 'En cocina' : 'Listo'}
-                        </Badge>
-                      </div>
-                      {o.items.map((it, idx) => (
-                        <p key={idx} className="text-sm text-foreground">{it.quantity}× {it.menu_item_name}</p>
-                      ))}
-                      <Button
-                        size="sm"
-                        className={`w-full mt-2 h-9 gap-1.5 ${getOrderActionStyle(o.status)}`}
-                        disabled={actionLoading === o.id}
-                        onClick={() => handleOrderAction(o)}
-                      >
-                        {actionLoading === o.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          getOrderActionLabel(o.status)
-                        )}
-                      </Button>
-                    </div>
+                  {o.items.map((it, idx) => (
+                    <p key={idx} className="text-sm text-foreground">{it.quantity}× {it.menu_item_name}</p>
                   ))}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Button
-                  variant="outline"
-                  className="w-full h-12"
-                  onClick={() => { setSheetOpen(false); navigate(`/mozo/pedido-manual/${selectedTable.id}`); }}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Pedir por cliente
-                </Button>
-                {(selectedTable.status === 'occupied' || selectedTable.status === 'waiting_bill') && (
                   <Button
-                    variant={selectedTable.status === 'waiting_bill' ? 'default' : 'destructive'}
-                    className={`w-full h-12 mt-2 ${selectedTable.status === 'waiting_bill' ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                    disabled={actionLoading === 'close'}
-                    onClick={closeTable}
+                    size="sm"
+                    className="w-full mt-2 h-9 gap-1.5"
+                    disabled={actionLoading === o.id}
+                    onClick={() => handleOrderAction(o)}
                   >
-                    {confirmClose 
-                      ? '¿Confirmar cierre?' 
-                      : selectedTable.status === 'waiting_bill' 
-                        ? 'Confirmar Pago y Liberar' 
-                        : 'Cerrar mesa'
-                    }
+                    {actionLoading === o.id ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        {getActionIcon(o.status)}
+                        {getActionLabel(o.status)}
+                      </>
+                    )}
                   </Button>
-                )}
-              </div>
-            </>
+                </div>
+              ))}
+            </div>
           )}
+
+          <div className="space-y-2">
+            {selectedTable && (
+              <Button
+                variant="outline"
+                className="w-full h-12"
+                onClick={() => { setSheetOpen(false); navigate(`/mozo/pedido-manual/${selectedTable.id}`); }}
+              >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Pedir por cliente
+              </Button>
+            )}
+            {(selectedTable?.status === 'occupied' || selectedTable?.status === 'waiting_bill') && (
+              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading === 'close'} onClick={closeTable}>
+                Cerrar mesa
+              </Button>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </div>

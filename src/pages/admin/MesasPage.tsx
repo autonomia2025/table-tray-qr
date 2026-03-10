@@ -88,12 +88,6 @@ export default function MesasPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "tables", filter: `branch_id=eq.${branchId}` }, () => {
         fetchTables();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_sessions", filter: `branch_id=eq.${branchId}` }, () => {
-        fetchTables();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "bill_requests", filter: `branch_id=eq.${branchId}` }, () => {
-        fetchTables();
-      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -103,28 +97,17 @@ export default function MesasPage() {
     if (!closeTarget) return;
     setClosing(true);
     try {
-      await supabase
-        .from("tables")
-        .update({ status: "free", assigned_waiter_id: null })
-        .eq("id", closeTarget.id);
-
+      await supabase.from("tables").update({ status: "free" }).eq("id", closeTarget.id);
       await supabase
         .from("table_sessions")
-        .update({ is_active: false, closed_at: new Date().toISOString() })
+        .update({ is_active: false, closed_at: new Date().toISOString() } as any)
         .eq("table_id", closeTarget.id)
         .eq("is_active", true);
-
-      await supabase
-        .from("bill_requests")
-        .update({ status: "paid", paid_at: new Date().toISOString() })
-        .eq("table_id", closeTarget.id)
-        .in("status", ["pending", "attending"]);
-
-      toast({ title: "✅ Mesa liberada", description: `Mesa ${closeTarget.number} lista para el siguiente cliente` });
+      toast({ title: "Mesa cerrada", description: `Mesa ${closeTarget.number} liberada` });
       setCloseTarget(null);
       fetchTables();
     } catch {
-      toast({ title: "Error", description: "No se pudo liberar la mesa", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo cerrar la mesa", variant: "destructive" });
     } finally {
       setClosing(false);
     }
@@ -162,8 +145,7 @@ export default function MesasPage() {
   if (loading) return <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
 
   const freeCount = tables.filter((t) => t.status === "free").length;
-  const occupiedCount = tables.filter((t) => t.status === "occupied").length;
-  const waitingBillCount = tables.filter((t) => t.status === "waiting_bill").length;
+  const occupiedCount = tables.filter((t) => t.status === "occupied" || t.status === "waiting_bill").length;
 
   return (
     <div>
@@ -171,20 +153,9 @@ export default function MesasPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Mesas</h2>
-          <div className="flex items-center gap-4 mt-1">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              <span className="text-sm text-muted-foreground">{freeCount} libres</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-              <span className="text-sm text-muted-foreground">{occupiedCount} ocupadas</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-              <span className="text-sm text-muted-foreground">{waitingBillCount} esperando cuenta</span>
-            </div>
-          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {freeCount} libres · {occupiedCount} ocupadas · {tables.length} total
+          </p>
         </div>
         <Button
           onClick={() => setShowCreate(true)}
@@ -201,22 +172,16 @@ export default function MesasPage() {
         {tables.map((t) => {
           const s = STATUS_MAP[t.status ?? "free"] ?? STATUS_MAP.free;
           const isOccupied = t.status === "occupied" || t.status === "waiting_bill";
-          const isWaitingBill = t.status === "waiting_bill";
           return (
             <button
               key={t.id}
               onClick={() => isOccupied ? setCloseTarget(t) : undefined}
               className={cn(
-                "rounded-xl p-4 text-left transition-all hover:shadow-lg border border-border relative",
+                "rounded-xl p-5 text-left transition-all hover:shadow-lg border border-border",
                 s.bg,
-                isOccupied && "cursor-pointer"
+                isOccupied && "cursor-pointer ring-1 ring-orange-300 dark:ring-orange-700"
               )}
             >
-              {isWaitingBill && (
-                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
-                  <div className="absolute inset-0 border-2 border-red-500 animate-pulse-ring rounded-xl" />
-                </div>
-              )}
               <div className="flex items-start justify-between">
                 <div className="text-3xl font-bold text-foreground">{t.number}</div>
                 {t.capacity && (
@@ -227,38 +192,12 @@ export default function MesasPage() {
                 )}
               </div>
               {t.name && <div className="text-sm text-muted-foreground mt-0.5">{t.name}</div>}
-              
-              {/* Status pill */}
-              <div className="mt-3">
-                {isWaitingBill ? (
-                  <span className="inline-flex items-center gap-1 bg-red-200 text-red-800 text-xs font-semibold px-2 py-1 rounded-full">
-                    🧾 Cuenta pedida
-                  </span>
-                ) : (
-                  <Badge variant="outline" className={cn(s.text)}>{s.label}</Badge>
-                )}
-              </div>
-              
+              <Badge variant="outline" className={cn("mt-3", s.text)}>{s.label}</Badge>
               {isOccupied && t.session_total !== undefined && (
-                <div className="mt-2 text-lg font-bold text-foreground">{formatCLP(t.session_total)}</div>
+                <div className="mt-2 text-sm font-semibold text-foreground">{formatCLP(t.session_total)}</div>
               )}
               {isOccupied && t.session_opened_at && (
                 <div className="text-xs text-muted-foreground mt-1">{minutesSince(t.session_opened_at)} min</div>
-              )}
-              
-              {/* Action button for occupied/waiting_bill */}
-              {isOccupied && (
-                <Button
-                  variant={isWaitingBill ? "default" : "outline"}
-                  size="sm"
-                  className={cn("w-full mt-3", isWaitingBill && "bg-green-600 hover:bg-green-700")}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCloseTarget(t);
-                  }}
-                >
-                  Liberar mesa
-                </Button>
               )}
             </button>
           );

@@ -4,11 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, X, AlertTriangle, Loader2, Check } from "lucide-react";
-import jsQR from "jsqr";
+import { BrowserQRCodeReader } from "@zxing/browser";
 import { useCartStore } from "@/store/cartStore";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import type { Json } from "@/integrations/supabase/types";
 
 /* ---------- helpers ---------- */
 function extractTokenFromScan(raw: string): string {
@@ -59,12 +58,9 @@ export default function ConfirmPage() {
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
   const [cameraError, setCameraError] = useState("");
-  const [cameraStarting, setCameraStarting] = useState(false);
-  const [isExistingSession, setIsExistingSession] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
   const processingRef = useRef(false);
 
   const totalPrice = getTotalPrice();
@@ -76,108 +72,69 @@ export default function ConfirmPage() {
     }
   }, [items.length, pageState, slug, navigate]);
 
-  // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
-
-  // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
-  const handleScannedTokenRef = useRef<(raw: string) => void>(() => undefined);
-
-  const stopCamera = useCallback(() => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    // Stop raw stream tracks
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    // Clear video srcObject
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  }, []);
-
   // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
-  }, [stopCamera]);
+  }, []);
+
+  // Auto-scan disabled — user must explicitly tap "Abrir cámara" after reviewing summary
+
+  // Use a ref for handleScannedToken to avoid stale closures in the scanner callback
+  const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
+
+  const stopCamera = useCallback(() => {
+    // Stop the ZXing scanner controls first
+    if (scannerControlsRef.current) {
+      try { scannerControlsRef.current.stop(); } catch {}
+      scannerControlsRef.current = null;
+    }
+    // Then stop the media stream
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
+    }
+  }, []);
 
   const startScanning = useCallback(async () => {
     setCameraError("");
     processingRef.current = false;
-    setIsExistingSession(false);
-    setCameraStarting(true);
+    setPageState("scanning");
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-      setPageState("scanning");
+      const reader = new BrowserQRCodeReader();
+      codeReaderRef.current = reader;
 
-      // Wait one frame for video element to mount in DOM
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      const controls = await reader.decodeFromVideoDevice(
+        undefined,
+        videoRef.current!,
+        (result) => {
+          // Guard: only process once
+          if (!result || processingRef.current) return;
+          const text = result.getText();
+          if (!text || text.trim().length === 0) return;
 
-      if (!videoRef.current) {
-        setCameraStarting(false);
-        return;
-      }
-
-      videoRef.current.srcObject = stream;
-
-      await new Promise<void>((resolve) => {
-        if (!videoRef.current) return resolve();
-        videoRef.current.onloadedmetadata = () => resolve();
-        setTimeout(resolve, 3000);
-      });
-
-      await videoRef.current.play().catch(() => undefined);
-      setCameraStarting(false);
-
-      const tick = () => {
-        if (!videoRef.current || !canvasRef.current || processingRef.current) return;
-        const video = videoRef.current;
-        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-          animFrameRef.current = requestAnimationFrame(tick);
-          return;
-        }
-        const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert",
-        });
-        if (code && code.data && code.data.trim().length > 0) {
+          // Lock immediately to prevent any further processing
           processingRef.current = true;
-          stopCamera();
-          handleScannedTokenRef.current(code.data.trim());
-          return;
-        }
-        animFrameRef.current = requestAnimationFrame(tick);
-      };
-      animFrameRef.current = requestAnimationFrame(tick);
 
-    } catch (err: unknown) {
+          // Stop scanner immediately
+          if (scannerControlsRef.current) {
+            try { scannerControlsRef.current.stop(); } catch {}
+            scannerControlsRef.current = null;
+          }
+
+          // Call handler via ref (always up-to-date)
+          handleScannedTokenRef.current(text.trim());
+        }
+      );
+
+      scannerControlsRef.current = controls;
+    } catch (err: any) {
       console.error("Camera error:", err);
-      processingRef.current = false;
-      setCameraStarting(false);
-      const name = typeof err === "object" && err && "name" in err ? String((err as { name?: unknown }).name) : "";
-      const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError" || message.includes("Permission")) {
+      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
         setCameraError("camera_denied");
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setCameraError("no_camera");
       } else {
         setCameraError("camera_error");
       }
@@ -187,7 +144,6 @@ export default function ConfirmPage() {
 
   const cancelScanning = useCallback(() => {
     processingRef.current = false;
-    setCameraStarting(false);
     stopCamera();
     setPageState("summary");
   }, [stopCamera]);
@@ -197,7 +153,7 @@ export default function ConfirmPage() {
     async (rawScanned: string) => {
       // Double-check guard
       if (pageState === "processing" || pageState === "success") return;
-
+      
       setPageState("processing");
       stopCamera();
       const scannedToken = extractTokenFromScan(rawScanned);
@@ -243,7 +199,6 @@ export default function ConfirmPage() {
         if (existingSession) {
           sessionId = existingSession.id;
           existingAmount = existingSession.total_amount || 0;
-          setIsExistingSession(true);
         } else {
           const { data: newSession, error: sessionError } = await supabase
             .from("table_sessions")
@@ -303,7 +258,7 @@ export default function ConfirmPage() {
           unit_price: item.unitPrice,
           quantity: item.quantity,
           subtotal: item.subtotal,
-          selected_modifiers: item.selectedModifiers as unknown as Json,
+          selected_modifiers: item.selectedModifiers as any,
           item_notes: item.itemNotes || null,
         }));
 
@@ -349,11 +304,10 @@ export default function ConfirmPage() {
         setTimeout(() => {
           navigate(`/${slug}/tracking?t=${scannedToken}&order=${order.id}`, { replace: true });
         }, 1500);
-      } catch (err: unknown) {
+      } catch (err: any) {
         console.error("Order creation error:", err);
         processingRef.current = false; // Allow retry
-        const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
-        setErrorMsg(message || "Error desconocido");
+        setErrorMsg(err.message || "Error desconocido");
         setPageState("error");
       }
     },
@@ -368,6 +322,15 @@ export default function ConfirmPage() {
   /* ========== RENDER ========== */
   return (
     <div className="min-h-screen bg-background">
+      {/* Video element */}
+      <video
+        ref={videoRef}
+        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        autoPlay
+        playsInline
+        muted
+      />
+
       {/* Header */}
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -447,9 +410,7 @@ export default function ConfirmPage() {
                 <div className="mx-auto mb-4 max-w-[300px] rounded-xl bg-yellow-50 border border-yellow-200 p-3">
                   <p className="text-xs text-yellow-800 font-medium">
                     {cameraError === "camera_denied"
-                      ? "Necesitamos acceso a la cámara. Ve a Configuración y permite el acceso."
-                      : cameraError === "no_camera"
-                      ? "No encontramos una cámara en este dispositivo."
+                      ? "Necesitamos acceso a la cámara para escanear el QR. Habilita el permiso en la configuración de tu navegador."
                       : "Error al acceder a la cámara. Intenta de nuevo."}
                   </p>
                 </div>
@@ -474,58 +435,39 @@ export default function ConfirmPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center"
+            className="fixed inset-0 z-50 bg-black"
           >
-            {/* Mount video INSIDE the visible container */}
-            <video
-              ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover"
-              autoPlay
-              playsInline
-              muted
-              webkit-playsinline=""
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            {cameraStarting ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-white text-sm font-medium">Iniciando cámara...</p>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
+              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
+              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
+
+              <div className="relative h-[260px] w-[260px]">
+                <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
+                <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
+                <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
+                <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
+
+                <motion.div
+                  className="absolute left-2 right-2 h-0.5 rounded-full"
+                  style={{ backgroundColor: primaryColor }}
+                  animate={{ top: ["10%", "90%", "10%"] }}
+                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                />
               </div>
-            ) : (
-              <>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-                  <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
-                  <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
+            </div>
 
-                  <div className="relative h-[260px] w-[260px]">
-                    <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
-                    <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
-                    <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
-                    <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
+            <div className="absolute bottom-32 left-0 right-0 text-center">
+              <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
+            </div>
 
-                    <motion.div
-                      className="absolute left-2 right-2 h-0.5 rounded-full"
-                      style={{ backgroundColor: primaryColor }}
-                      animate={{ top: ["10%", "90%", "10%"] }}
-                      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                  </div>
-                </div>
-
-                <div className="absolute bottom-32 left-0 right-0 text-center">
-                  <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
-                </div>
-
-                <button
-                  onClick={cancelScanning}
-                  className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
-                >
-                  <X className="h-4 w-4" /> Cancelar
-                </button>
-              </>
-            )}
+            <button
+              onClick={cancelScanning}
+              className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
+            >
+              <X className="h-4 w-4" /> Cancelar
+            </button>
           </motion.div>
         )}
 
@@ -563,9 +505,7 @@ export default function ConfirmPage() {
               <Check className="h-12 w-12 text-white" />
             </motion.div>
             <p className="mt-5 text-xl font-bold text-foreground">¡Pedido enviado! 🎉</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isExistingSession ? "Se agregó a tu pedido anterior" : "Tu pedido ya está en cocina"}
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Tu pedido ya está en cocina</p>
           </motion.div>
         )}
 

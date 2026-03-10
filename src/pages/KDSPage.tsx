@@ -3,9 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2, CheckCircle2 } from "lucide-react";
+import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
@@ -132,15 +131,12 @@ function OrderCard({
   order,
   column,
   onAction,
-  confirmReady,
 }: {
   order: KDSOrder;
   column: "new" | "kitchen" | "ready";
-  onAction: (orderId: string, newStatus: string, order: KDSOrder) => void;
-  confirmReady: string | null;
+  onAction: (orderId: string, newStatus: string) => void;
 }) {
   const borderColor = column === "new" ? "#EF4444" : column === "kitchen" ? "#F59E0B" : "#22C55E";
-  const isConfirming = confirmReady === order.id;
 
   const modifiers = (mods: any): string[] => {
     if (!mods) return [];
@@ -215,7 +211,7 @@ function OrderCard({
       {column === "new" && (
         <div className="px-4 pb-3">
           <button
-            onClick={() => onAction(order.id, "in_kitchen", order)}
+            onClick={() => onAction(order.id, "in_kitchen")}
             className="w-full rounded-lg py-3 text-base font-bold text-white transition-opacity active:opacity-80"
             style={{ backgroundColor: "#EF4444", minHeight: 44 }}
           >
@@ -226,25 +222,11 @@ function OrderCard({
       {column === "kitchen" && (
         <div className="px-4 pb-3">
           <button
-            onClick={() => onAction(order.id, "ready", order)}
+            onClick={() => onAction(order.id, "ready")}
             className="w-full rounded-lg py-3 text-base font-bold text-white transition-opacity active:opacity-80"
             style={{ backgroundColor: "#22C55E", minHeight: 44 }}
           >
             LISTO
-          </button>
-        </div>
-      )}
-      {column === "ready" && (
-        <div className="px-4 pb-3">
-          <button
-            onClick={() => onAction(order.id, "delivered", order)}
-            className={`w-full rounded-lg py-3 text-base font-bold text-white transition-opacity active:opacity-80 ${isConfirming ? 'animate-pulse' : ''}`}
-            style={{ 
-              backgroundColor: isConfirming ? "#16A34A" : "#22C55E", 
-              minHeight: 44 
-            }}
-          >
-            {isConfirming ? '¿Confirmar?' : '✓ ENTREGADO'}
           </button>
         </div>
       )}
@@ -261,7 +243,6 @@ function KDSColumn({
   orders,
   column,
   onAction,
-  confirmReady,
 }: {
   title: string;
   count: number;
@@ -269,8 +250,7 @@ function KDSColumn({
   bgColor: string;
   orders: KDSOrder[];
   column: "new" | "kitchen" | "ready";
-  onAction: (orderId: string, newStatus: string, order: KDSOrder) => void;
-  confirmReady: string | null;
+  onAction: (orderId: string, newStatus: string) => void;
 }) {
   return (
     <div className="flex flex-col min-h-0 flex-1">
@@ -296,7 +276,7 @@ function KDSColumn({
             </div>
           ) : (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} column={column} onAction={onAction} confirmReady={confirmReady} />
+              <OrderCard key={order.id} order={order} column={column} onAction={onAction} />
             ))
           )}
         </AnimatePresence>
@@ -463,17 +443,7 @@ export default function KDSPage() {
 
   if (!branchId) return <BranchSelector tenantId={tenantId} />;
 
-  return (
-    <ErrorBoundary
-      fallback={
-        <div className="flex h-screen items-center justify-center bg-black text-white text-2xl">
-          ⚠️ Error en KDS — recarga la página
-        </div>
-      }
-    >
-      <KDSBoard branchId={branchId} />
-    </ErrorBoundary>
-  );
+  return <KDSBoard branchId={branchId} />;
 }
 
 function KDSBoard({ branchId }: { branchId: string }) {
@@ -482,8 +452,6 @@ function KDSBoard({ branchId }: { branchId: string }) {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [clock, setClock] = useState("");
-  const [deliveredToday, setDeliveredToday] = useState(0);
-  const [confirmReady, setConfirmReady] = useState<string | null>(null);
   const soundEnabledRef = useRef(false);
 
   // Keep ref in sync
@@ -590,23 +558,6 @@ function KDSBoard({ branchId }: { branchId: string }) {
     if (initialOrders) setOrders(initialOrders);
   }, [initialOrders]);
 
-  // Fetch delivered count for today
-  useQuery({
-    queryKey: ["kds-delivered-today", branchId],
-    queryFn: async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { count } = await supabase
-        .from("orders")
-        .select("*", { count: "exact", head: true })
-        .eq("branch_id", branchId)
-        .eq("status", "delivered")
-        .gte("delivered_at", today.toISOString());
-      setDeliveredToday(count || 0);
-      return count || 0;
-    },
-  });
-
   // Realtime subscription
   useEffect(() => {
     const channel = supabase
@@ -654,24 +605,10 @@ function KDSBoard({ branchId }: { branchId: string }) {
   }, [branchId]);
 
   // Action handler
-  const handleAction = useCallback(async (orderId: string, newStatus: string, order: KDSOrder) => {
-    // Handle "ready" -> "delivered" confirmation
-    if (newStatus === "delivered") {
-      if (confirmReady === orderId) {
-        // Second tap - confirm
-        setConfirmReady(null);
-      } else {
-        // First tap - show confirmation
-        setConfirmReady(orderId);
-        setTimeout(() => setConfirmReady(null), 3000);
-        return;
-      }
-    }
-
+  const handleAction = useCallback(async (orderId: string, newStatus: string) => {
     const updateData: any = { status: newStatus };
     if (newStatus === "in_kitchen") updateData.kitchen_accepted_at = new Date().toISOString();
     if (newStatus === "ready") updateData.ready_at = new Date().toISOString();
-    if (newStatus === "delivered") updateData.delivered_at = new Date().toISOString();
 
     // Optimistic update
     setOrders((prev) =>
@@ -679,7 +616,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
     );
 
     await supabase.from("orders").update(updateData).eq("id", orderId);
-  }, [confirmReady]);
+  }, []);
 
   // Enable sound
   const toggleSound = useCallback(() => {
@@ -721,14 +658,6 @@ function KDSBoard({ branchId }: { branchId: string }) {
         <span className="text-lg font-mono font-bold text-gray-300">{clock}</span>
 
         <div className="flex items-center gap-4">
-          {/* Delivered counter */}
-          {deliveredToday > 0 && (
-            <div className="flex items-center gap-1.5 text-green-400">
-              <CheckCircle2 className="h-4 w-4" />
-              <span className="text-xs font-semibold">{deliveredToday} entregados hoy</span>
-            </div>
-          )}
-
           {/* Connection status */}
           <div className="flex items-center gap-1.5">
             {isOnline ? (
@@ -769,7 +698,6 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={newOrders}
           column="new"
           onAction={handleAction}
-          confirmReady={confirmReady}
         />
         <KDSColumn
           title="EN COCINA"
@@ -779,7 +707,6 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={kitchenOrders}
           column="kitchen"
           onAction={handleAction}
-          confirmReady={confirmReady}
         />
         <KDSColumn
           title="LISTOS PARA ENTREGAR"
@@ -789,7 +716,6 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={readyOrders}
           column="ready"
           onAction={handleAction}
-          confirmReady={confirmReady}
         />
       </div>
     </div>

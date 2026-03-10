@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
-import jsQR from "jsqr";
+import { BrowserQRCodeReader } from "@zxing/browser";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { useCartStore } from "@/store/cartStore";
@@ -31,7 +31,7 @@ interface OrderWithItems {
     quantity: number;
     unit_price: number;
     subtotal: number;
-    selected_modifiers: unknown;
+    selected_modifiers: any;
   }[];
 }
 
@@ -57,7 +57,6 @@ export default function BillPage() {
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
   const [cameraError, setCameraError] = useState("");
-  const [cameraStarting, setCameraStarting] = useState(false);
   const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
   const [showBackBtn, setShowBackBtn] = useState(false);
@@ -65,11 +64,7 @@ export default function BillPage() {
   const [finalTip, setFinalTip] = useState(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const processingRef = useRef(false);
-  const handleScannedTokenRef = useRef<(raw: string) => void>(() => {});
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
 
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
@@ -156,99 +151,34 @@ export default function BillPage() {
   const total = subtotal + tipAmount;
 
   /* ---- camera ---- */
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
   const stopCamera = useCallback(() => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    // Stop raw stream tracks
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    // Clear video srcObject
-    if (videoRef.current) {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((t) => t.stop());
       videoRef.current.srcObject = null;
     }
   }, []);
 
-  useEffect(() => {
-    return () => stopCamera();
-  }, [stopCamera]);
-
   const startScanning = useCallback(async () => {
     setCameraError("");
-    processingRef.current = false;
-    setCameraStarting(true);
-
+    setPageState("scanning");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-
-      streamRef.current = stream;
-      setPageState("scanning");
-
-      // Wait one frame for video element to mount in DOM
-      await new Promise((resolve) => setTimeout(resolve, 80));
-
-      if (!videoRef.current) {
-        setCameraStarting(false);
-        return;
-      }
-      videoRef.current.srcObject = stream;
-
-      await new Promise<void>((resolve) => {
-        if (!videoRef.current) return resolve();
-        videoRef.current.onloadedmetadata = () => resolve();
-        setTimeout(resolve, 3000);
-      });
-
-      await videoRef.current.play().catch(() => undefined);
-      setCameraStarting(false);
-
-      const tick = () => {
-        if (!videoRef.current || !canvasRef.current || processingRef.current) return;
-        const video = videoRef.current;
-        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-          animFrameRef.current = requestAnimationFrame(tick);
-          return;
-        }
-        const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert",
-        });
-        if (code && code.data && code.data.trim().length > 0) {
-          processingRef.current = true;
+      const reader = new BrowserQRCodeReader();
+      codeReaderRef.current = reader;
+      await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
+        if (result) {
+          const token = extractTokenFromScan(result.getText());
           stopCamera();
-          handleScannedTokenRef.current(code.data.trim());
-          return;
+          handleScannedToken(token);
         }
-        animFrameRef.current = requestAnimationFrame(tick);
-      };
-      animFrameRef.current = requestAnimationFrame(tick);
-
-    } catch (err: unknown) {
-      console.error("Camera error:", err);
-      processingRef.current = false;
-      setCameraStarting(false);
-      const name = typeof err === "object" && err && "name" in err ? String((err as { name?: unknown }).name) : "";
-      const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError" || message.includes("Permission")) {
+      });
+    } catch (err: any) {
+      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
         setCameraError("camera_denied");
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setCameraError("no_camera");
       } else {
         setCameraError("camera_error");
       }
@@ -257,21 +187,14 @@ export default function BillPage() {
   }, [stopCamera]);
 
   const cancelScanning = useCallback(() => {
-    processingRef.current = false;
-    setCameraStarting(false);
     stopCamera();
     setPageState("summary");
   }, [stopCamera]);
 
   /* ---- bill creation ---- */
   const handleScannedToken = useCallback(
-    async (rawScanned: string) => {
-      if (pageState === "processing" || pageState === "success") return;
+    async (scannedToken: string) => {
       setPageState("processing");
-      stopCamera();
-
-      const scannedToken = extractTokenFromScan(rawScanned);
-
       try {
         const { data: scannedTable } = await supabase
           .from("tables")
@@ -297,37 +220,18 @@ export default function BillPage() {
 
         if (billError) throw new Error("Error al enviar la solicitud.");
 
-        // Update table status
         await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
-
-        // Close table session immediately
-        await supabase
-          .from("table_sessions")
-          .update({
-            is_active: false,
-            closed_at: new Date().toISOString(),
-            close_reason: "bill_requested",
-          })
-          .eq("id", session.id);
 
         setFinalTotal(total);
         setFinalTip(tipAmount);
         setPageState("success");
-      } catch (err: unknown) {
-        console.error("Bill request error:", err);
-        processingRef.current = false;
-        const message = typeof err === "object" && err && "message" in err ? String((err as { message?: unknown }).message) : "";
-        setErrorMsg(message || "Error desconocido");
+      } catch (err: any) {
+        setErrorMsg(err.message || "Error desconocido");
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total, stopCamera, pageState],
+    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total],
   );
-
-  // Keep the ref always up-to-date
-  useEffect(() => {
-    handleScannedTokenRef.current = handleScannedToken;
-  }, [handleScannedToken]);
 
   // Show "back to start" button after 3s on success
   useEffect(() => {
@@ -374,6 +278,14 @@ export default function BillPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <video
+        ref={videoRef}
+        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+        autoPlay
+        playsInline
+        muted
+      />
+
       {/* Header */}
       {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
@@ -520,9 +432,7 @@ export default function BillPage() {
                 <div className="mx-auto mb-4 max-w-[300px] rounded-xl bg-yellow-50 border border-yellow-200 p-3">
                   <p className="text-xs text-yellow-800 font-medium">
                     {cameraError === "camera_denied"
-                      ? "Necesitamos acceso a la cámara. Ve a Configuración y permite el acceso."
-                      : cameraError === "no_camera"
-                      ? "No encontramos una cámara en este dispositivo."
+                      ? "Necesitamos acceso a la cámara. Habilita el permiso en la configuración de tu navegador."
                       : "Error al acceder a la cámara. Intenta de nuevo."}
                   </p>
                 </div>
@@ -549,22 +459,6 @@ export default function BillPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 bg-black"
           >
-            {/* Mount video INSIDE the visible container */}
-            <video
-              ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover"
-              autoPlay
-              playsInline
-              muted
-              webkit-playsinline=""
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            {cameraStarting && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-white text-sm font-medium">Iniciando cámara...</p>
-              </div>
-            )}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
               <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />

@@ -1,11 +1,9 @@
-import { useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { ArrowRight, UtensilsCrossed } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCartStore } from "@/store/cartStore";
 
 interface TenantData {
   id: string;
@@ -77,27 +75,6 @@ export default function RestaurantSplash() {
     enabled: !!slug,
     staleTime: 5 * 60 * 1000,
   });
-
-  // Clear cart on mount only if session is no longer active
-  useEffect(() => {
-    const token = useCartStore.getState().tableToken;
-    if (!token) return;
-    
-    supabase
-      .from("tables")
-      .select("id, table_sessions!inner(is_active)")
-      .eq("qr_token", token)
-      .eq("table_sessions.is_active", true)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!data) {
-          const store = useCartStore.getState();
-          store.clearCart();
-          store.setTableToken("");
-          store.setTableNumber(null);
-        }
-      });
-  }, []);
 
   if (isLoading) {
     return (
