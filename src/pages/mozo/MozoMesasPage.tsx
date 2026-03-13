@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, UserCheck, UserX, ChefHat, CheckCircle2, Truck } from 'lucide-react';
+import { Loader2, PlusCircle, UserCheck, UserX, ChefHat, CheckCircle2, Truck, Receipt, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TableData {
@@ -28,13 +28,6 @@ interface OrderWithItems {
   total_amount: number;
   items: { menu_item_name: string; quantity: number }[];
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  free: 'bg-green-100 border-green-300 text-green-800',
-  occupied: 'bg-orange-100 border-orange-300 text-orange-800',
-  waiting_bill: 'bg-red-100 border-red-300 text-red-800',
-  reserved: 'bg-muted border-border text-muted-foreground',
-};
 
 const STATUS_LABELS: Record<string, string> = {
   free: 'Libre',
@@ -76,6 +69,7 @@ export default function MozoMesasPage() {
 
     const occupiedIds = tablesData.filter(t => t.status === 'occupied' || t.status === 'waiting_bill').map(t => t.id);
     let sessionsMap: Record<string, { total: number; opened: string }> = {};
+    const orderCountMap: Record<string, number> = {};
 
     if (occupiedIds.length > 0) {
       const [{ data: sessions }, { data: orderCounts }] = await Promise.all([
@@ -94,40 +88,33 @@ export default function MozoMesasPage() {
       sessions?.forEach(s => {
         sessionsMap[s.table_id] = { total: s.total_amount ?? 0, opened: s.opened_at ?? '' };
       });
-
-      // Count active orders per table
-      const orderCountMap: Record<string, number> = {};
       orderCounts?.forEach(o => {
         orderCountMap[o.table_id] = (orderCountMap[o.table_id] ?? 0) + 1;
       });
-
-      setTables(tablesData.map(t => ({
-        ...t,
-        sessionTotal: sessionsMap[t.id]?.total,
-        sessionOpenedAt: sessionsMap[t.id]?.opened,
-        activeOrders: orderCountMap[t.id] ?? 0,
-      })));
-    } else {
-      setTables(tablesData.map(t => ({ ...t })));
     }
+
+    setTables(tablesData.map(t => ({
+      ...t,
+      sessionTotal: sessionsMap[t.id]?.total,
+      sessionOpenedAt: sessionsMap[t.id]?.opened,
+      activeOrders: orderCountMap[t.id] ?? 0,
+    })));
     setLoading(false);
   };
 
   useEffect(() => {
     fetchTables();
-
     const channel = supabase
       .channel('mozo-tables')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [branchId]);
 
-  const toggleAssignment = async (table: TableData, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleAssignment = async (table: TableData) => {
     const isMyTable = table.assigned_waiter_id === staffId;
+    setActionLoading(table.id);
     const { error } = await supabase
       .from('tables')
       .update({ assigned_waiter_id: isMyTable ? null : staffId })
@@ -135,8 +122,9 @@ export default function MozoMesasPage() {
     if (error) {
       toast({ title: 'Error al actualizar mesa', description: error.message, variant: 'destructive' });
     } else {
-      toast({ title: isMyTable ? 'Mesa liberada' : `Mesa ${table.number} tomada` });
+      toast({ title: isMyTable ? 'Mesa liberada' : `Mesa ${table.number} tomada ✓` });
     }
+    setActionLoading(null);
     fetchTables();
   };
 
@@ -159,7 +147,7 @@ export default function MozoMesasPage() {
       .from('orders')
       .select('id, order_number, status, total_amount')
       .eq('session_id', session.id)
-      .in('status', ['confirmed', 'in_kitchen', 'ready'])
+      .in('status', ['confirmed', 'in_kitchen', 'ready', 'delivered'])
       .order('confirmed_at', { ascending: true });
 
     if (!ordersData || ordersData.length === 0) { setOrders([]); setOrdersLoading(false); return; }
@@ -183,9 +171,6 @@ export default function MozoMesasPage() {
     if (order.status === 'confirmed') {
       await supabase.from('orders').update({ status: 'in_kitchen', kitchen_accepted_at: now }).eq('id', order.id);
       toast({ title: `Pedido #${order.order_number} → cocina` });
-    } else if (order.status === 'in_kitchen') {
-      await supabase.from('orders').update({ status: 'ready', ready_at: now }).eq('id', order.id);
-      toast({ title: `Pedido #${order.order_number} → listo` });
     } else if (order.status === 'ready') {
       await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('id', order.id);
       toast({ title: `Pedido #${order.order_number} → entregado` });
@@ -197,141 +182,138 @@ export default function MozoMesasPage() {
   const closeTable = async () => {
     if (!selectedTable) return;
     setActionLoading('close');
+    const now = new Date().toISOString();
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', selectedTable.id);
-    await supabase.from('table_sessions').update({ is_active: false, closed_at: new Date().toISOString() }).eq('table_id', selectedTable.id).eq('is_active', true);
-    toast({ title: 'Mesa cerrada' });
+    await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', selectedTable.id).eq('is_active', true);
+    await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', selectedTable.id).in('status', ['confirmed', 'in_kitchen', 'ready']);
+    toast({ title: 'Mesa cerrada ✓' });
     setSheetOpen(false);
     setActionLoading(null);
     fetchTables();
   };
 
-  const getActionLabel = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'Enviar a cocina';
-      case 'in_kitchen': return 'Marcar listo';
-      case 'ready': return 'Entregado';
-      default: return '';
-    }
-  };
-
-  const getActionIcon = (status: string) => {
-    switch (status) {
-      case 'confirmed': return <ChefHat className="w-4 h-4" />;
-      case 'in_kitchen': return <CheckCircle2 className="w-4 h-4" />;
-      case 'ready': return <Truck className="w-4 h-4" />;
-      default: return null;
-    }
-  };
-
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
-  return (
-    <div className="p-4">
-      <h2 className="text-lg font-bold text-foreground mb-4">Mesas</h2>
-      <div className="grid grid-cols-2 gap-3">
-        {tables.map(t => {
-          const st = t.status ?? 'free';
-          const colors = STATUS_COLORS[st] ?? STATUS_COLORS.free;
-          const isActive = st === 'occupied' || st === 'waiting_bill';
-          const isMine = t.assigned_waiter_id === staffId;
-          const isAssigned = !!t.assigned_waiter_id;
-          const assignedToOther = isAssigned && !isMine;
+  const myTables = tables.filter(t => t.assigned_waiter_id === staffId);
+  const otherTables = tables.filter(t => t.assigned_waiter_id !== staffId);
 
-          return (
-            <button
+  return (
+    <div className="p-4 pb-24">
+      <h2 className="text-lg font-bold text-foreground mb-1">Mis Mesas</h2>
+      <p className="text-xs text-muted-foreground mb-3">Toca una mesa para ver detalles</p>
+
+      {myTables.length === 0 ? (
+        <div className="text-center py-8 mb-6 rounded-xl border-2 border-dashed border-border">
+          <UserX className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No tienes mesas asignadas</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Toca "Tomar" en una mesa libre para asignártela</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          {myTables.map(t => (
+            <TableCard
               key={t.id}
-              onClick={() => isActive ? openSheet(t) : undefined}
-              disabled={!isActive}
-              className={`rounded-xl border-2 p-4 text-left transition-all relative ${colors} ${isActive ? 'active:scale-95' : 'opacity-80'} ${isMine ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-            >
-              <div className="flex items-start justify-between">
-                <span className="text-2xl font-bold">{t.number}</span>
-                <div className="flex items-center gap-1">
-                  {st === 'waiting_bill' && <span className="text-base">🧾</span>}
-                  <button
-                    onClick={(e) => toggleAssignment(t, e)}
-                    className={`p-1 rounded-full transition-colors ${
-                      isMine
-                        ? 'bg-primary/20 text-primary'
-                        : assignedToOther
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                    }`}
-                    disabled={assignedToOther}
-                    title={isMine ? 'Soltar mesa' : assignedToOther ? 'Asignada a otro mozo' : 'Tomar mesa'}
-                  >
-                    {isMine ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              {t.name && <p className="text-xs mt-0.5 truncate opacity-70">{t.name}</p>}
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                <Badge variant="outline" className="text-[10px] border-current">
-                  {STATUS_LABELS[st] ?? st}
-                </Badge>
-                {isMine && (
-                  <Badge variant="default" className="text-[10px]">Mía</Badge>
-                )}
-                {assignedToOther && (
-                  <Badge variant="secondary" className="text-[10px]">Otro mozo</Badge>
-                )}
-                {isActive && (t.activeOrders ?? 0) > 0 && (
-                  <Badge variant="destructive" className="text-[10px]">
-                    {t.activeOrders} pedido{(t.activeOrders ?? 0) > 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
-              {isActive && t.sessionTotal !== undefined && (
-                <p className="text-sm font-semibold mt-1">{formatCLP(t.sessionTotal)}</p>
-              )}
-              {isActive && t.sessionOpenedAt && (
-                <p className="text-xs opacity-60 mt-0.5">{minutesAgo(t.sessionOpenedAt)} min</p>
-              )}
-            </button>
-          );
-        })}
+              table={t}
+              staffId={staffId}
+              onTap={() => openSheet(t)}
+              onToggle={() => toggleAssignment(t)}
+              actionLoading={actionLoading}
+            />
+          ))}
+        </div>
+      )}
+
+      <h2 className="text-sm font-bold text-muted-foreground mb-3 uppercase tracking-wide">Otras mesas</h2>
+      <div className="grid grid-cols-2 gap-3">
+        {otherTables.map(t => (
+          <TableCard
+            key={t.id}
+            table={t}
+            staffId={staffId}
+            onTap={() => {
+              const isActive = t.status === 'occupied' || t.status === 'waiting_bill';
+              if (isActive) openSheet(t);
+            }}
+            onToggle={() => toggleAssignment(t)}
+            actionLoading={actionLoading}
+          />
+        ))}
       </div>
 
+      {/* Table detail sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl px-4 pb-8">
           <SheetHeader className="mb-4">
-            <SheetTitle>
-              Mesa {selectedTable?.number}{selectedTable?.name ? ` · ${selectedTable.name}` : ''}
+            <SheetTitle className="flex items-center gap-2">
+              Mesa {selectedTable?.number}
+              {selectedTable?.name && <span className="text-muted-foreground font-normal">· {selectedTable.name}</span>}
+              {selectedTable?.status === 'waiting_bill' && <Badge variant="destructive" className="text-[10px]">🧾 Cuenta pedida</Badge>}
             </SheetTitle>
           </SheetHeader>
+
+          {/* Session info */}
+          {selectedTable?.sessionOpenedAt && (
+            <div className="flex items-center gap-4 mb-4 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-1.5 text-sm">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{minutesAgo(selectedTable.sessionOpenedAt)} min</span>
+              </div>
+              {selectedTable.sessionTotal !== undefined && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Receipt className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold">{formatCLP(selectedTable.sessionTotal)}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {ordersLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : orders.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8 text-sm">Sin pedidos activos</p>
+            <p className="text-muted-foreground text-center py-8 text-sm">Sin pedidos</p>
           ) : (
-            <div className="space-y-3 mb-6 max-h-[45vh] overflow-auto">
+            <div className="space-y-2 mb-6 max-h-[40vh] overflow-auto">
               {orders.map(o => (
-                <div key={o.id} className="bg-muted/50 rounded-lg p-3">
+                <div key={o.id} className={`rounded-lg p-3 border ${
+                  o.status === 'confirmed' ? 'bg-red-50 border-red-200' :
+                  o.status === 'in_kitchen' ? 'bg-amber-50 border-amber-200' :
+                  o.status === 'ready' ? 'bg-green-50 border-green-200' :
+                  'bg-muted/30 border-border'
+                }`}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-semibold">Pedido #{o.order_number}</span>
-                    <Badge variant={o.status === 'confirmed' ? 'destructive' : o.status === 'ready' ? 'default' : 'secondary'} className="text-[10px]">
-                      {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                    <span className="text-sm font-semibold">#{o.order_number}</span>
+                    <Badge variant={
+                      o.status === 'confirmed' ? 'destructive' :
+                      o.status === 'ready' ? 'default' :
+                      o.status === 'delivered' ? 'outline' :
+                      'secondary'
+                    } className="text-[10px]">
+                      {o.status === 'delivered' ? '✓ Entregado' : ORDER_STATUS_LABELS[o.status] ?? o.status}
                     </Badge>
                   </div>
                   {o.items.map((it, idx) => (
                     <p key={idx} className="text-sm text-foreground">{it.quantity}× {it.menu_item_name}</p>
                   ))}
-                  <Button
-                    size="sm"
-                    className="w-full mt-2 h-9 gap-1.5"
-                    disabled={actionLoading === o.id}
-                    onClick={() => handleOrderAction(o)}
-                  >
-                    {actionLoading === o.id ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <>
-                        {getActionIcon(o.status)}
-                        {getActionLabel(o.status)}
-                      </>
-                    )}
-                  </Button>
+                  <p className="text-xs font-semibold mt-1">{formatCLP(o.total_amount)}</p>
+                  {/* Actions: only for confirmed (send to kitchen) and ready (deliver) */}
+                  {(o.status === 'confirmed' || o.status === 'ready') && (
+                    <Button
+                      size="sm"
+                      className={`w-full mt-2 h-9 gap-1.5 ${
+                        o.status === 'confirmed' ? '' : 'bg-green-600 hover:bg-green-700'
+                      }`}
+                      disabled={actionLoading === o.id}
+                      onClick={() => handleOrderAction(o)}
+                    >
+                      {actionLoading === o.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : o.status === 'confirmed' ? (
+                        <><ChefHat className="w-4 h-4" /> Enviar a cocina</>
+                      ) : (
+                        <><Truck className="w-4 h-4" /> Marcar entregado</>
+                      )}
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -345,17 +327,99 @@ export default function MozoMesasPage() {
                 onClick={() => { setSheetOpen(false); navigate(`/mozo/pedido-manual/${selectedTable.id}`); }}
               >
                 <PlusCircle className="h-4 w-4 mr-2" />
-                Pedir por cliente
+                Nuevo pedido
               </Button>
             )}
             {(selectedTable?.status === 'occupied' || selectedTable?.status === 'waiting_bill') && (
-              <Button variant="destructive" className="w-full h-12 mt-2" disabled={actionLoading === 'close'} onClick={closeTable}>
+              <Button variant="destructive" className="w-full h-12" disabled={actionLoading === 'close'} onClick={closeTable}>
+                {actionLoading === 'close' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Cerrar mesa
               </Button>
             )}
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+/* ---- Table Card Component ---- */
+function TableCard({
+  table: t,
+  staffId,
+  onTap,
+  onToggle,
+  actionLoading,
+}: {
+  table: TableData;
+  staffId: string;
+  onTap: () => void;
+  onToggle: () => void;
+  actionLoading: string | null;
+}) {
+  const st = t.status ?? 'free';
+  const isActive = st === 'occupied' || st === 'waiting_bill';
+  const isMine = t.assigned_waiter_id === staffId;
+  const assignedToOther = !!t.assigned_waiter_id && !isMine;
+
+  const bgColor = st === 'free'
+    ? 'bg-card border-border'
+    : st === 'waiting_bill'
+    ? 'bg-red-50 border-red-200'
+    : 'bg-amber-50 border-amber-200';
+
+  return (
+    <div
+      onClick={onTap}
+      className={`rounded-xl border-2 p-3.5 transition-all relative cursor-pointer active:scale-[0.97] ${bgColor} ${isMine ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+    >
+      <div className="flex items-start justify-between mb-1">
+        <span className="text-2xl font-bold text-foreground">{t.number}</span>
+        {st === 'waiting_bill' && <span className="text-lg">🧾</span>}
+      </div>
+
+      {t.name && <p className="text-xs truncate text-muted-foreground">{t.name}</p>}
+
+      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+        <Badge variant="outline" className="text-[10px] border-current">
+          {STATUS_LABELS[st] ?? st}
+        </Badge>
+        {isActive && (t.activeOrders ?? 0) > 0 && (
+          <Badge variant="destructive" className="text-[10px]">
+            {t.activeOrders} pedido{(t.activeOrders ?? 0) > 1 ? 's' : ''}
+          </Badge>
+        )}
+      </div>
+
+      {isActive && t.sessionTotal !== undefined && (
+        <p className="text-sm font-semibold mt-1.5">{formatCLP(t.sessionTotal)}</p>
+      )}
+      {isActive && t.sessionOpenedAt && (
+        <p className="text-[11px] text-muted-foreground mt-0.5">{minutesAgo(t.sessionOpenedAt)} min</p>
+      )}
+
+      {/* Take/release button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        disabled={assignedToOther || actionLoading === t.id}
+        className={`mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors ${
+          isMine
+            ? 'bg-primary/10 text-primary border border-primary/20'
+            : assignedToOther
+            ? 'bg-muted text-muted-foreground cursor-not-allowed'
+            : 'bg-muted/80 text-foreground hover:bg-muted border border-border'
+        }`}
+      >
+        {actionLoading === t.id ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : isMine ? (
+          <><UserCheck className="w-3.5 h-3.5" /> Mi mesa</>
+        ) : assignedToOther ? (
+          <><UserX className="w-3.5 h-3.5" /> Otro mozo</>
+        ) : (
+          <><UserCheck className="w-3.5 h-3.5" /> Tomar</>
+        )}
+      </button>
     </div>
   );
 }
