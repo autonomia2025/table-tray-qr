@@ -63,8 +63,9 @@ async function getMyTableIds(branchId: string, staffId: string): Promise<string[
     .select('id, assigned_waiter_id')
     .eq('branch_id', branchId);
   if (!data) return [];
+  // Only show tables assigned to me (strict filtering)
   return data
-    .filter(t => !t.assigned_waiter_id || t.assigned_waiter_id === staffId)
+    .filter(t => t.assigned_waiter_id === staffId)
     .map(t => t.id);
 }
 

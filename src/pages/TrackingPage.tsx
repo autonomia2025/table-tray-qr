@@ -303,8 +303,8 @@ export default function TrackingPage() {
     const startCamera = async () => {
       try {
         const reader = new BrowserQRCodeReader();
-        await reader.decodeFromVideoDevice(
-          undefined,
+        await reader.decodeFromConstraints(
+          { video: { facingMode: "environment" } },
           waiterVideoRef.current!,
           (result) => {
             if (result && !cancelled) {
@@ -313,7 +313,7 @@ export default function TrackingPage() {
               setWaiterScanOpen(false);
               handleWaiterScanned(token);
             }
-          }
+          },
         );
       } catch (err) {
         console.error("Camera error:", err);

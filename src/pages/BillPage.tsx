@@ -169,13 +169,17 @@ export default function BillPage() {
     try {
       const reader = new BrowserQRCodeReader();
       codeReaderRef.current = reader;
-      await reader.decodeFromVideoDevice(undefined, videoRef.current!, (result) => {
-        if (result) {
-          const token = extractTokenFromScan(result.getText());
-          stopCamera();
-          handleScannedToken(token);
-        }
-      });
+      await reader.decodeFromConstraints(
+        { video: { facingMode: "environment" } },
+        videoRef.current!,
+        (result) => {
+          if (result) {
+            const token = extractTokenFromScan(result.getText());
+            stopCamera();
+            handleScannedToken(token);
+          }
+        },
+      );
     } catch (err: any) {
       if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
         setCameraError("camera_denied");
