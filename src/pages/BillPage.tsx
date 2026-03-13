@@ -225,9 +225,13 @@ export default function BillPage() {
           requested_at: new Date().toISOString(),
         });
 
-        if (billError) throw new Error("Error al enviar la solicitud.");
+        if (billError) {
+          console.error("Bill insert error:", billError);
+          throw new Error("Error al enviar la solicitud: " + billError.message);
+        }
 
-        await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
+        // Update table status - ignore errors (anonymous users may not have write access)
+        await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id).then(() => {});
 
         setFinalTotal(total);
         setFinalTip(tipAmount);
