@@ -375,27 +375,40 @@ export default function MozoNotificacionesPage() {
 
                   {/* Bill requests */}
                   {group.billRequests.map(bill => (
-                    <div key={`bill-${bill.id}`} className="flex items-center gap-3 bg-red-50 rounded-lg p-3 border border-red-100">
-                      <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                        <Receipt className="w-4 h-4 text-red-700" />
+                    <div key={`bill-${bill.id}`} className="bg-red-50 rounded-lg p-3 border border-red-100">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                          <Receipt className="w-4 h-4 text-red-700" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCLP(bill.totalAmount)}
+                            {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
+                            {' · hace '}{minutesAgo(bill.createdAt)} min
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCLP(bill.totalAmount)}
-                          {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
-                          {' · hace '}{minutesAgo(bill.createdAt)} min
-                        </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-8"
+                          disabled={actionLoading === bill.id}
+                          onClick={() => handleBillAttend(bill.id, group.tableId)}
+                        >
+                          {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '📋 En camino'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 h-8"
+                          disabled={actionLoading === bill.id}
+                          onClick={() => handleBillClose(bill.id, group.tableId)}
+                        >
+                          {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Cerrar mesa'}
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0 h-8"
-                        disabled={actionLoading === bill.id}
-                        onClick={() => handleBillAttend(bill.id)}
-                      >
-                        {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'En camino'}
-                      </Button>
                     </div>
                   ))}
 
