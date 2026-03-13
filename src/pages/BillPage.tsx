@@ -464,7 +464,7 @@ export default function BillPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black"
+            className="fixed inset-0 z-50"
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
