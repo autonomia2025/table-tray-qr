@@ -325,7 +325,7 @@ export default function TrackingPage() {
 
     startCamera();
     return () => {
-      cancelled = true;
+      processed = true;
       stopWaiterCamera();
     };
   }, [waiterScanOpen]);
