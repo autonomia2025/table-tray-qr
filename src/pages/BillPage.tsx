@@ -65,6 +65,7 @@ export default function BillPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scanProcessedRef = useRef(false);
 
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
