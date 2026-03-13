@@ -299,7 +299,7 @@ export default function TrackingPage() {
   useEffect(() => {
     if (!waiterScanOpen) return;
 
-    let cancelled = false;
+    let processed = false;
     const startCamera = async () => {
       try {
         const reader = new BrowserQRCodeReader();
@@ -307,7 +307,8 @@ export default function TrackingPage() {
           { video: { facingMode: "environment" } },
           waiterVideoRef.current!,
           (result) => {
-            if (result && !cancelled) {
+            if (result && !processed) {
+              processed = true;
               const token = extractTokenFromScan(result.getText());
               stopWaiterCamera();
               setWaiterScanOpen(false);
@@ -324,7 +325,7 @@ export default function TrackingPage() {
 
     startCamera();
     return () => {
-      cancelled = true;
+      processed = true;
       stopWaiterCamera();
     };
   }, [waiterScanOpen]);
@@ -435,7 +436,7 @@ export default function TrackingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black"
+            className="fixed inset-0 z-50"
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />

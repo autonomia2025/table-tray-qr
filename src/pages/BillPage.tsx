@@ -65,6 +65,7 @@ export default function BillPage() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const scanProcessedRef = useRef(false);
 
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
@@ -165,6 +166,7 @@ export default function BillPage() {
 
   const startScanning = useCallback(async () => {
     setCameraError("");
+    scanProcessedRef.current = false;
     setPageState("scanning");
     try {
       const reader = new BrowserQRCodeReader();
@@ -173,7 +175,8 @@ export default function BillPage() {
         { video: { facingMode: "environment" } },
         videoRef.current!,
         (result) => {
-          if (result) {
+          if (result && !scanProcessedRef.current) {
+            scanProcessedRef.current = true;
             const token = extractTokenFromScan(result.getText());
             stopCamera();
             handleScannedToken(token);
@@ -461,7 +464,7 @@ export default function BillPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black"
+            className="fixed inset-0 z-50"
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
