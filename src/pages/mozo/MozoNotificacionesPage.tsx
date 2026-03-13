@@ -225,10 +225,26 @@ export default function MozoNotificacionesPage() {
     setActionLoading(null);
   };
 
-  const handleBillAttend = async (id: string) => {
+  const handleBillAttend = async (id: string, tableId: string) => {
     setActionLoading(id);
     await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', id);
     toast({ title: 'Cuenta en camino' });
+    fetchAll();
+    setActionLoading(null);
+  };
+
+  const handleBillClose = async (billId: string, tableId: string) => {
+    setActionLoading(billId);
+    const now = new Date().toISOString();
+    // Mark bill as completed
+    await supabase.from('bill_requests').update({ status: 'completed', attended_at: now }).eq('id', billId);
+    // Close session
+    await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', tableId).eq('is_active', true);
+    // Mark all active orders as delivered
+    await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', tableId).in('status', ['confirmed', 'in_kitchen', 'ready']);
+    // Free table
+    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', tableId);
+    toast({ title: 'Mesa cerrada y cuenta completada ✓' });
     fetchAll();
     setActionLoading(null);
   };
