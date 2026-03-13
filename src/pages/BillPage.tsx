@@ -166,6 +166,7 @@ export default function BillPage() {
 
   const startScanning = useCallback(async () => {
     setCameraError("");
+    scanProcessedRef.current = false;
     setPageState("scanning");
     try {
       const reader = new BrowserQRCodeReader();
@@ -174,7 +175,8 @@ export default function BillPage() {
         { video: { facingMode: "environment" } },
         videoRef.current!,
         (result) => {
-          if (result) {
+          if (result && !scanProcessedRef.current) {
+            scanProcessedRef.current = true;
             const token = extractTokenFromScan(result.getText());
             stopCamera();
             handleScannedToken(token);
