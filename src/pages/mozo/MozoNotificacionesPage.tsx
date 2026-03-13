@@ -63,8 +63,9 @@ async function getMyTableIds(branchId: string, staffId: string): Promise<string[
     .select('id, assigned_waiter_id')
     .eq('branch_id', branchId);
   if (!data) return [];
+  // Only show tables assigned to me (strict filtering)
   return data
-    .filter(t => !t.assigned_waiter_id || t.assigned_waiter_id === staffId)
+    .filter(t => t.assigned_waiter_id === staffId)
     .map(t => t.id);
 }
 
@@ -224,10 +225,26 @@ export default function MozoNotificacionesPage() {
     setActionLoading(null);
   };
 
-  const handleBillAttend = async (id: string) => {
+  const handleBillAttend = async (id: string, tableId: string) => {
     setActionLoading(id);
     await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', id);
     toast({ title: 'Cuenta en camino' });
+    fetchAll();
+    setActionLoading(null);
+  };
+
+  const handleBillClose = async (billId: string, tableId: string) => {
+    setActionLoading(billId);
+    const now = new Date().toISOString();
+    // Mark bill as completed
+    await supabase.from('bill_requests').update({ status: 'completed', attended_at: now }).eq('id', billId);
+    // Close session
+    await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', tableId).eq('is_active', true);
+    // Mark all active orders as delivered
+    await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', tableId).in('status', ['confirmed', 'in_kitchen', 'ready']);
+    // Free table
+    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', tableId);
+    toast({ title: 'Mesa cerrada y cuenta completada ✓' });
     fetchAll();
     setActionLoading(null);
   };
@@ -358,27 +375,40 @@ export default function MozoNotificacionesPage() {
 
                   {/* Bill requests */}
                   {group.billRequests.map(bill => (
-                    <div key={`bill-${bill.id}`} className="flex items-center gap-3 bg-red-50 rounded-lg p-3 border border-red-100">
-                      <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                        <Receipt className="w-4 h-4 text-red-700" />
+                    <div key={`bill-${bill.id}`} className="bg-red-50 rounded-lg p-3 border border-red-100">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                          <Receipt className="w-4 h-4 text-red-700" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCLP(bill.totalAmount)}
+                            {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
+                            {' · hace '}{minutesAgo(bill.createdAt)} min
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCLP(bill.totalAmount)}
-                          {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
-                          {' · hace '}{minutesAgo(bill.createdAt)} min
-                        </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-8"
+                          disabled={actionLoading === bill.id}
+                          onClick={() => handleBillAttend(bill.id, group.tableId)}
+                        >
+                          {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '📋 En camino'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 h-8"
+                          disabled={actionLoading === bill.id}
+                          onClick={() => handleBillClose(bill.id, group.tableId)}
+                        >
+                          {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Cerrar mesa'}
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0 h-8"
-                        disabled={actionLoading === bill.id}
-                        onClick={() => handleBillAttend(bill.id)}
-                      >
-                        {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'En camino'}
-                      </Button>
                     </div>
                   ))}
 
