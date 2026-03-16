@@ -402,6 +402,17 @@ export default function MenuAdminPage() {
                       <Button size="sm" variant="ghost" onClick={() => moveItem(i, -1)}><ArrowUp className="h-3 w-3" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => moveItem(i, 1)}><ArrowDown className="h-3 w-3" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => openItemSheet(item)}><Pencil className="h-3 w-3" /></Button>
+                      <button
+                        onClick={() => handleToggleStock(item)}
+                        className={`rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
+                          item.status === 'out_of_stock'
+                            ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                        title={item.status === 'out_of_stock' ? 'Marcar disponible' : 'Marcar agotado'}
+                      >
+                        {item.status === 'out_of_stock' ? '✓ Agotado' : '86'}
+                      </button>
                       <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteConfirm({ type: "item", id: item.id, name: item.name })}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   </div>
