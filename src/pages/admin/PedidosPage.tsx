@@ -57,6 +57,31 @@ function timeAgo(dateStr: string | null) {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
+function useElapsedMinutes(iso: string | null): number {
+  const [mins, setMins] = useState(() =>
+    iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 60000) : 0
+  );
+  useEffect(() => {
+    if (!iso) return;
+    const id = setInterval(() =>
+      setMins(Math.floor((Date.now() - new Date(iso).getTime()) / 60000)), 30000
+    );
+    return () => clearInterval(id);
+  }, [iso]);
+  return mins;
+}
+
+function ElapsedBadge({ confirmedAt }: { confirmedAt: string | null }) {
+  const mins = useElapsedMinutes(confirmedAt);
+  if (mins < 10) return null;
+  const isLate = mins >= 20;
+  return (
+    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${isLate ? 'bg-destructive/10 text-destructive' : 'bg-yellow-100 text-yellow-700'}`}>
+      ⏱ {mins}min
+    </span>
+  );
+}
+
 export default function PedidosPage() {
   const { branchId, tenantId } = useAdmin();
   const { toast } = useToast();
