@@ -49,7 +49,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MenuAdminPage() {
-  const { tenantId, branchId } = useAdmin();
+  const { tenantId, branchId, slug } = useAdmin();
   const { toast } = useToast();
 
   const [menuId, setMenuId] = useState<string | null>(null);
