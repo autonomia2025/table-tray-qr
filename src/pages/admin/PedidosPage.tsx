@@ -230,6 +230,14 @@ export default function PedidosPage() {
         <p className="text-xs text-destructive mt-1 truncate">📝 {order.notes}</p>
       )}
       <p className="text-sm font-semibold mt-2">{formatCLP(order.total_amount)}</p>
+      {(order.status === 'confirmed' || order.status === 'in_kitchen') && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id, order.order_number); }}
+          className="text-[11px] text-destructive underline mt-1"
+        >
+          Cancelar pedido
+        </button>
+      )}
     </button>
   );
 
