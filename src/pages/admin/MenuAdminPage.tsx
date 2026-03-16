@@ -329,7 +329,17 @@ export default function MenuAdminPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">Menú</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Menú</h2>
+        <a
+          href={`/${slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+        >
+          Ver menú del cliente →
+        </a>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Categories column */}
