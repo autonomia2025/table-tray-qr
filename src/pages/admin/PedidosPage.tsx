@@ -194,6 +194,15 @@ export default function PedidosPage() {
     setActionLoading(false);
   };
 
+  const handleCancelOrder = async (orderId: string, orderNumber: number) => {
+    if (!confirm(`¿Cancelar pedido #${String(orderNumber).padStart(3, '0')}?`)) return;
+    await supabase
+      .from('orders')
+      .update({ status: 'cancelled', cancelled_reason: 'admin_cancelled' })
+      .eq('id', orderId);
+    toast({ title: `Pedido #${String(orderNumber).padStart(3, '0')} cancelado` });
+  };
+
   const openDetail = (order: OrderRow) => {
     setSelectedOrder(order);
     setDetailItems(itemsMap[order.id] ?? []);

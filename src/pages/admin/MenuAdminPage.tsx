@@ -291,6 +291,13 @@ export default function MenuAdminPage() {
     refreshItems();
   };
 
+  const handleToggleStock = async (item: MenuItem) => {
+    const newStatus = item.status === 'out_of_stock' ? 'available' : 'out_of_stock';
+    await supabase.from('menu_items').update({ status: newStatus }).eq('id', item.id);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: newStatus } : i));
+    toast({ title: newStatus === 'out_of_stock' ? `"${item.name}" marcado como agotado` : `"${item.name}" disponible nuevamente` });
+  };
+
   const moveItem = async (idx: number, dir: -1 | 1) => {
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= items.length) return;
