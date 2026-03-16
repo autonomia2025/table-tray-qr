@@ -37,6 +37,7 @@ interface ItemDetail {
   labels: string[] | null;
   allergens: string[] | null;
   prep_time_minutes: number | null;
+  total_orders: number | null;
 }
 
 interface ItemData {
@@ -74,7 +75,7 @@ const LABEL_STYLES: Record<string, { bg: string; text: string; label: string }> 
 async function fetchItemDetail(id: string): Promise<ItemData | null> {
   const { data: mi } = await supabase
     .from("menu_items")
-    .select("id, name, description_short, description_long, price, image_url, image_is_real, status, labels, allergens, prep_time_minutes")
+    .select("id, name, description_short, description_long, price, image_url, image_is_real, status, labels, allergens, prep_time_minutes, total_orders")
     .eq("id", id)
     .maybeSingle();
   if (!mi) return null;
@@ -128,6 +129,7 @@ async function fetchItemDetail(id: string): Promise<ItemData | null> {
       labels: mi.labels as string[] | null,
       allergens: mi.allergens as string[] | null,
       prep_time_minutes: mi.prep_time_minutes,
+      total_orders: mi.total_orders,
     },
     groups: groupList.filter((g) => g.modifiers.length > 0),
   };
@@ -137,7 +139,7 @@ async function fetchItemDetail(id: string): Promise<ItemData | null> {
 function DetailSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <Skeleton className="aspect-video w-full" />
+      <Skeleton className="w-full" style={{ height: 280 }} />
       <div className="flex flex-col gap-3 p-4">
         <Skeleton className="h-7 w-3/4" />
         <Skeleton className="h-5 w-1/3" />
@@ -200,6 +202,7 @@ export default function ItemDetailPage() {
   const item = data?.item;
   const groups = data?.groups || [];
   const isOutOfStock = item?.status === "out_of_stock";
+  const hasRealImage = item?.image_url && item?.image_is_real;
 
   // Selection handlers
   const toggleSelection = useCallback((groupId: string, modId: string, type: string, maxSel: number) => {
@@ -348,48 +351,96 @@ export default function ItemDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* Back button */}
-      <button
-        onClick={() => navigate(`/${slug}/menu`)}
-        className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow text-foreground"
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </button>
-
-      {/* Image */}
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {item.image_url ? (
-          <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[80px]" style={{ backgroundColor: `${primaryColor}18` }}>
-            🍽
-          </div>
-        )}
-        {item.image_is_real && (
-          <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[11px] font-semibold text-foreground shadow">
+      {/* Hero image with overlaid back button */}
+      {hasRealImage ? (
+        <div className="relative w-full" style={{ height: 280 }}>
+          <img
+            src={item.image_url!}
+            alt={item.name}
+            className="w-full h-full object-cover"
+          />
+          {/* Back button overlay */}
+          <button
+            onClick={() => navigate(`/${slug}/menu`)}
+            className="absolute top-4 left-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm text-white"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          {/* Foto real badge */}
+          <span className="absolute top-4 right-4 flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[11px] font-semibold text-foreground shadow">
             <Camera className="h-3 w-3" /> Foto real
           </span>
-        )}
-        {isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center bg-foreground/60">
-            <span className="rounded-full bg-background/90 px-4 py-1.5 text-sm font-bold text-foreground">Agotado</span>
+          {/* Labels overlay */}
+          {item.labels && item.labels.length > 0 && (
+            <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
+              {item.labels.map((label) => {
+                const style = LABEL_STYLES[label];
+                if (!style) return null;
+                return (
+                  <span key={label} className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: style.bg, color: style.text }}>
+                    {style.label}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {/* Out of stock overlay */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 flex items-center justify-center bg-foreground/60">
+              <span className="rounded-full bg-background/90 px-4 py-1.5 text-sm font-bold text-foreground">Agotado</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* No real image — show back button normally + spacer or placeholder */}
+          <button
+            onClick={() => navigate(`/${slug}/menu`)}
+            className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm shadow text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div className="relative w-full overflow-hidden bg-muted" style={{ height: item.image_url ? 220 : 56 }}>
+            {item.image_url ? (
+              <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[80px]" style={{ backgroundColor: `${primaryColor}18` }}>
+                🍽
+              </div>
+            )}
+            {isOutOfStock && item.image_url && (
+              <div className="absolute inset-0 flex items-center justify-center bg-foreground/60">
+                <span className="rounded-full bg-background/90 px-4 py-1.5 text-sm font-bold text-foreground">Agotado</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Body */}
       <div className="px-4 pt-4">
         <h1 className="text-[22px] font-bold leading-tight text-foreground">{item.name}</h1>
 
+        {/* Social proof */}
+        {item.total_orders && item.total_orders > 5 && (
+          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            🔥 <span>{item.total_orders} personas lo pidieron</span>
+          </p>
+        )}
+
+        {/* Prep time pill */}
+        {item.prep_time_minutes && (
+          <div className="flex items-center gap-1 mt-2">
+            <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full flex items-center gap-1">
+              <Clock className="h-3 w-3" /> {item.prep_time_minutes} min aprox.
+            </span>
+          </div>
+        )}
+
         <div className="mt-2 flex items-center gap-3">
           <span className="text-xl font-bold" style={{ color: primaryColor }}>
             {formatCLP(item.price)}
           </span>
-          {item.prep_time_minutes && (
-            <span className="flex items-center gap-1 text-[13px] text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" /> ~{item.prep_time_minutes} min
-            </span>
-          )}
         </div>
 
         {(item.description_long || item.description_short) && (
@@ -398,7 +449,8 @@ export default function ItemDetailPage() {
           </p>
         )}
 
-        {item.labels && item.labels.length > 0 && (
+        {/* Labels (only when no hero image, since hero has them overlaid) */}
+        {!hasRealImage && item.labels && item.labels.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {item.labels.map((l) => {
               const s = LABEL_STYLES[l];
