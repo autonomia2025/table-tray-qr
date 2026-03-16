@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,13 @@ interface BranchInfo {
   restaurant_name: string;
   tenant_name: string;
   primary_color: string;
+}
+
+interface RecentlyDeliveredEntry {
+  id: string;
+  table_number: number;
+  order_number: number;
+  delivered_at: string;
 }
 
 /* ===================== HELPERS ===================== */
@@ -131,10 +138,12 @@ function OrderCard({
   order,
   column,
   onAction,
+  onDisableItem,
 }: {
   order: KDSOrder;
   column: "new" | "kitchen" | "ready";
   onAction: (orderId: string, newStatus: string) => void;
+  onDisableItem?: (itemId: string, itemName: string) => void;
 }) {
   const borderColor = column === "new" ? "#EF4444" : column === "kitchen" ? "#F59E0B" : "#22C55E";
 
@@ -176,9 +185,21 @@ function OrderCard({
       <div className="px-4 py-3 space-y-2">
         {order.items.map((item) => (
           <div key={item.id}>
-            <p className="text-[17px] text-white">
-              {item.quantity}× {item.menu_item_name}
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[17px] text-white flex-1">
+                {item.quantity}× {item.menu_item_name}
+              </p>
+              {(column === "new" || column === "kitchen") && onDisableItem && (
+                <button
+                  onClick={() => onDisableItem(item.id, item.menu_item_name)}
+                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold"
+                  style={{ backgroundColor: "rgba(239,68,68,0.15)", color: "#EF4444" }}
+                  title="Marcar agotado"
+                >
+                  86
+                </button>
+              )}
+            </div>
             {modifiers(item.selected_modifiers).map((mod, i) => (
               <p key={i} className="text-sm text-gray-400 pl-4">
                 {mod}
@@ -207,13 +228,13 @@ function OrderCard({
         </>
       )}
 
-      {/* Action button */}
+      {/* Action buttons */}
       {column === "new" && (
         <div className="px-4 pb-3">
           <button
             onClick={() => onAction(order.id, "in_kitchen")}
-            className="w-full rounded-lg py-3 text-base font-bold text-white transition-opacity active:opacity-80"
-            style={{ backgroundColor: "#EF4444", minHeight: 44 }}
+            className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
+            style={{ backgroundColor: "#EF4444", minHeight: 56 }}
           >
             ACEPTAR
           </button>
@@ -223,10 +244,21 @@ function OrderCard({
         <div className="px-4 pb-3">
           <button
             onClick={() => onAction(order.id, "ready")}
-            className="w-full rounded-lg py-3 text-base font-bold text-white transition-opacity active:opacity-80"
-            style={{ backgroundColor: "#22C55E", minHeight: 44 }}
+            className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
+            style={{ backgroundColor: "#22C55E", minHeight: 56 }}
           >
             LISTO
+          </button>
+        </div>
+      )}
+      {column === "ready" && (
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => onAction(order.id, "delivered")}
+            className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
+            style={{ backgroundColor: "#6366F1", minHeight: 56 }}
+          >
+            ✓ ENTREGADO
           </button>
         </div>
       )}
@@ -243,6 +275,9 @@ function KDSColumn({
   orders,
   column,
   onAction,
+  onDisableItem,
+  recentlyDelivered,
+  groupedNewItems,
 }: {
   title: string;
   count: number;
@@ -251,6 +286,9 @@ function KDSColumn({
   orders: KDSOrder[];
   column: "new" | "kitchen" | "ready";
   onAction: (orderId: string, newStatus: string) => void;
+  onDisableItem?: (itemId: string, itemName: string) => void;
+  recentlyDelivered?: RecentlyDeliveredEntry[];
+  groupedNewItems?: { name: string; totalQty: number; tables: number[] }[];
 }) {
   return (
     <div className="flex flex-col min-h-0 flex-1">
@@ -266,6 +304,24 @@ function KDSColumn({
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto p-3">
+        {/* Grouped summary for new column */}
+        {column === "new" && groupedNewItems && orders.length > 1 && groupedNewItems.length > 0 && (
+          <div className="mb-3 rounded-lg p-3" style={{ backgroundColor: "#1F1F1F", border: "1px solid #2A2A2A" }}>
+            <p className="text-xs font-bold mb-2" style={{ color: "#F59E0B" }}>RESUMEN DE NUEVOS</p>
+            {groupedNewItems.map(g => (
+              <div key={g.name} className="flex items-center justify-between py-0.5">
+                <span className="text-sm text-white">{g.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: "#6B7280" }}>
+                    M: {g.tables.join(", ")}
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>×{g.totalQty}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <AnimatePresence initial={false}>
           {orders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-40 text-gray-700">
@@ -276,10 +332,23 @@ function KDSColumn({
             </div>
           ) : (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} column={column} onAction={onAction} />
+              <OrderCard key={order.id} order={order} column={column} onAction={onAction} onDisableItem={onDisableItem} />
             ))
           )}
         </AnimatePresence>
+
+        {/* Recently delivered log for ready column */}
+        {column === "ready" && recentlyDelivered && recentlyDelivered.length > 0 && (
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid #1F1F1F" }}>
+            <p className="text-xs mb-2" style={{ color: "#374151", fontWeight: 700 }}>ÚLTIMOS ENTREGADOS</p>
+            {recentlyDelivered.map(d => (
+              <div key={d.id} className="flex items-center justify-between py-0.5 opacity-40">
+                <span className="text-xs text-gray-500">Mesa {d.table_number}</span>
+                <span className="text-xs text-gray-600">#{String(d.order_number).padStart(3, "0")}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -303,7 +372,6 @@ function useKDSAuth() {
 
       const userId = session.user.id;
 
-      // Check tenant_members first
       const { data: member } = await supabase
         .from("tenant_members")
         .select("tenant_id")
@@ -317,7 +385,6 @@ function useKDSAuth() {
         return;
       }
 
-      // Check staff_users
       const { data: staff } = await supabase
         .from("staff_users")
         .select("tenant_id")
@@ -453,6 +520,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
   const [isOnline, setIsOnline] = useState(true);
   const [clock, setClock] = useState("");
   const soundEnabledRef = useRef(false);
+  const [deliveredToday, setDeliveredToday] = useState(0);
+  const [recentlyDelivered, setRecentlyDelivered] = useState<RecentlyDeliveredEntry[]>([]);
+  const [disabledItems, setDisabledItems] = useState<Set<string>>(new Set());
 
   // Keep ref in sync
   useEffect(() => {
@@ -609,19 +679,53 @@ function KDSBoard({ branchId }: { branchId: string }) {
     const updateData: any = { status: newStatus };
     if (newStatus === "in_kitchen") updateData.kitchen_accepted_at = new Date().toISOString();
     if (newStatus === "ready") updateData.ready_at = new Date().toISOString();
+    if (newStatus === "delivered") updateData.delivered_at = new Date().toISOString();
 
-    // Optimistic update
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, ...updateData } : o)),
-    );
+    // Track delivered orders
+    if (newStatus === "delivered") {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setDeliveredToday(prev => prev + 1);
+        setRecentlyDelivered(prev => [
+          { id: orderId, table_number: order.table_number, order_number: order.order_number, delivered_at: new Date().toISOString() },
+          ...prev.slice(0, 7),
+        ]);
+      }
+    }
+
+    // Optimistic update — remove delivered/cancelled, update others
+    if (newStatus === "delivered") {
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    } else {
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, ...updateData } : o)),
+      );
+    }
 
     await supabase.from("orders").update(updateData).eq("id", orderId);
+  }, [orders]);
+
+  // Disable item handler (86)
+  const handleDisableItem = useCallback(async (itemId: string, _itemName: string) => {
+    const { data } = await supabase
+      .from("order_items")
+      .select("menu_item_id")
+      .eq("id", itemId)
+      .maybeSingle();
+
+    if (!data?.menu_item_id) return;
+
+    await supabase
+      .from("menu_items")
+      .update({ status: "out_of_stock" })
+      .eq("id", data.menu_item_id);
+
+    setDisabledItems(prev => new Set([...prev, itemId]));
   }, []);
 
   // Enable sound
   const toggleSound = useCallback(() => {
     if (!audioUnlocked) {
-      // Unlock AudioContext with user gesture
       try {
         const ctx = new AudioContext();
         ctx.resume();
@@ -639,6 +743,24 @@ function KDSBoard({ branchId }: { branchId: string }) {
   const kitchenOrders = orders.filter((o) => o.status === "in_kitchen");
   const readyOrders = orders.filter((o) => o.status === "ready");
 
+  // Grouped new items
+  const groupedNewItems = useMemo(() => {
+    const map = new Map<string, { name: string; totalQty: number; tables: number[] }>();
+    newOrders.forEach(order => {
+      order.items.forEach(item => {
+        const key = item.menu_item_name;
+        const existing = map.get(key);
+        if (existing) {
+          existing.totalQty += item.quantity;
+          if (!existing.tables.includes(order.table_number)) existing.tables.push(order.table_number);
+        } else {
+          map.set(key, { name: item.menu_item_name, totalQty: item.quantity, tables: [order.table_number] });
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty);
+  }, [newOrders]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: "#0A0A0A" }}>
       {/* HEADER */}
@@ -655,7 +777,14 @@ function KDSBoard({ branchId }: { branchId: string }) {
           )}
         </div>
 
-        <span className="text-lg font-mono font-bold text-gray-300">{clock}</span>
+        <div className="flex items-center gap-3">
+          {deliveredToday > 0 && (
+            <span style={{ color: "#22C55E", fontSize: 13, fontWeight: 700 }}>
+              ✓ {deliveredToday} entregados
+            </span>
+          )}
+          <span className="text-lg font-mono font-bold text-gray-300">{clock}</span>
+        </div>
 
         <div className="flex items-center gap-4">
           {/* Connection status */}
@@ -698,6 +827,8 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={newOrders}
           column="new"
           onAction={handleAction}
+          onDisableItem={handleDisableItem}
+          groupedNewItems={groupedNewItems}
         />
         <KDSColumn
           title="EN COCINA"
@@ -707,6 +838,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={kitchenOrders}
           column="kitchen"
           onAction={handleAction}
+          onDisableItem={handleDisableItem}
         />
         <KDSColumn
           title="LISTOS PARA ENTREGAR"
@@ -716,6 +848,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={readyOrders}
           column="ready"
           onAction={handleAction}
+          recentlyDelivered={recentlyDelivered}
         />
       </div>
     </div>
