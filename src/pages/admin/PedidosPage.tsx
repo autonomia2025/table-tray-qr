@@ -205,7 +205,10 @@ export default function PedidosPage() {
       className="w-full text-left bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow"
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="font-bold text-sm">#{order.order_number}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-sm">#{order.order_number}</span>
+          <ElapsedBadge confirmedAt={order.confirmed_at} />
+        </div>
         <span className="text-xs text-muted-foreground flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {timeAgo(order.confirmed_at)}
