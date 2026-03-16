@@ -38,12 +38,12 @@ interface Order {
   items: OrderItem[];
 }
 
-const STATUS_MAP: Record<string, { label: string; color: string; step: number }> = {
-  confirmed: { label: "Recibido ✓", color: "text-muted-foreground", step: 0 },
-  in_kitchen: { label: "En cocina 🍳", color: "text-orange-500", step: 1 },
-  ready: { label: "¡Listo! 🔔", color: "text-green-500", step: 2 },
-  delivered: { label: "Entregado ✓", color: "text-green-700", step: 3 },
-  cancelled: { label: "Cancelado", color: "text-destructive", step: -1 },
+const STATUS_MAP: Record<string, { label: string; sublabel: string; color: string; step: number }> = {
+  confirmed: { label: "Recibido ✓", sublabel: "El cocinero lo verá en un momento", color: "text-muted-foreground", step: 0 },
+  in_kitchen: { label: "En cocina 🍳", sublabel: "Listo en aprox. 10-15 min", color: "text-orange-500", step: 1 },
+  ready: { label: "¡Listo para entregar! 🔔", sublabel: "El mozo lo trae ahora", color: "text-green-500", step: 2 },
+  delivered: { label: "Entregado ✓", sublabel: "", color: "text-green-700", step: 3 },
+  cancelled: { label: "Cancelado", sublabel: "", color: "text-destructive", step: -1 },
 };
 
 const STEPS = ["Recibido", "En cocina", "Listo", "Entregado"];
@@ -109,6 +109,10 @@ export default function TrackingPage() {
   const [waiterModalOpen, setWaiterModalOpen] = useState(false);
   const [waiterSending, setWaiterSending] = useState(false);
   const [readyFired, setReadyFired] = useState(false);
+
+  // Waiter call tracking
+  const [waiterCallId, setWaiterCallId] = useState<string | null>(null);
+  const [waiterCallStatus, setWaiterCallStatus] = useState<string | null>(null);
 
   // QR scanner state for waiter call
   const [waiterScanOpen, setWaiterScanOpen] = useState(false);
@@ -213,7 +217,7 @@ export default function TrackingPage() {
     if (rawOrders) setOrders(rawOrders);
   }, [rawOrders]);
 
-  // Realtime subscription
+  // Realtime subscription for orders
   useEffect(() => {
     if (!session?.id) return;
     const channel = supabase
@@ -239,6 +243,38 @@ export default function TrackingPage() {
       supabase.removeChannel(channel);
     };
   }, [session?.id]);
+
+  // Realtime subscription for waiter call status
+  useEffect(() => {
+    if (!waiterCallId) return;
+    const channel = supabase
+      .channel(`waiter-call-${waiterCallId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "waiter_calls",
+          filter: `id=eq.${waiterCallId}`,
+        },
+        (payload) => {
+          const updated = payload.new as { status: string };
+          setWaiterCallStatus(updated.status);
+          if (updated.status === "attended") {
+            // Auto-clear after 5 seconds
+            setTimeout(() => {
+              setWaiterCallId(null);
+              setWaiterCallStatus(null);
+            }, 5000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [waiterCallId]);
 
   // Current order
   const currentOrder = useMemo(() => {
@@ -277,6 +313,14 @@ export default function TrackingPage() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  // Cancel waiter call
+  const cancelWaiterCall = async () => {
+    if (!waiterCallId) return;
+    await supabase.from("waiter_calls").update({ status: "cancelled" }).eq("id", waiterCallId);
+    setWaiterCallId(null);
+    setWaiterCallStatus(null);
   };
 
   // Waiter call — select reason then open scanner
@@ -350,14 +394,19 @@ export default function TrackingPage() {
       }
 
       try {
-        await supabase.from("waiter_calls").insert({
+        const { data: insertedCall } = await supabase.from("waiter_calls").insert({
           tenant_id: tableData.tenant_id,
           table_id: tableData.id,
           branch_id: tableData.branch_id,
           session_id: session.id,
           reason: waiterReason,
           status: "pending",
-        });
+        }).select("id").single();
+
+        if (insertedCall) {
+          setWaiterCallId(insertedCall.id);
+          setWaiterCallStatus("pending");
+        }
         toast({ title: "El mozo fue notificado 👍" });
       } catch {
         toast({ title: "Error al llamar al mozo", variant: "destructive" });
@@ -407,6 +456,8 @@ export default function TrackingPage() {
   }
 
   if (!currentOrder) return null;
+
+  const currentStatusInfo = STATUS_MAP[currentOrder.status] || STATUS_MAP.confirmed;
 
   const modifiersLabel = (mods: Json) => {
     if (!Array.isArray(mods) || mods.length === 0) return null;
@@ -547,6 +598,11 @@ export default function TrackingPage() {
               })}
             </div>
 
+            {/* Status sublabel */}
+            {currentStatusInfo.sublabel && (
+              <p className="text-xs text-muted-foreground mt-3 text-center">{currentStatusInfo.sublabel}</p>
+            )}
+
             <AnimatePresence>
               {currentOrder.status === "ready" && (
                 <motion.p
@@ -595,6 +651,41 @@ export default function TrackingPage() {
             </span>
           </div>
         </div>
+
+        {/* ── SESSION TOTAL (above actions) ── */}
+        {orders.length > 1 && (
+          <div className="flex items-center justify-between py-3 px-1 mb-2">
+            <span className="text-sm font-bold text-foreground">Total esta visita</span>
+            <span className="text-lg font-bold" style={{ color: primaryColor }}>
+              {formatCLP(sessionTotal)}
+            </span>
+          </div>
+        )}
+
+        {/* ── WAITER CALL BANNER ── */}
+        {waiterCallStatus && (
+          <div className="mb-4">
+            <div
+              className={`rounded-xl border px-4 py-3 text-center text-sm font-semibold ${
+                waiterCallStatus === "attended"
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : "bg-yellow-50 border-yellow-200 text-yellow-700"
+              }`}
+            >
+              {waiterCallStatus === "attended"
+                ? "✅ Mozo atendió tu llamada"
+                : "🛎 El mozo está en camino"}
+            </div>
+            {waiterCallStatus === "pending" && (
+              <button
+                onClick={cancelWaiterCall}
+                className="text-xs text-muted-foreground underline text-center w-full mt-1"
+              >
+                Cancelar llamada
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ── ACTION BUTTONS ── */}
         {!isCancelled && (
@@ -702,15 +793,6 @@ export default function TrackingPage() {
                   </div>
                 );
               })}
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-foreground">Total de tu visita</span>
-                <span className="text-lg font-bold" style={{ color: primaryColor }}>
-                  {formatCLP(sessionTotal)}
-                </span>
-              </div>
             </div>
           </>
         )}
