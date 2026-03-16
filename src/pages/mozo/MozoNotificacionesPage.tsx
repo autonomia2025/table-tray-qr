@@ -41,6 +41,13 @@ function minutesAgo(d: string) {
   return Math.floor((Date.now() - new Date(d).getTime()) / 60000);
 }
 
+function timeAgo(iso: string): string {
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "ahora";
+  if (mins === 1) return "hace 1 min";
+  return `hace ${mins} min`;
+}
+
 function playSound() {
   try {
     const ctx = new AudioContext();
@@ -63,7 +70,6 @@ async function getMyTableIds(branchId: string, staffId: string): Promise<string[
     .select('id, assigned_waiter_id')
     .eq('branch_id', branchId);
   if (!data) return [];
-  // Only show tables assigned to me (strict filtering)
   return data
     .filter(t => t.assigned_waiter_id === staffId)
     .map(t => t.id);
@@ -236,13 +242,9 @@ export default function MozoNotificacionesPage() {
   const handleBillClose = async (billId: string, tableId: string) => {
     setActionLoading(billId);
     const now = new Date().toISOString();
-    // Mark bill as completed
     await supabase.from('bill_requests').update({ status: 'completed', attended_at: now }).eq('id', billId);
-    // Close session
     await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', tableId).eq('is_active', true);
-    // Mark all active orders as delivered
     await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', tableId).in('status', ['confirmed', 'in_kitchen', 'ready']);
-    // Free table
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', tableId);
     toast({ title: 'Mesa cerrada y cuenta completada ✓' });
     fetchAll();
@@ -352,103 +354,113 @@ export default function MozoNotificacionesPage() {
 
                 <div className="p-3 space-y-2.5">
                   {/* Calls */}
-                  {group.calls.map(call => (
-                    <div key={`call-${call.id}`} className="flex items-center gap-3 bg-amber-50 rounded-lg p-3 border border-amber-100">
-                      <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                        <Bell className="w-4 h-4 text-amber-700" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground">Llamada de mozo</p>
-                        <p className="text-xs text-muted-foreground">{REASON_MAP[call.reason] ?? call.reason} · hace {minutesAgo(call.createdAt)} min</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0 h-8"
-                        disabled={actionLoading === call.id}
-                        onClick={() => handleCallAttend(call.id)}
-                      >
-                        {actionLoading === call.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Atender'}
-                      </Button>
-                    </div>
-                  ))}
-
-                  {/* Bill requests */}
-                  {group.billRequests.map(bill => (
-                    <div key={`bill-${bill.id}`} className="bg-red-50 rounded-lg p-3 border border-red-100">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                          <Receipt className="w-4 h-4 text-red-700" />
+                  {group.calls.map(call => {
+                    const isUrgent = ((Date.now() - new Date(call.createdAt).getTime()) / 60000) > 5;
+                    return (
+                      <div key={`call-${call.id}`} className={`flex items-center gap-3 bg-amber-50 rounded-lg p-3 border border-amber-100 ${isUrgent ? 'animate-pulse ring-1 ring-red-400' : ''}`}>
+                        <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                          <Bell className="w-4 h-4 text-amber-700" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCLP(bill.totalAmount)}
-                            {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
-                            {' · hace '}{minutesAgo(bill.createdAt)} min
-                          </p>
+                          <p className="text-sm font-semibold text-foreground">Llamada de mozo</p>
+                          <p className="text-xs text-muted-foreground">{REASON_MAP[call.reason] ?? call.reason}</p>
+                          <span className="text-[11px] text-muted-foreground">{timeAgo(call.createdAt)}</span>
                         </div>
-                      </div>
-                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 h-8"
-                          disabled={actionLoading === bill.id}
-                          onClick={() => handleBillAttend(bill.id, group.tableId)}
+                          className="shrink-0 h-8"
+                          disabled={actionLoading === call.id}
+                          onClick={() => handleCallAttend(call.id)}
                         >
-                          {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '📋 En camino'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="flex-1 h-8"
-                          disabled={actionLoading === bill.id}
-                          onClick={() => handleBillClose(bill.id, group.tableId)}
-                        >
-                          {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Cerrar mesa'}
+                          {actionLoading === call.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Atender'}
                         </Button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+
+                  {/* Bill requests */}
+                  {group.billRequests.map(bill => {
+                    const isUrgent = ((Date.now() - new Date(bill.createdAt).getTime()) / 60000) > 5;
+                    return (
+                      <div key={`bill-${bill.id}`} className={`bg-red-50 rounded-lg p-3 border border-red-100 ${isUrgent ? 'animate-pulse ring-1 ring-red-400' : ''}`}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                            <Receipt className="w-4 h-4 text-red-700" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground">Pide la cuenta</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatCLP(bill.totalAmount)}
+                              {bill.tipAmount > 0 && ` · Propina: ${formatCLP(bill.tipAmount)}`}
+                            </p>
+                            <span className="text-[11px] text-muted-foreground">{timeAgo(bill.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-8"
+                            disabled={actionLoading === bill.id}
+                            onClick={() => handleBillAttend(bill.id, group.tableId)}
+                          >
+                            {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '📋 En camino'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="flex-1 h-8"
+                            disabled={actionLoading === bill.id}
+                            onClick={() => handleBillClose(bill.id, group.tableId)}
+                          >
+                            {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Cerrar mesa'}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
 
                   {/* Orders grouped by status */}
-                  {group.orders.map(order => (
-                    <div key={`order-${order.id}`} className={`rounded-lg p-3 border ${STATUS_COLORS[order.status] ?? 'bg-muted/50 border-border'}`}>
-                      <div className="flex items-start justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <UtensilsCrossed className="w-4 h-4" />
-                          <span className="text-sm font-bold">Pedido #{order.orderNumber}</span>
+                  {group.orders.map(order => {
+                    const isUrgent = ((Date.now() - new Date(order.createdAt).getTime()) / 60000) > 5;
+                    return (
+                      <div key={`order-${order.id}`} className={`rounded-lg p-3 border ${STATUS_COLORS[order.status] ?? 'bg-muted/50 border-border'} ${isUrgent ? 'animate-pulse ring-1 ring-red-400' : ''}`}>
+                        <div className="flex items-start justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <UtensilsCrossed className="w-4 h-4" />
+                            <span className="text-sm font-bold">Pedido #{order.orderNumber}</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] border-current">
+                            {STATUS_LABELS[order.status] ?? order.status}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="text-[10px] border-current">
-                          {STATUS_LABELS[order.status] ?? order.status}
-                        </Badge>
+                        <div className="text-xs space-y-0.5 mb-2">
+                          {order.items.map((it, idx) => (
+                            <p key={idx}>{it.quantity}× {it.menu_item_name}</p>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground">{timeAgo(order.createdAt)}</span>
+                          <Button
+                            size="sm"
+                            className={`h-8 ${getOrderActionStyle(order.status)}`}
+                            disabled={actionLoading === order.id}
+                            onClick={() => handleOrderAction(order)}
+                          >
+                            {actionLoading === order.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <>
+                                {getOrderActionIcon(order.status)}
+                                {getOrderActionLabel(order.status)}
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="text-xs space-y-0.5 mb-2">
-                        {order.items.map((it, idx) => (
-                          <p key={idx}>{it.quantity}× {it.menu_item_name}</p>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-muted-foreground">hace {minutesAgo(order.createdAt)} min</span>
-                        <Button
-                          size="sm"
-                          className={`h-8 ${getOrderActionStyle(order.status)}`}
-                          disabled={actionLoading === order.id}
-                          onClick={() => handleOrderAction(order)}
-                        >
-                          {actionLoading === order.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <>
-                              {getOrderActionIcon(order.status)}
-                              {getOrderActionLabel(order.status)}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </motion.div>
             ))}

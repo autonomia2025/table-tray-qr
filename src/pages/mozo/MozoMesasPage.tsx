@@ -3,6 +3,7 @@ import { useWaiters } from '@/contexts/WaitersContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCLP } from '@/lib/format';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,7 @@ interface TableData {
   sessionTotal?: number;
   sessionOpenedAt?: string;
   activeOrders?: number;
+  callCount?: number;
 }
 
 interface OrderWithItems {
@@ -57,6 +59,8 @@ export default function MozoMesasPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [otherWaiters, setOtherWaiters] = useState<{ id: string; name: string }[]>([]);
 
   const fetchTables = async () => {
     const { data: tablesData } = await supabase
@@ -70,9 +74,10 @@ export default function MozoMesasPage() {
     const occupiedIds = tablesData.filter(t => t.status === 'occupied' || t.status === 'waiting_bill').map(t => t.id);
     let sessionsMap: Record<string, { total: number; opened: string }> = {};
     const orderCountMap: Record<string, number> = {};
+    let callCountMap: Record<string, number> = {};
 
     if (occupiedIds.length > 0) {
-      const [{ data: sessions }, { data: orderCounts }] = await Promise.all([
+      const [{ data: sessions }, { data: orderCounts }, { data: waiterCallCounts }] = await Promise.all([
         supabase
           .from('table_sessions')
           .select('table_id, total_amount, opened_at')
@@ -83,6 +88,11 @@ export default function MozoMesasPage() {
           .select('table_id')
           .in('table_id', occupiedIds)
           .in('status', ['confirmed', 'in_kitchen', 'ready']),
+        supabase
+          .from('waiter_calls')
+          .select('table_id')
+          .in('table_id', occupiedIds)
+          .eq('status', 'pending'),
       ]);
 
       sessions?.forEach(s => {
@@ -91,6 +101,9 @@ export default function MozoMesasPage() {
       orderCounts?.forEach(o => {
         orderCountMap[o.table_id] = (orderCountMap[o.table_id] ?? 0) + 1;
       });
+      (waiterCallCounts ?? []).forEach(wc => {
+        callCountMap[wc.table_id] = (callCountMap[wc.table_id] ?? 0) + 1;
+      });
     }
 
     setTables(tablesData.map(t => ({
@@ -98,6 +111,7 @@ export default function MozoMesasPage() {
       sessionTotal: sessionsMap[t.id]?.total,
       sessionOpenedAt: sessionsMap[t.id]?.opened,
       activeOrders: orderCountMap[t.id] ?? 0,
+      callCount: callCountMap[t.id] ?? 0,
     })));
     setLoading(false);
   };
@@ -190,6 +204,31 @@ export default function MozoMesasPage() {
     setSheetOpen(false);
     setActionLoading(null);
     fetchTables();
+  };
+
+  const handleTransfer = async (table: TableData) => {
+    setActionLoading('transfer');
+    const { data } = await supabase
+      .from('staff_users')
+      .select('id, name')
+      .eq('branch_id', branchId)
+      .eq('is_active', true)
+      .neq('id', staffId);
+    setOtherWaiters(data ?? []);
+    setActionLoading(null);
+    setTransferOpen(true);
+  };
+
+  const confirmTransfer = async (newWaiterId: string) => {
+    if (!selectedTable) return;
+    await supabase
+      .from('tables')
+      .update({ assigned_waiter_id: newWaiterId })
+      .eq('id', selectedTable.id);
+    setTransferOpen(false);
+    setSheetOpen(false);
+    fetchTables();
+    toast({ title: 'Mesa transferida' });
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -336,9 +375,46 @@ export default function MozoMesasPage() {
                 Cerrar mesa
               </Button>
             )}
+            {selectedTable && selectedTable.assigned_waiter_id === staffId && (
+              <button
+                onClick={() => handleTransfer(selectedTable)}
+                disabled={actionLoading === 'transfer'}
+                className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border border-border text-foreground flex items-center justify-center gap-2"
+              >
+                {actionLoading === 'transfer' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  '↔ Transferir a otro mozo'
+                )}
+              </button>
+            )}
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Transfer dialog */}
+      <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transferir Mesa {selectedTable?.number}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2">
+            {otherWaiters.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No hay otros mozos disponibles</p>
+            ) : (
+              otherWaiters.map(w => (
+                <button
+                  key={w.id}
+                  onClick={() => confirmTransfer(w.id)}
+                  className="w-full rounded-xl border border-border p-3 text-left text-sm font-medium hover:bg-accent transition-colors"
+                >
+                  {w.name}
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -373,6 +449,13 @@ function TableCard({
       onClick={onTap}
       className={`rounded-xl border-2 p-3.5 transition-all relative cursor-pointer active:scale-[0.97] ${bgColor} ${isMine ? 'ring-2 ring-primary ring-offset-1' : ''}`}
     >
+      {/* Waiter call badge */}
+      {(t.callCount ?? 0) > 0 && (
+        <span className="absolute top-2 left-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded-full px-1.5 py-0.5">
+          🔔 {t.callCount}
+        </span>
+      )}
+
       <div className="flex items-start justify-between mb-1">
         <span className="text-2xl font-bold text-foreground">{t.number}</span>
         {st === 'waiting_bill' && <span className="text-lg">🧾</span>}

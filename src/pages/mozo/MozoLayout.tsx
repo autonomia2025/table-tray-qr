@@ -1,14 +1,40 @@
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { LayoutGrid, Bell, User, LogOut } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+function playNotifSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1046, ctx.currentTime);
+    osc.frequency.setValueAtTime(1318, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  } catch { /* ignore */ }
+}
 
 export default function MozoLayout() {
   const { isLoggedIn, staffName, branchId, staffId, logout } = useWaiters();
   const navigate = useNavigate();
   const location = useLocation();
   const [notifCount, setNotifCount] = useState(0);
+  const prevNotifCountRef = useRef(0);
+  const audioUnlockedRef = useRef(false);
+
+  // Unlock AudioContext on first user interaction
+  useEffect(() => {
+    const unlock = () => { audioUnlockedRef.current = true; };
+    window.addEventListener("click", unlock, { once: true });
+    return () => window.removeEventListener("click", unlock);
+  }, []);
 
   // Count pending notifications for MY tables + unassigned tables
   useEffect(() => {
@@ -47,6 +73,15 @@ export default function MozoLayout() {
 
     return () => { supabase.removeChannel(channel); };
   }, [isLoggedIn, branchId, staffId]);
+
+  // Play sound when notification count increases
+  useEffect(() => {
+    if (!audioUnlockedRef.current) return;
+    if (notifCount > prevNotifCountRef.current) {
+      playNotifSound();
+    }
+    prevNotifCountRef.current = notifCount;
+  }, [notifCount]);
 
   if (!isLoggedIn) return <Navigate to="/mozo/login" replace />;
 
