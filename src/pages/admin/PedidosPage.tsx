@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCLP } from "@/lib/format";
@@ -55,6 +55,31 @@ function timeAgo(dateStr: string | null) {
   if (mins < 1) return "ahora";
   if (mins < 60) return `${mins}m`;
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+function useElapsedMinutes(iso: string | null): number {
+  const [mins, setMins] = useState(() =>
+    iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 60000) : 0
+  );
+  useEffect(() => {
+    if (!iso) return;
+    const id = setInterval(() =>
+      setMins(Math.floor((Date.now() - new Date(iso).getTime()) / 60000)), 30000
+    );
+    return () => clearInterval(id);
+  }, [iso]);
+  return mins;
+}
+
+function ElapsedBadge({ confirmedAt }: { confirmedAt: string | null }) {
+  const mins = useElapsedMinutes(confirmedAt);
+  if (mins < 10) return null;
+  const isLate = mins >= 20;
+  return (
+    <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${isLate ? 'bg-destructive/10 text-destructive' : 'bg-yellow-100 text-yellow-700'}`}>
+      ⏱ {mins}min
+    </span>
+  );
 }
 
 export default function PedidosPage() {
@@ -169,6 +194,15 @@ export default function PedidosPage() {
     setActionLoading(false);
   };
 
+  const handleCancelOrder = async (orderId: string, orderNumber: number) => {
+    if (!confirm(`¿Cancelar pedido #${String(orderNumber).padStart(3, '0')}?`)) return;
+    await supabase
+      .from('orders')
+      .update({ status: 'cancelled', cancelled_reason: 'admin_cancelled' })
+      .eq('id', orderId);
+    toast({ title: `Pedido #${String(orderNumber).padStart(3, '0')} cancelado` });
+  };
+
   const openDetail = (order: OrderRow) => {
     setSelectedOrder(order);
     setDetailItems(itemsMap[order.id] ?? []);
@@ -180,7 +214,10 @@ export default function PedidosPage() {
       className="w-full text-left bg-card border border-border rounded-lg p-3 hover:shadow-md transition-shadow"
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="font-bold text-sm">#{order.order_number}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-sm">#{order.order_number}</span>
+          <ElapsedBadge confirmedAt={order.confirmed_at} />
+        </div>
         <span className="text-xs text-muted-foreground flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {timeAgo(order.confirmed_at)}
@@ -202,6 +239,14 @@ export default function PedidosPage() {
         <p className="text-xs text-destructive mt-1 truncate">📝 {order.notes}</p>
       )}
       <p className="text-sm font-semibold mt-2">{formatCLP(order.total_amount)}</p>
+      {(order.status === 'confirmed' || order.status === 'in_kitchen') && (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id, order.order_number); }}
+          className="text-[11px] text-destructive underline mt-1"
+        >
+          Cancelar pedido
+        </button>
+      )}
     </button>
   );
 

@@ -13,6 +13,28 @@ import TeamTab from "@/components/reports/TeamTab";
 import ClientsTab from "@/components/reports/ClientsTab";
 import { periodRange, fetchAll, type Period } from "@/lib/report-utils";
 
+function exportOrdersCSV(orders: any[], period: string) {
+  if (!orders.length) return;
+  const headers = ['Número', 'Estado', 'Total', 'Mesa', 'Fecha'];
+  const rows = orders
+    .filter(o => o.status !== 'cancelled')
+    .map(o => [
+      String(o.order_number ?? '').padStart(3, '0'),
+      o.status ?? '',
+      String(o.total_amount ?? 0),
+      String(o.table_id ?? ''),
+      o.confirmed_at ? new Date(o.confirmed_at).toLocaleDateString('es-CL') : '',
+    ]);
+  const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reporte-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ReportesPage() {
   const { branchId } = useAdmin();
   const [loading, setLoading] = useState(true);
@@ -119,9 +141,18 @@ export default function ReportesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-bold text-foreground">Reportes</h1>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <div className="flex items-center gap-3">
+          <PeriodSelector value={period} onChange={setPeriod} />
+          <button
+            onClick={() => exportOrdersCSV(orders, period)}
+            disabled={loading || orders.length === 0}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-40"
+          >
+            <span>⬇</span> Exportar CSV
+          </button>
+        </div>
       </div>
 
       <Tabs defaultValue="ventas" className="space-y-4">

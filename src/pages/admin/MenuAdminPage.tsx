@@ -49,7 +49,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MenuAdminPage() {
-  const { tenantId, branchId } = useAdmin();
+  const { tenantId, branchId, slug } = useAdmin();
   const { toast } = useToast();
 
   const [menuId, setMenuId] = useState<string | null>(null);
@@ -291,6 +291,13 @@ export default function MenuAdminPage() {
     refreshItems();
   };
 
+  const handleToggleStock = async (item: MenuItem) => {
+    const newStatus = item.status === 'out_of_stock' ? 'available' : 'out_of_stock';
+    await supabase.from('menu_items').update({ status: newStatus }).eq('id', item.id);
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: newStatus } : i));
+    toast({ title: newStatus === 'out_of_stock' ? `"${item.name}" marcado como agotado` : `"${item.name}" disponible nuevamente` });
+  };
+
   const moveItem = async (idx: number, dir: -1 | 1) => {
     const newIdx = idx + dir;
     if (newIdx < 0 || newIdx >= items.length) return;
@@ -329,7 +336,17 @@ export default function MenuAdminPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-foreground mb-6">Menú</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Menú</h2>
+        <a
+          href={`/${slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+        >
+          Ver menú del cliente →
+        </a>
+      </div>
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Categories column */}
@@ -392,6 +409,17 @@ export default function MenuAdminPage() {
                       <Button size="sm" variant="ghost" onClick={() => moveItem(i, -1)}><ArrowUp className="h-3 w-3" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => moveItem(i, 1)}><ArrowDown className="h-3 w-3" /></Button>
                       <Button size="sm" variant="ghost" onClick={() => openItemSheet(item)}><Pencil className="h-3 w-3" /></Button>
+                      <button
+                        onClick={() => handleToggleStock(item)}
+                        className={`rounded-lg px-2 py-1 text-xs font-semibold transition-colors ${
+                          item.status === 'out_of_stock'
+                            ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                        title={item.status === 'out_of_stock' ? 'Marcar disponible' : 'Marcar agotado'}
+                      >
+                        {item.status === 'out_of_stock' ? '✓ Agotado' : '86'}
+                      </button>
                       <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteConfirm({ type: "item", id: item.id, name: item.name })}><Trash2 className="h-3 w-3" /></Button>
                     </div>
                   </div>
