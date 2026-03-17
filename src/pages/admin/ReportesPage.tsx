@@ -173,7 +173,7 @@ export default function ReportesPage() {
         </TabsList>
 
         <TabsContent value="ventas">
-          <SalesTab orders={orders} prevOrders={prevOrders} daysInPeriod={daysInPeriod} />
+          <SalesTab orders={orders} prevOrders={prevOrders} daysInPeriod={daysInPeriod} sessions={sessions} billRequests={billRequests} />
         </TabsContent>
         <TabsContent value="pedidos">
           <OrdersTab orders={orders} prevOrders={prevOrders} />
