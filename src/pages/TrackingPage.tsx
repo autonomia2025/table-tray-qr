@@ -245,6 +245,34 @@ export default function TrackingPage() {
     };
   }, [session?.id]);
 
+  // Realtime subscription for session close (redirect to menu)
+  useEffect(() => {
+    if (!tableData?.id) return;
+    const channel = supabase
+      .channel(`session-status-${tableData.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "table_sessions",
+          filter: `table_id=eq.${tableData.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as { is_active: boolean };
+          if (!updated.is_active) {
+            toast({ title: "✅ ¡Gracias por tu visita!", description: "Esperamos verte pronto" });
+            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tableData?.id, slug, navigate, toast]);
+
   // Realtime subscription for waiter call status
   useEffect(() => {
     if (!waiterCallId) return;
