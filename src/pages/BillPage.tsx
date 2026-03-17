@@ -62,6 +62,7 @@ export default function BillPage() {
   const [showBackBtn, setShowBackBtn] = useState(false);
   const [finalTotal, setFinalTotal] = useState(0);
   const [finalTip, setFinalTip] = useState(0);
+  const [sessionTimeout, setSessionTimeout] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
@@ -110,7 +111,8 @@ export default function BillPage() {
       return data;
     },
     enabled: !!tableData?.id,
-    staleTime: 5000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: orders = [], isLoading } = useQuery({
@@ -244,6 +246,12 @@ export default function BillPage() {
     [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total],
   );
 
+  // Session timeout guard
+  useEffect(() => {
+    const t = setTimeout(() => setSessionTimeout(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
   // Show "back to start" button after 3s on success
   useEffect(() => {
     if (pageState === "success") {
@@ -270,7 +278,7 @@ export default function BillPage() {
     );
   }
 
-  if (!session && !isLoading) {
+  if (!session && !isLoading && sessionTimeout) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
         <p className="text-5xl mb-4">🔍</p>

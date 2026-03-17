@@ -146,6 +146,12 @@ export default function ReportesPage() {
         <div className="flex items-center gap-3">
           <PeriodSelector value={period} onChange={setPeriod} />
           <button
+            onClick={fetchData}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+          >
+            ↻ Actualizar
+          </button>
+          <button
             onClick={() => exportOrdersCSV(orders, period)}
             disabled={loading || orders.length === 0}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors disabled:opacity-40"

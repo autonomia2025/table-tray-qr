@@ -164,7 +164,8 @@ export default function TrackingPage() {
       return data;
     },
     enabled: !!tableData?.id,
-    staleTime: 10_000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Orders
@@ -243,6 +244,34 @@ export default function TrackingPage() {
       supabase.removeChannel(channel);
     };
   }, [session?.id]);
+
+  // Realtime subscription for session close (redirect to menu)
+  useEffect(() => {
+    if (!tableData?.id) return;
+    const channel = supabase
+      .channel(`session-status-${tableData.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "table_sessions",
+          filter: `table_id=eq.${tableData.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as { is_active: boolean };
+          if (!updated.is_active) {
+            toast({ title: "✅ ¡Gracias por tu visita!", description: "Esperamos verte pronto" });
+            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tableData?.id, slug, navigate, toast]);
 
   // Realtime subscription for waiter call status
   useEffect(() => {
@@ -436,7 +465,8 @@ export default function TrackingPage() {
   }
 
   /* ---------- ERROR ---------- */
-  if (isError || (!isLoading && session && orders.length === 0) || (!isLoading && !session && tableData)) {
+  const ordersLoading = !session?.id || isLoading;
+  if (isError || (!ordersLoading && session && orders.length === 0)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
         <AlertTriangle className="h-16 w-16 text-muted-foreground mb-4" />
@@ -665,18 +695,17 @@ export default function TrackingPage() {
         {/* ── WAITER CALL BANNER ── */}
         {waiterCallStatus && (
           <div className="mb-4">
-            <div
-              className={`rounded-xl border px-4 py-3 text-center text-sm font-semibold ${
-                waiterCallStatus === "attended"
-                  ? "bg-green-50 border-green-200 text-green-700"
-                  : "bg-yellow-50 border-yellow-200 text-yellow-700"
-              }`}
-            >
-              {waiterCallStatus === "attended"
-                ? "✅ Mozo atendió tu llamada"
-                : "🛎 El mozo está en camino"}
+            <div className={`w-full rounded-xl p-4 flex items-center gap-3 ${
+              waiterCallStatus === 'attended' ? 'bg-green-500' : 'bg-amber-500'
+            }`}>
+              <span className="text-2xl">{waiterCallStatus === 'attended' ? '✅' : '🛎'}</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white">
+                  {waiterCallStatus === 'attended' ? 'Mozo atendió tu llamada' : 'Mozo notificado — viene en camino'}
+                </p>
+              </div>
             </div>
-            {waiterCallStatus === "pending" && (
+            {waiterCallStatus === 'pending' && (
               <button
                 onClick={cancelWaiterCall}
                 className="text-xs text-muted-foreground underline text-center w-full mt-1"
@@ -715,6 +744,11 @@ export default function TrackingPage() {
               <Receipt className="h-4 w-4" />
               Pedir la cuenta 🧾
             </button>
+            {!hasDelivered && (
+              <p className="text-[11px] text-muted-foreground text-center -mt-1">
+                Disponible cuando tu pedido sea entregado
+              </p>
+            )}
 
             <button
               onClick={() => setWaiterModalOpen(true)}
