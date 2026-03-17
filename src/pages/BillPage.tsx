@@ -62,6 +62,7 @@ export default function BillPage() {
   const [showBackBtn, setShowBackBtn] = useState(false);
   const [finalTotal, setFinalTotal] = useState(0);
   const [finalTip, setFinalTip] = useState(0);
+  const [sessionTimeout, setSessionTimeout] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
