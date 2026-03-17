@@ -437,7 +437,8 @@ export default function TrackingPage() {
   }
 
   /* ---------- ERROR ---------- */
-  if (isError || (!isLoading && session && orders.length === 0) || (!isLoading && !session && tableData)) {
+  const ordersLoading = !session?.id || isLoading;
+  if (isError || (!ordersLoading && session && orders.length === 0)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
         <AlertTriangle className="h-16 w-16 text-muted-foreground mb-4" />
