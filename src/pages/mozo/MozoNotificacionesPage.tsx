@@ -242,7 +242,7 @@ export default function MozoNotificacionesPage() {
   const handleBillClose = async (billId: string, tableId: string) => {
     setActionLoading(billId);
     const now = new Date().toISOString();
-    await supabase.from('bill_requests').update({ status: 'completed', attended_at: now }).eq('id', billId);
+    await supabase.from('bill_requests').update({ status: 'paid', attended_at: now }).eq('id', billId);
     await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', tableId).eq('is_active', true);
     await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', tableId).in('status', ['confirmed', 'in_kitchen', 'ready']);
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', tableId);

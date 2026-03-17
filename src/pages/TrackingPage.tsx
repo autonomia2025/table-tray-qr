@@ -744,6 +744,11 @@ export default function TrackingPage() {
               <Receipt className="h-4 w-4" />
               Pedir la cuenta 🧾
             </button>
+            {!hasDelivered && (
+              <p className="text-[11px] text-muted-foreground text-center -mt-1">
+                Disponible cuando tu pedido sea entregado
+              </p>
+            )}
 
             <button
               onClick={() => setWaiterModalOpen(true)}

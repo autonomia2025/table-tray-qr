@@ -96,7 +96,7 @@ export default function AdminLayout() {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => item.external ? window.open(item.path, '_blank') : navigate(item.path)}
               className={cn(
                 "flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors",
                 active ? "text-primary" : "text-muted-foreground"

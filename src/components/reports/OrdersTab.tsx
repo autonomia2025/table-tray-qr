@@ -130,7 +130,7 @@ export default function OrdersTab({ orders, prevOrders }: Props) {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-sm">Revenue por mesa (Top 10)</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">Ingresos por mesa (Top 10)</CardTitle></CardHeader>
         <CardContent>
           {tableRevenue.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Sin datos</p>

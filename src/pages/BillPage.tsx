@@ -278,7 +278,7 @@ export default function BillPage() {
     );
   }
 
-  if (!session && !isLoading) {
+  if (!session && !isLoading && sessionTimeout) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
         <p className="text-5xl mb-4">🔍</p>
