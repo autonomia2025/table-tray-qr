@@ -110,7 +110,8 @@ export default function BillPage() {
       return data;
     },
     enabled: !!tableData?.id,
-    staleTime: 5000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: orders = [], isLoading } = useQuery({
