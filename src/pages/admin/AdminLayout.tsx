@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLayout() {
-  const { tenantName, branchName, primaryColor, isLoading, isImpersonating, logout, slug } = useAdmin();
+  const { tenantName, branchName, branchId, primaryColor, isLoading, isImpersonating, logout, slug } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const { slug: urlSlug } = useParams<{ slug: string }>();
