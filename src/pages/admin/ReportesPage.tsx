@@ -76,7 +76,7 @@ export default function ReportesPage() {
       fetchAll("orders", "id, total_amount, confirmed_at, status, table_id, session_id", [
         f("branch_id", "eq", branchId), f("confirmed_at", "gte", prevFromStr), f("confirmed_at", "lte", prevToStr),
       ]),
-      fetchAll("table_sessions", "id, table_id, opened_at, closed_at, total_amount", [
+      fetchAll("table_sessions", "id, table_id, opened_at, closed_at, total_amount, tip_amount", [
         f("branch_id", "eq", branchId), f("opened_at", "gte", fromStr), f("opened_at", "lte", toStr),
       ]),
       supabase.from("tables").select("id, number, name, assigned_waiter_id, capacity").eq("branch_id", branchId).then(r => r.data ?? []),
