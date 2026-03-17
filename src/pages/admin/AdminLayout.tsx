@@ -12,13 +12,14 @@ export default function AdminLayout() {
   const effectiveSlug = urlSlug ?? slug;
 
   const NAV_ITEMS = [
-    { path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid },
-    { path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList },
-    { path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen },
-    { path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3 },
-    { path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users },
-    { path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode },
-    { path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings },
+    { path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid, external: false },
+    { path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList, external: false },
+    { path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen, external: false },
+    { path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3, external: false },
+    { path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users, external: false },
+    { path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode, external: false },
+    { path: `/kds?branch=${branchId}`, label: "KDS Cocina", icon: ChefHat, external: true },
+    { path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings, external: false },
   ];
 
   if (isLoading) {
