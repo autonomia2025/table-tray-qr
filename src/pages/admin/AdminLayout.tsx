@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3 } from "lucide-react";
+import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
