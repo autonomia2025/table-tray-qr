@@ -246,6 +246,12 @@ export default function BillPage() {
     [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total],
   );
 
+  // Session timeout guard
+  useEffect(() => {
+    const t = setTimeout(() => setSessionTimeout(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
   // Show "back to start" button after 3s on success
   useEffect(() => {
     if (pageState === "success") {
