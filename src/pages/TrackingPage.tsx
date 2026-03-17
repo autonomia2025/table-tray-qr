@@ -164,7 +164,8 @@ export default function TrackingPage() {
       return data;
     },
     enabled: !!tableData?.id,
-    staleTime: 10_000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Orders
