@@ -695,18 +695,17 @@ export default function TrackingPage() {
         {/* ── WAITER CALL BANNER ── */}
         {waiterCallStatus && (
           <div className="mb-4">
-            <div
-              className={`rounded-xl border px-4 py-3 text-center text-sm font-semibold ${
-                waiterCallStatus === "attended"
-                  ? "bg-green-50 border-green-200 text-green-700"
-                  : "bg-yellow-50 border-yellow-200 text-yellow-700"
-              }`}
-            >
-              {waiterCallStatus === "attended"
-                ? "✅ Mozo atendió tu llamada"
-                : "🛎 El mozo está en camino"}
+            <div className={`w-full rounded-xl p-4 flex items-center gap-3 ${
+              waiterCallStatus === 'attended' ? 'bg-green-500' : 'bg-amber-500'
+            }`}>
+              <span className="text-2xl">{waiterCallStatus === 'attended' ? '✅' : '🛎'}</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white">
+                  {waiterCallStatus === 'attended' ? 'Mozo atendió tu llamada' : 'Mozo notificado — viene en camino'}
+                </p>
+              </div>
             </div>
-            {waiterCallStatus === "pending" && (
+            {waiterCallStatus === 'pending' && (
               <button
                 onClick={cancelWaiterCall}
                 className="text-xs text-muted-foreground underline text-center w-full mt-1"
