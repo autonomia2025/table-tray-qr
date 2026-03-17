@@ -186,6 +186,7 @@ export default function ConfirmPage() {
         setTableNumber(tableData.number);
 
         // 4. Find or create active table_session
+        // If table is "free" but has a stale active session, close the old one first
         const { data: existingSession } = await supabase
           .from("table_sessions")
           .select("id, total_amount")
@@ -196,7 +197,16 @@ export default function ConfirmPage() {
         let sessionId: string;
         let existingAmount = 0;
 
-        if (existingSession) {
+        if (existingSession && tableData.status === "free") {
+          // Stale session — close it and create a fresh one
+          await supabase
+            .from("table_sessions")
+            .update({ is_active: false, closed_at: new Date().toISOString() })
+            .eq("id", existingSession.id);
+          // Fall through to create new session
+        }
+
+        if (existingSession && tableData.status !== "free") {
           sessionId = existingSession.id;
           existingAmount = existingSession.total_amount || 0;
         } else {
