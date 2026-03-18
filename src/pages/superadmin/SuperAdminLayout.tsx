@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Building2, BarChart2, ToggleLeft, Settings, LogIn } from 'lucide-react';
+import { Building2, BarChart2, ToggleLeft, Settings, LogIn, Users, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +7,12 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useSuperAdmin } from '@/contexts/SuperAdminContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
+import ThemeToggle from '@/components/ThemeToggle';
+import GlobalSearch from '@/components/GlobalSearch';
 
 const NAV_ITEMS = [
   { path: '/superadmin/tenants', icon: Building2, label: 'Tenants' },
+  { path: '/superadmin/equipo', icon: Users, label: 'Equipo' },
   { path: '/superadmin/metricas', icon: BarChart2, label: 'Métricas' },
   { path: '/superadmin/flags', icon: ToggleLeft, label: 'Flags' },
   { path: '/superadmin/config', icon: Settings, label: 'Config' },
@@ -34,7 +37,7 @@ function SuperAdminLogin() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
         <div className="text-center mb-6">
-          <Badge className="bg-indigo-600 text-white mb-2">SuperAdmin</Badge>
+          <Badge className="bg-secondary text-secondary-foreground mb-2">SuperAdmin</Badge>
           <h1 className="text-xl font-bold text-foreground">Acceso restringido</h1>
         </div>
         <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
@@ -53,7 +56,12 @@ export default function SuperAdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { isPlatformAdmin, isLoading } = useSuperAdmin();
+  const { isPlatformAdmin, isLoading, impersonating, setImpersonating } = useSuperAdmin();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/superadmin');
+  };
 
   if (isLoading) {
     return (
@@ -72,8 +80,8 @@ export default function SuperAdminLayout() {
       {!isMobile && (
         <aside className="w-56 border-r border-border bg-card flex flex-col shrink-0">
           <div className="h-14 flex items-center gap-2 px-4 border-b border-border">
-            <span className="font-bold text-foreground text-sm">MenuQR</span>
-            <Badge className="bg-indigo-600 text-white text-[10px] hover:bg-indigo-700">Founder</Badge>
+            <span className="font-bold text-foreground text-sm">Tablio</span>
+            <Badge className="bg-secondary text-secondary-foreground text-[10px]">Founder</Badge>
           </div>
           <nav className="flex-1 p-2 space-y-1">
             {NAV_ITEMS.map(item => {
@@ -92,16 +100,41 @@ export default function SuperAdminLayout() {
               );
             })}
           </nav>
+          <div className="p-3 border-t border-border space-y-1">
+            <div className="flex items-center justify-between px-1">
+              <ThemeToggle />
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Cerrar sesión
+            </button>
+          </div>
         </aside>
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        {isMobile && (
-          <header className="h-12 flex items-center gap-2 px-4 border-b border-border bg-card">
-            <span className="font-bold text-foreground text-sm">MenuQR SuperAdmin</span>
-            <Badge className="bg-indigo-600 text-white text-[10px] hover:bg-indigo-700">Founder</Badge>
-          </header>
-        )}
+        <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-card">
+          <div className="flex items-center gap-2">
+            {isMobile && <span className="font-bold text-foreground text-sm">Tablio</span>}
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-2">
+            {impersonating && (
+              <Button variant="outline" size="sm" onClick={() => setImpersonating(null)} className="text-xs gap-1">
+                Dejar de impersonar
+              </Button>
+            )}
+            {isMobile && <ThemeToggle />}
+            {isMobile && (
+              <button onClick={handleLogout} className="text-muted-foreground">
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </header>
 
         <main className="flex-1 overflow-auto">
           <Outlet />
