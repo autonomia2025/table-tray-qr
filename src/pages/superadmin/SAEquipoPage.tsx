@@ -240,7 +240,7 @@ export default function SAEquipoPage() {
                 </tr></thead>
                 <tbody className="divide-y divide-border">
                   {vendedores.map((v, i) => (
-                    <tr key={v.id} className={i === 0 ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''}>
+                    <tr key={v.id} className={i === 0 ? 'bg-primary/5' : ''}>
                       <td className="py-2 font-bold text-muted-foreground">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
                       <td className="py-2 font-medium text-foreground">{v.name}</td>
                       <td className="py-2 text-muted-foreground text-xs">{v.zone || '-'}</td>

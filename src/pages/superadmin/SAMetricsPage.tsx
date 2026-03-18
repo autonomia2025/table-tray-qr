@@ -274,7 +274,7 @@ export default function SAMetricsPage() {
             {d.staleLeads.length > 0 && (
               <Card className="border-amber-500/30">
                 <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2 text-amber-600">
+                  <CardTitle className="text-sm flex items-center gap-2 text-destructive">
                     <AlertTriangle className="w-4 h-4" />
                     Leads estancados +7 días ({d.staleLeads.length})
                   </CardTitle>
