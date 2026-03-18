@@ -49,7 +49,7 @@ export default function BackofficeJoinPage() {
     // Auto login
     const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (!loginError) {
-      setTimeout(() => navigate('/backoffice'), 1000);
+      setTimeout(() => navigate('/vendedor'), 1000);
     }
   };
 
