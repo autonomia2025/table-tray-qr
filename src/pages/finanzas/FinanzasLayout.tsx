@@ -1,7 +1,12 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { DollarSign, Users, TrendingDown, PieChart, LogIn, LogOut, Download } from 'lucide-react';
+import { DollarSign, Users, TrendingDown, PieChart, LogIn, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import ThemeToggle from '@/components/ThemeToggle';
+import GlobalSearch from '@/components/GlobalSearch';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
