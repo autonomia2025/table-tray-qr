@@ -58,6 +58,48 @@ export type Database = {
           },
         ]
       }
+      backoffice_members: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          last_access_at: string | null
+          name: string
+          phone: string | null
+          role: string
+          user_id: string | null
+          zone: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          last_access_at?: string | null
+          name: string
+          phone?: string | null
+          role?: string
+          user_id?: string | null
+          zone?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          last_access_at?: string | null
+          name?: string
+          phone?: string | null
+          role?: string
+          user_id?: string | null
+          zone?: string | null
+        }
+        Relationships: []
+      }
       bill_requests: {
         Row: {
           attended_at: string | null
@@ -266,6 +308,131 @@ export type Database = {
           key?: string
         }
         Relationships: []
+      }
+      lead_activities: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          lead_id: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lead_id: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lead_id?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          address: string | null
+          assigned_seller_id: string | null
+          converted_tenant_id: string | null
+          created_at: string | null
+          demo_date: string | null
+          email: string | null
+          id: string
+          lost_reason: string | null
+          monthly_value: number | null
+          next_action: string | null
+          next_action_date: string | null
+          notes: string | null
+          owner_name: string | null
+          phone: string | null
+          pilot_end_date: string | null
+          pilot_start_date: string | null
+          restaurant_name: string
+          source: string | null
+          stage: string
+          temperature: string | null
+          updated_at: string | null
+          zone: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_seller_id?: string | null
+          converted_tenant_id?: string | null
+          created_at?: string | null
+          demo_date?: string | null
+          email?: string | null
+          id?: string
+          lost_reason?: string | null
+          monthly_value?: number | null
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          owner_name?: string | null
+          phone?: string | null
+          pilot_end_date?: string | null
+          pilot_start_date?: string | null
+          restaurant_name: string
+          source?: string | null
+          stage?: string
+          temperature?: string | null
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_seller_id?: string | null
+          converted_tenant_id?: string | null
+          created_at?: string | null
+          demo_date?: string | null
+          email?: string | null
+          id?: string
+          lost_reason?: string | null
+          monthly_value?: number | null
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          owner_name?: string | null
+          phone?: string | null
+          pilot_end_date?: string | null
+          pilot_start_date?: string | null
+          restaurant_name?: string
+          source?: string | null
+          stage?: string
+          temperature?: string | null
+          updated_at?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_seller_id_fkey"
+            columns: ["assigned_seller_id"]
+            isOneToOne: false
+            referencedRelation: "backoffice_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_tenant_id_fkey"
+            columns: ["converted_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_items: {
         Row: {
