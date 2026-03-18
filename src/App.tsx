@@ -44,6 +44,7 @@ import BackofficeLayout from "./pages/backoffice/BackofficeLayout";
 import BackofficeDashboard from "./pages/backoffice/BackofficeDashboard";
 import BackofficeVendedores from "./pages/backoffice/BackofficeVendedores";
 import BackofficePipeline from "./pages/backoffice/BackofficePipeline";
+import BackofficeJoinPage from "./pages/backoffice/BackofficeJoinPage";
 
 const queryClient = new QueryClient();
 
