@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useSeller } from '@/contexts/SellerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
   { path: '/vendedor/mi-dia', icon: CalendarCheck, label: 'Mi día' },
