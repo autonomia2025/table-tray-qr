@@ -126,6 +126,14 @@ const App = () => (
             <Route path="numeros" element={<SellerNumerosPage />} />
             <Route path="recursos" element={<SellerRecursosPage />} />
           </Route>
+          {/* Finance panel */}
+          <Route path="/finanzas" element={<FinanzasLayout />}>
+            <Route index element={<Navigate to="/finanzas/revenue" replace />} />
+            <Route path="revenue" element={<FinanzasRevenuePage />} />
+            <Route path="clientes" element={<FinanzasClientesPage />} />
+            <Route path="churn" element={<FinanzasChurnPage />} />
+            <Route path="costos" element={<FinanzasCostosPage />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
