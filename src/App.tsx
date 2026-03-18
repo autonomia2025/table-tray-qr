@@ -62,6 +62,7 @@ import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
