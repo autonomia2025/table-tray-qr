@@ -136,10 +136,10 @@ export default function SellerNumerosPage() {
 
       {/* Commissions */}
       {goals.commission_per_close > 0 && (
-        <Card className="border-emerald-200 bg-emerald-50/50">
+        <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground mb-1">Comisiones del mes</p>
-            <p className="text-2xl font-bold text-emerald-700">
+            <p className="text-2xl font-bold text-primary">
               ${commission.toLocaleString('es-CL')}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
