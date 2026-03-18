@@ -109,6 +109,7 @@ const App = () => (
           <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
             <Route index element={<Navigate to="/superadmin/tenants" replace />} />
             <Route path="tenants" element={<SATenantsPage />} />
+            <Route path="equipo" element={<SAEquipoPage />} />
             <Route path="metricas" element={<SAMetricsPage />} />
             <Route path="flags" element={<SAFlagsPage />} />
             <Route path="config" element={<SAConfigPage />} />
