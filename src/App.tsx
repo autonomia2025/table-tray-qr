@@ -44,6 +44,7 @@ import BackofficeLayout from "./pages/backoffice/BackofficeLayout";
 import BackofficeDashboard from "./pages/backoffice/BackofficeDashboard";
 import BackofficeVendedores from "./pages/backoffice/BackofficeVendedores";
 import BackofficePipeline from "./pages/backoffice/BackofficePipeline";
+import BackofficeJoinPage from "./pages/backoffice/BackofficeJoinPage";
 
 const queryClient = new QueryClient();
 
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="flags" element={<SAFlagsPage />} />
             <Route path="config" element={<SAConfigPage />} />
           </Route>
+          <Route path="/backoffice/join/:token" element={<BackofficeJoinPage />} />
           <Route path="/backoffice" element={<SuperAdminProvider><BackofficeLayout /></SuperAdminProvider>}>
             <Route index element={<Navigate to="/backoffice/dashboard" replace />} />
             <Route path="dashboard" element={<BackofficeDashboard />} />
