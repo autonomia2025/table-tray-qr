@@ -97,6 +97,12 @@ const App = () => (
             <Route path="flags" element={<SAFlagsPage />} />
             <Route path="config" element={<SAConfigPage />} />
           </Route>
+          <Route path="/backoffice" element={<SuperAdminProvider><BackofficeLayout /></SuperAdminProvider>}>
+            <Route index element={<Navigate to="/backoffice/dashboard" replace />} />
+            <Route path="dashboard" element={<BackofficeDashboard />} />
+            <Route path="vendedores" element={<BackofficeVendedores />} />
+            <Route path="pipeline" element={<BackofficePipeline />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
