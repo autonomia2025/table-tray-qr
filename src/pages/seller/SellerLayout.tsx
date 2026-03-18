@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useSeller } from '@/contexts/SellerContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
   { path: '/vendedor/mi-dia', icon: CalendarCheck, label: 'Mi día' },
@@ -80,6 +81,7 @@ export default function SellerLayout() {
           <Badge variant="outline" className="text-[10px] border-primary text-primary">{seller?.zone || 'Vendedor'}</Badge>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <span className="text-xs text-muted-foreground truncate max-w-[100px]">{seller?.name}</span>
           <button onClick={handleLogout} className="text-muted-foreground hover:text-foreground transition-colors">
             <LogOut className="w-4 h-4" />

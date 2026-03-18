@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -38,6 +39,7 @@ import SATenantsPage from "./pages/superadmin/SATenantsPage";
 import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
 import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
+import SAEquipoPage from "./pages/superadmin/SAEquipoPage";
 import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
 import BackofficeLayout from "./pages/backoffice/BackofficeLayout";
@@ -61,6 +63,7 @@ import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -106,6 +109,7 @@ const App = () => (
           <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
             <Route index element={<Navigate to="/superadmin/tenants" replace />} />
             <Route path="tenants" element={<SATenantsPage />} />
+            <Route path="equipo" element={<SAEquipoPage />} />
             <Route path="metricas" element={<SAMetricsPage />} />
             <Route path="flags" element={<SAFlagsPage />} />
             <Route path="config" element={<SAConfigPage />} />
@@ -139,6 +143,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

@@ -1,12 +1,15 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Kanban, LogIn, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Kanban, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSuperAdmin } from '@/contexts/SuperAdminContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { LogIn } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
+import GlobalSearch from '@/components/GlobalSearch';
 
 const NAV_ITEMS = [
   { path: '/backoffice/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -96,7 +99,10 @@ export default function BackofficeLayout() {
               );
             })}
           </nav>
-          <div className="p-3 border-t border-border">
+          <div className="p-3 border-t border-border space-y-1">
+            <div className="flex items-center justify-between px-1">
+              <ThemeToggle />
+            </div>
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
@@ -109,17 +115,25 @@ export default function BackofficeLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        {isMobile && (
-          <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-card">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-foreground">Tablio</span>
-              <Badge className="bg-primary text-primary-foreground text-[10px]">CRM</Badge>
-            </div>
-            <button onClick={handleLogout} className="text-muted-foreground">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </header>
-        )}
+        <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-card">
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <>
+                <span className="font-bold text-foreground">Tablio</span>
+                <Badge className="bg-primary text-primary-foreground text-[10px]">CRM</Badge>
+              </>
+            )}
+            <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-2">
+            {isMobile && <ThemeToggle />}
+            {isMobile && (
+              <button onClick={handleLogout} className="text-muted-foreground">
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </header>
 
         <main className="flex-1 overflow-auto">
           <Outlet />
