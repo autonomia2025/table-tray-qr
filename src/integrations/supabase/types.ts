@@ -58,6 +58,50 @@ export type Database = {
           },
         ]
       }
+      backoffice_invitations: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          role: string
+          token: string
+          used_at: string | null
+          used_by_member_id: string | null
+          zone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          role?: string
+          token?: string
+          used_at?: string | null
+          used_by_member_id?: string | null
+          zone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          role?: string
+          token?: string
+          used_at?: string | null
+          used_by_member_id?: string | null
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backoffice_invitations_used_by_member_id_fkey"
+            columns: ["used_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "backoffice_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backoffice_members: {
         Row: {
           avatar_url: string | null
@@ -873,6 +917,50 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_goals: {
+        Row: {
+          closes_goal: number | null
+          commission_per_close: number | null
+          created_at: string | null
+          demos_goal: number | null
+          id: string
+          period: string
+          pilots_goal: number | null
+          seller_id: string
+          visits_goal: number | null
+        }
+        Insert: {
+          closes_goal?: number | null
+          commission_per_close?: number | null
+          created_at?: string | null
+          demos_goal?: number | null
+          id?: string
+          period: string
+          pilots_goal?: number | null
+          seller_id: string
+          visits_goal?: number | null
+        }
+        Update: {
+          closes_goal?: number | null
+          commission_per_close?: number | null
+          created_at?: string | null
+          demos_goal?: number | null
+          id?: string
+          period?: string
+          pilots_goal?: number | null
+          seller_id?: string
+          visits_goal?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_goals_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "backoffice_members"
             referencedColumns: ["id"]
           },
         ]
