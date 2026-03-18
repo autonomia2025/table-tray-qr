@@ -52,6 +52,11 @@ import SellerRegistroPage from "./pages/seller/SellerRegistroPage";
 import SellerPipelinePage from "./pages/seller/SellerPipelinePage";
 import SellerNumerosPage from "./pages/seller/SellerNumerosPage";
 import SellerRecursosPage from "./pages/seller/SellerRecursosPage";
+import FinanzasLayout from "./pages/finanzas/FinanzasLayout";
+import FinanzasRevenuePage from "./pages/finanzas/FinanzasRevenuePage";
+import FinanzasClientesPage from "./pages/finanzas/FinanzasClientesPage";
+import FinanzasChurnPage from "./pages/finanzas/FinanzasChurnPage";
+import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +125,14 @@ const App = () => (
             <Route path="pipeline" element={<SellerPipelinePage />} />
             <Route path="numeros" element={<SellerNumerosPage />} />
             <Route path="recursos" element={<SellerRecursosPage />} />
+          </Route>
+          {/* Finance panel */}
+          <Route path="/finanzas" element={<FinanzasLayout />}>
+            <Route index element={<Navigate to="/finanzas/revenue" replace />} />
+            <Route path="revenue" element={<FinanzasRevenuePage />} />
+            <Route path="clientes" element={<FinanzasClientesPage />} />
+            <Route path="churn" element={<FinanzasChurnPage />} />
+            <Route path="costos" element={<FinanzasCostosPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
