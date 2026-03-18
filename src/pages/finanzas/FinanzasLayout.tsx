@@ -7,9 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 import GlobalSearch from '@/components/GlobalSearch';
-import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
   { path: '/finanzas/revenue', icon: DollarSign, label: 'Revenue' },
