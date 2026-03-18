@@ -52,6 +52,11 @@ import SellerRegistroPage from "./pages/seller/SellerRegistroPage";
 import SellerPipelinePage from "./pages/seller/SellerPipelinePage";
 import SellerNumerosPage from "./pages/seller/SellerNumerosPage";
 import SellerRecursosPage from "./pages/seller/SellerRecursosPage";
+import FinanzasLayout from "./pages/finanzas/FinanzasLayout";
+import FinanzasRevenuePage from "./pages/finanzas/FinanzasRevenuePage";
+import FinanzasClientesPage from "./pages/finanzas/FinanzasClientesPage";
+import FinanzasChurnPage from "./pages/finanzas/FinanzasChurnPage";
+import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
 
 const queryClient = new QueryClient();
 
