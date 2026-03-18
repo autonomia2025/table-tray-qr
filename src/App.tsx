@@ -40,6 +40,10 @@ import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
 import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
+import BackofficeLayout from "./pages/backoffice/BackofficeLayout";
+import BackofficeDashboard from "./pages/backoffice/BackofficeDashboard";
+import BackofficeVendedores from "./pages/backoffice/BackofficeVendedores";
+import BackofficePipeline from "./pages/backoffice/BackofficePipeline";
 
 const queryClient = new QueryClient();
 
