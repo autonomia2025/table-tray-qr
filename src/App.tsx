@@ -39,6 +39,7 @@ import SATenantsPage from "./pages/superadmin/SATenantsPage";
 import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
 import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
+import SAEquipoPage from "./pages/superadmin/SAEquipoPage";
 import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
 import BackofficeLayout from "./pages/backoffice/BackofficeLayout";
