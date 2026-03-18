@@ -45,6 +45,13 @@ import BackofficeDashboard from "./pages/backoffice/BackofficeDashboard";
 import BackofficeVendedores from "./pages/backoffice/BackofficeVendedores";
 import BackofficePipeline from "./pages/backoffice/BackofficePipeline";
 import BackofficeJoinPage from "./pages/backoffice/BackofficeJoinPage";
+import { SellerProvider } from "./contexts/SellerContext";
+import SellerLayout from "./pages/seller/SellerLayout";
+import SellerMiDiaPage from "./pages/seller/SellerMiDiaPage";
+import SellerRegistroPage from "./pages/seller/SellerRegistroPage";
+import SellerPipelinePage from "./pages/seller/SellerPipelinePage";
+import SellerNumerosPage from "./pages/seller/SellerNumerosPage";
+import SellerRecursosPage from "./pages/seller/SellerRecursosPage";
 
 const queryClient = new QueryClient();
 
@@ -104,6 +111,15 @@ const App = () => (
             <Route path="dashboard" element={<BackofficeDashboard />} />
             <Route path="vendedores" element={<BackofficeVendedores />} />
             <Route path="pipeline" element={<BackofficePipeline />} />
+          </Route>
+          {/* Seller panel - mobile-first */}
+          <Route path="/vendedor" element={<SellerProvider><SellerLayout /></SellerProvider>}>
+            <Route index element={<Navigate to="/vendedor/mi-dia" replace />} />
+            <Route path="mi-dia" element={<SellerMiDiaPage />} />
+            <Route path="registro" element={<SellerRegistroPage />} />
+            <Route path="pipeline" element={<SellerPipelinePage />} />
+            <Route path="numeros" element={<SellerNumerosPage />} />
+            <Route path="recursos" element={<SellerRecursosPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
