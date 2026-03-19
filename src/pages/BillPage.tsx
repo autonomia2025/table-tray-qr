@@ -213,11 +213,24 @@ export default function BillPage() {
 
         if (!scannedTable) throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
         if (tenant?.id && scannedTable.tenant_id !== tenant.id) throw new Error("QR incorrecto.");
-        if (!session?.id) throw new Error("No se encontró la sesión activa.");
+
+        // Find active session from the scanned table (don't rely on pre-loaded session)
+        let activeSessionId = session?.id;
+        if (!activeSessionId) {
+          const { data: foundSession } = await supabase
+            .from("table_sessions")
+            .select("id")
+            .eq("table_id", scannedTable.id)
+            .eq("is_active", true)
+            .maybeSingle();
+          activeSessionId = foundSession?.id;
+        }
+
+        if (!activeSessionId) throw new Error("No se encontró una sesión activa en esta mesa.");
 
         const { error: billError } = await supabase.from("bill_requests").insert({
           tenant_id: scannedTable.tenant_id,
-          session_id: session.id,
+          session_id: activeSessionId,
           table_id: scannedTable.id,
           branch_id: scannedTable.branch_id,
           total_amount: subtotal,
@@ -232,7 +245,7 @@ export default function BillPage() {
           throw new Error("Error al enviar la solicitud: " + billError.message);
         }
 
-        // Update table status - ignore errors (anonymous users may not have write access)
+        // Update table status
         await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id).then(() => {});
 
         setFinalTotal(total);
