@@ -213,11 +213,24 @@ export default function BillPage() {
 
         if (!scannedTable) throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
         if (tenant?.id && scannedTable.tenant_id !== tenant.id) throw new Error("QR incorrecto.");
-        if (!session?.id) throw new Error("No se encontró la sesión activa.");
+
+        // Find active session from the scanned table (don't rely on pre-loaded session)
+        let activeSessionId = session?.id;
+        if (!activeSessionId) {
+          const { data: foundSession } = await supabase
+            .from("table_sessions")
+            .select("id")
+            .eq("table_id", scannedTable.id)
+            .eq("is_active", true)
+            .maybeSingle();
+          activeSessionId = foundSession?.id;
+        }
+
+        if (!activeSessionId) throw new Error("No se encontró una sesión activa en esta mesa.");
 
         const { error: billError } = await supabase.from("bill_requests").insert({
           tenant_id: scannedTable.tenant_id,
-          session_id: session.id,
+          session_id: activeSessionId,
           table_id: scannedTable.id,
           branch_id: scannedTable.branch_id,
           total_amount: subtotal,
@@ -232,7 +245,7 @@ export default function BillPage() {
           throw new Error("Error al enviar la solicitud: " + billError.message);
         }
 
-        // Update table status - ignore errors (anonymous users may not have write access)
+        // Update table status
         await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id).then(() => {});
 
         setFinalTotal(total);
@@ -278,19 +291,71 @@ export default function BillPage() {
     );
   }
 
-  if (!session && !isLoading && sessionTimeout) {
+  // If no session loaded from token, show scan-first flow instead of blocking
+  if (!session && !isLoading && sessionTimeout && !tableToken) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-        <p className="text-5xl mb-4">🔍</p>
-        <p className="text-base font-bold text-foreground">No encontramos tu sesión</p>
-        <p className="mt-1 text-sm text-muted-foreground">Escanea el QR de tu mesa nuevamente.</p>
-        <button
-          onClick={() => navigate(`/${slug}/menu`)}
-          className="mt-6 rounded-2xl px-6 py-3 text-sm font-semibold text-white"
-          style={{ backgroundColor: primaryColor }}
-        >
-          Volver al menú
-        </button>
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
+          <button
+            onClick={() => navigate(`/${slug}/menu`)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <span className="text-sm font-bold text-foreground">La cuenta</span>
+          <div className="w-9" />
+        </header>
+        <div className="flex flex-col items-center justify-center px-6 pt-16 text-center">
+          <p className="text-5xl mb-4">📱</p>
+          <p className="text-base font-bold text-foreground">Escanea el QR de tu mesa</p>
+          <p className="mt-1 text-sm text-muted-foreground mb-6">Para pedir la cuenta, escanea la tarjeta QR de tu mesa.</p>
+          <button
+            onClick={startScanning}
+            className="flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Camera className="h-5 w-5" />
+            Escanear QR
+          </button>
+        </div>
+        <video
+          ref={videoRef}
+          className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
+          autoPlay
+          playsInline
+          muted
+        />
+        {pageState === "scanning" && (
+          <div className="fixed inset-0 z-[51]">
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-5 py-2">
+              <p className="text-white text-sm font-medium">Apunta al QR de tu mesa</p>
+            </div>
+            <button onClick={cancelScanning} className="absolute top-6 right-4 rounded-full bg-black/50 p-2">
+              <X className="h-5 w-5 text-white" />
+            </button>
+          </div>
+        )}
+        <AnimatePresence>
+          {pageState === "processing" && (
+            <motion.div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            </motion.div>
+          )}
+          {pageState === "success" && (
+            <motion.div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <p className="text-6xl mb-4">✅</p>
+              <p className="text-xl font-bold text-foreground">¡Cuenta solicitada!</p>
+              <p className="text-sm text-muted-foreground mt-2">El mozo llegará pronto con la máquina de pago.</p>
+            </motion.div>
+          )}
+          {pageState === "error" && (
+            <motion.div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+              <p className="text-base font-bold text-foreground">{errorMsg}</p>
+              <button onClick={() => setPageState("summary")} className="mt-4 text-sm text-primary underline">Reintentar</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
