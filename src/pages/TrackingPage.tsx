@@ -485,7 +485,21 @@ export default function TrackingPage() {
     );
   }
 
-  if (!currentOrder) return null;
+  if (!currentOrder) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 flex h-14 items-center justify-center border-b border-border bg-background px-4">
+          <Skeleton className="h-5 w-32" />
+        </header>
+        <div className="p-4 space-y-4">
+          <Skeleton className="h-10 w-40 mx-auto" />
+          <Skeleton className="h-5 w-24 mx-auto" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   const currentStatusInfo = STATUS_MAP[currentOrder.status] || STATUS_MAP.confirmed;
 
