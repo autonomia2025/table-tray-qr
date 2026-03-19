@@ -103,6 +103,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // 3b. Also add to tenant_members so get_tenant_id() works for RLS
+    const { error: memberError } = await supabaseAdmin
+      .from("tenant_members")
+      .insert({
+        user_id: userId,
+        tenant_id: invitation.tenant_id,
+        branch_id: invitation.branch_id,
+        role: invitation.role,
+        is_active: true,
+      });
+
+    if (memberError) {
+      console.error("tenant_members insert error:", memberError);
+      // Non-fatal: staff_users record exists, but RLS may not work
+    }
+
     // 4. Mark invitation as used
     await supabaseAdmin
       .from("staff_invitations")
