@@ -228,13 +228,31 @@ export default function BillPage() {
 
         if (!activeSessionId) throw new Error("No se encontró una sesión activa en esta mesa.");
 
+        // Always fetch real order totals from DB to avoid stale/empty state
+        const { data: sessionOrders } = await supabase
+          .from("orders")
+          .select("total_amount")
+          .eq("session_id", activeSessionId)
+          .neq("status", "cancelled");
+
+        const realSubtotal = (sessionOrders ?? []).reduce((s, o) => s + o.total_amount, 0);
+        const effectiveSubtotal = realSubtotal > 0 ? realSubtotal : subtotal;
+
+        // Recalculate tip based on real subtotal
+        const effectiveTip = (() => {
+          if (customTip) return parseInt(customTip, 10) || 0;
+          if (selectedTipIdx !== null) return Math.round(effectiveSubtotal * (TIP_OPTIONS[selectedTipIdx].pct / 100));
+          return 0;
+        })();
+        const effectiveTotal = effectiveSubtotal + effectiveTip;
+
         const { error: billError } = await supabase.from("bill_requests").insert({
           tenant_id: scannedTable.tenant_id,
           session_id: activeSessionId,
           table_id: scannedTable.id,
           branch_id: scannedTable.branch_id,
-          total_amount: subtotal,
-          tip_amount: tipAmount,
+          total_amount: effectiveSubtotal,
+          tip_amount: effectiveTip,
           tip_percentage: tipPercentage,
           status: "pending",
           requested_at: new Date().toISOString(),
@@ -246,17 +264,17 @@ export default function BillPage() {
         }
 
         // Update table status
-        await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id).then(() => {});
+        await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
 
-        setFinalTotal(total);
-        setFinalTip(tipAmount);
+        setFinalTotal(effectiveTotal);
+        setFinalTip(effectiveTip);
         setPageState("success");
       } catch (err: any) {
         setErrorMsg(err.message || "Error desconocido");
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total],
+    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total, customTip, selectedTipIdx],
   );
 
   // Session timeout guard
