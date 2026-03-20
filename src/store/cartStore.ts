@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export interface CartModifier {
   groupName: string;
@@ -7,7 +8,7 @@ export interface CartModifier {
 }
 
 export interface CartItem {
-  id: string; // unique cart line id
+  id: string;
   menuItemId: string;
   name: string;
   unitPrice: number;
@@ -37,43 +38,74 @@ interface CartState {
 const calcSubtotal = (item: Pick<CartItem, "unitPrice" | "quantity" | "selectedModifiers">) =>
   (item.unitPrice + item.selectedModifiers.reduce((s, m) => s + m.extraPrice, 0)) * item.quantity;
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
-  tableToken: null,
-  tenantId: null,
-  branchId: null,
-  tableNumber: null,
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      tableToken: null,
+      tenantId: null,
+      branchId: null,
+      tableNumber: null,
 
-  addItem: (item) => {
-    const id = crypto.randomUUID();
-    const subtotal = calcSubtotal(item);
-    set((s) => ({ items: [...s.items, { ...item, id, subtotal }] }));
-  },
+      addItem: (item) => {
+        const existing = get().items.find(
+          (i) =>
+            i.menuItemId === item.menuItemId &&
+            JSON.stringify(i.selectedModifiers) === JSON.stringify(item.selectedModifiers) &&
+            i.itemNotes === item.itemNotes
+        );
 
-  removeItem: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+        if (existing) {
+          set((s) => ({
+            items: s.items.map((i) =>
+              i.id === existing.id
+                ? { ...i, quantity: i.quantity + item.quantity, subtotal: calcSubtotal({ ...i, quantity: i.quantity + item.quantity }) }
+                : i
+            ),
+          }));
+        } else {
+          const id = crypto.randomUUID();
+          const subtotal = calcSubtotal(item);
+          set((s) => ({ items: [...s.items, { ...item, id, subtotal }] }));
+        }
+      },
 
-  updateQuantity: (id, quantity) => {
-    if (quantity <= 0) {
-      set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
-      return;
+      removeItem: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+
+      updateQuantity: (id, quantity) => {
+        if (quantity <= 0) {
+          set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+          return;
+        }
+        set((s) => ({
+          items: s.items.map((i) =>
+            i.id === id ? { ...i, quantity, subtotal: calcSubtotal({ ...i, quantity }) } : i
+          ),
+        }));
+      },
+
+      clearCart: () => set({ items: [] }),
+
+      setTableContext: (tenantId, branchId) => set({ tenantId, branchId }),
+
+      setTableToken: (token) => set({ tableToken: token }),
+
+      setTableNumber: (num) => set({ tableNumber: num }),
+
+      getTotalItems: () => get().items.reduce((s, i) => s + i.quantity, 0),
+
+      getTotalPrice: () => get().items.reduce((s, i) => s + i.subtotal, 0),
+    }),
+    {
+      name: "tablio-cart",
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        items: state.items,
+        tableToken: state.tableToken,
+        tenantId: state.tenantId,
+        branchId: state.branchId,
+        tableNumber: state.tableNumber,
+      }),
     }
-    set((s) => ({
-      items: s.items.map((i) =>
-        i.id === id ? { ...i, quantity, subtotal: calcSubtotal({ ...i, quantity }) } : i
-      ),
-    }));
-  },
-
-  // Clears items but keeps tableToken, tableNumber (card stays valid for re-ordering)
-  clearCart: () => set({ items: [] }),
-
-  setTableContext: (tenantId, branchId) => set({ tenantId, branchId }),
-
-  setTableToken: (token) => set({ tableToken: token }),
-
-  setTableNumber: (num) => set({ tableNumber: num }),
-
-  getTotalItems: () => get().items.reduce((s, i) => s + i.quantity, 0),
-
-  getTotalPrice: () => get().items.reduce((s, i) => s + i.subtotal, 0),
-}));
+  )
+);
