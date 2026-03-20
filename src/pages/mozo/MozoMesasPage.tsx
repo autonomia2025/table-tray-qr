@@ -230,16 +230,21 @@ export default function MozoMesasPage() {
     setActionLoading(null);
   };
 
-  const handleCloseBill = async (table: TableData) => {
+  const handleCloseBill = (table: TableData) => {
+    setConfirmBillTable(table);
+  };
+
+  const executeCloseBill = async (table: TableData) => {
     setActionLoading(table.id);
     const now = new Date().toISOString();
     await supabase.from('bill_requests').update({ status: 'paid' }).eq('table_id', table.id).eq('status', 'pending');
     await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', table.id).eq('is_active', true);
     await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', table.id).in('status', ['confirmed', 'in_kitchen', 'ready']);
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', table.id);
+    setConfirmBillTable(null);
+    setSheetOpen(false);
     fetchTables();
     toast({ title: '✅ Mesa cerrada' });
-    setSheetOpen(false);
     setActionLoading(null);
   };
 
