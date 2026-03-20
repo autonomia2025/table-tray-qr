@@ -244,11 +244,16 @@ export default function BillPage() {
         const effectiveSubtotal = realSubtotal > 0 ? realSubtotal : subtotal;
 
         // Recalculate tip based on real subtotal
+        const currentTipIdx = selectedTipIdxRef.current;
+        const currentCustomTip = customTipRef.current;
         const effectiveTip = (() => {
-          if (customTip) return parseInt(customTip, 10) || 0;
-          if (selectedTipIdx !== null) return Math.round(effectiveSubtotal * (TIP_OPTIONS[selectedTipIdx].pct / 100));
+          if (currentCustomTip) return parseInt(currentCustomTip, 10) || 0;
+          if (currentTipIdx !== null) return Math.round(effectiveSubtotal * (TIP_OPTIONS[currentTipIdx].pct / 100));
           return 0;
         })();
+        const effectiveTipPercentage = currentTipIdx !== null && !currentCustomTip
+          ? TIP_OPTIONS[currentTipIdx].pct
+          : 0;
         const effectiveTotal = effectiveSubtotal + effectiveTip;
 
         const { error: billError } = await supabase.from("bill_requests").insert({
