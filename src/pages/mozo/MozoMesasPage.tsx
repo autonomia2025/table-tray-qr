@@ -97,6 +97,7 @@ export default function MozoMesasPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [otherWaiters, setOtherWaiters] = useState<{ id: string; name: string }[]>([]);
+  const [confirmBillTable, setConfirmBillTable] = useState<TableData | null>(null);
   const prevUrgentRef = useRef(0);
 
   const fetchTables = useCallback(async () => {
