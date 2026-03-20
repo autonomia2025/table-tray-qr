@@ -263,7 +263,7 @@ export default function BillPage() {
           branch_id: scannedTable.branch_id,
           total_amount: effectiveSubtotal,
           tip_amount: effectiveTip,
-          tip_percentage: tipPercentage,
+          tip_percentage: effectiveTipPercentage,
           status: "pending",
           requested_at: new Date().toISOString(),
         });
