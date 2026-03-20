@@ -59,6 +59,8 @@ export default function BillPage() {
   const [cameraError, setCameraError] = useState("");
   const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
+  const selectedTipIdxRef = useRef<number | null>(null);
+  const customTipRef = useRef<string>("");
   const [showBackBtn, setShowBackBtn] = useState(false);
   const [finalTotal, setFinalTotal] = useState(0);
   const [finalTip, setFinalTip] = useState(0);
