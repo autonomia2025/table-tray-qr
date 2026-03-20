@@ -3,7 +3,7 @@ import { useWaiters } from '@/contexts/WaitersContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCLP } from '@/lib/format';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -97,6 +97,7 @@ export default function MozoMesasPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [otherWaiters, setOtherWaiters] = useState<{ id: string; name: string }[]>([]);
+  const [confirmBillTable, setConfirmBillTable] = useState<TableData | null>(null);
   const prevUrgentRef = useRef(0);
 
   const fetchTables = useCallback(async () => {
@@ -229,16 +230,21 @@ export default function MozoMesasPage() {
     setActionLoading(null);
   };
 
-  const handleCloseBill = async (table: TableData) => {
+  const handleCloseBill = (table: TableData) => {
+    setConfirmBillTable(table);
+  };
+
+  const executeCloseBill = async (table: TableData) => {
     setActionLoading(table.id);
     const now = new Date().toISOString();
     await supabase.from('bill_requests').update({ status: 'paid' }).eq('table_id', table.id).eq('status', 'pending');
     await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', table.id).eq('is_active', true);
     await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', table.id).in('status', ['confirmed', 'in_kitchen', 'ready']);
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', table.id);
+    setConfirmBillTable(null);
+    setSheetOpen(false);
     fetchTables();
     toast({ title: '✅ Mesa cerrada' });
-    setSheetOpen(false);
     setActionLoading(null);
   };
 
@@ -533,6 +539,51 @@ export default function MozoMesasPage() {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Close bill confirmation dialog */}
+      <Dialog open={!!confirmBillTable} onOpenChange={(open) => { if (!open) setConfirmBillTable(null); }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>¿Cerrar mesa {confirmBillTable?.number}?</DialogTitle>
+            <DialogDescription>
+              Esto marcará la cuenta como pagada, liberará la mesa y cerrará la sesión activa. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmBillTable && (
+            <div className="rounded-xl bg-muted/50 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total de la sesión</span>
+                <span className="text-base font-bold text-foreground">
+                  {confirmBillTable.sessionTotal !== undefined
+                    ? formatCLP(confirmBillTable.sessionTotal)
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Mesa</span>
+                <span className="text-sm font-medium text-foreground">Mesa {confirmBillTable.number}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-row gap-2 sm:flex-row">
+            <button
+              onClick={() => setConfirmBillTable(null)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => confirmBillTable && executeCloseBill(confirmBillTable)}
+              className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-colors"
+              style={{ backgroundColor: '#E8531D' }}
+            >
+              Sí, cerrar mesa
+            </button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -59,6 +59,8 @@ export default function BillPage() {
   const [cameraError, setCameraError] = useState("");
   const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
+  const selectedTipIdxRef = useRef<number | null>(null);
+  const customTipRef = useRef<string>("");
   const [showBackBtn, setShowBackBtn] = useState(false);
   const [finalTotal, setFinalTotal] = useState(0);
   const [finalTip, setFinalTip] = useState(0);
@@ -67,6 +69,9 @@ export default function BillPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const scanProcessedRef = useRef(false);
+
+  useEffect(() => { selectedTipIdxRef.current = selectedTipIdx; }, [selectedTipIdx]);
+  useEffect(() => { customTipRef.current = customTip; }, [customTip]);
 
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
@@ -239,11 +244,16 @@ export default function BillPage() {
         const effectiveSubtotal = realSubtotal > 0 ? realSubtotal : subtotal;
 
         // Recalculate tip based on real subtotal
+        const currentTipIdx = selectedTipIdxRef.current;
+        const currentCustomTip = customTipRef.current;
         const effectiveTip = (() => {
-          if (customTip) return parseInt(customTip, 10) || 0;
-          if (selectedTipIdx !== null) return Math.round(effectiveSubtotal * (TIP_OPTIONS[selectedTipIdx].pct / 100));
+          if (currentCustomTip) return parseInt(currentCustomTip, 10) || 0;
+          if (currentTipIdx !== null) return Math.round(effectiveSubtotal * (TIP_OPTIONS[currentTipIdx].pct / 100));
           return 0;
         })();
+        const effectiveTipPercentage = currentTipIdx !== null && !currentCustomTip
+          ? TIP_OPTIONS[currentTipIdx].pct
+          : 0;
         const effectiveTotal = effectiveSubtotal + effectiveTip;
 
         const { error: billError } = await supabase.from("bill_requests").insert({
@@ -253,7 +263,7 @@ export default function BillPage() {
           branch_id: scannedTable.branch_id,
           total_amount: effectiveSubtotal,
           tip_amount: effectiveTip,
-          tip_percentage: tipPercentage,
+          tip_percentage: effectiveTipPercentage,
           status: "pending",
           requested_at: new Date().toISOString(),
         });
@@ -274,7 +284,7 @@ export default function BillPage() {
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total, customTip, selectedTipIdx],
+    [tenant?.id, session?.id, subtotal, total],
   );
 
   // Session timeout guard
