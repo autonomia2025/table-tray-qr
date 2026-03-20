@@ -541,6 +541,51 @@ export default function MozoMesasPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Close bill confirmation dialog */}
+      <Dialog open={!!confirmBillTable} onOpenChange={(open) => { if (!open) setConfirmBillTable(null); }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>¿Cerrar mesa {confirmBillTable?.number}?</DialogTitle>
+            <DialogDescription>
+              Esto marcará la cuenta como pagada, liberará la mesa y cerrará la sesión activa. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+
+          {confirmBillTable && (
+            <div className="rounded-xl bg-muted/50 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Total de la sesión</span>
+                <span className="text-base font-bold text-foreground">
+                  {confirmBillTable.sessionTotal !== undefined
+                    ? formatCLP(confirmBillTable.sessionTotal)
+                    : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Mesa</span>
+                <span className="text-sm font-medium text-foreground">Mesa {confirmBillTable.number}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="flex-row gap-2 sm:flex-row">
+            <button
+              onClick={() => setConfirmBillTable(null)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => confirmBillTable && executeCloseBill(confirmBillTable)}
+              className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-colors"
+              style={{ backgroundColor: '#E8531D' }}
+            >
+              Sí, cerrar mesa
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

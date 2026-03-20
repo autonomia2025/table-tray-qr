@@ -284,7 +284,7 @@ export default function BillPage() {
         setPageState("error");
       }
     },
-    [tenant?.id, session?.id, subtotal, tipAmount, tipPercentage, total, customTip, selectedTipIdx],
+    [tenant?.id, session?.id, subtotal, total],
   );
 
   // Session timeout guard
