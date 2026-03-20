@@ -70,6 +70,9 @@ export default function BillPage() {
   const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
   const scanProcessedRef = useRef(false);
 
+  useEffect(() => { selectedTipIdxRef.current = selectedTipIdx; }, [selectedTipIdx]);
+  useEffect(() => { customTipRef.current = customTip; }, [customTip]);
+
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
     queryKey: ["tenant-bill", slug],
