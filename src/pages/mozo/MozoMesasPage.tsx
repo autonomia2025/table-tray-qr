@@ -175,6 +175,8 @@ export default function MozoMesasPage() {
         sessionTotal: sessionsMap[t.id]?.total ?? 0,
         sessionOpenedAt: sessionsMap[t.id]?.opened ?? null,
         activeOrdersCount: om.confirmed + om.ready + om.inKitchen,
+        tipAmount: tipMap[t.id]?.amount ?? 0,
+        tipPercentage: tipMap[t.id]?.percentage ?? 0,
       };
     }));
     setLoading(false);
