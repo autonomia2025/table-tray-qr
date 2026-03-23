@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Clock, ChefHat, Check, Truck, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, Clock, ChefHat, Check, Truck, XCircle, AlertTriangle, Receipt } from "lucide-react";
 
 interface OrderRow {
   id: string;
@@ -46,6 +46,7 @@ const COLUMNS = [
   { key: "in_kitchen", label: "En cocina", icon: ChefHat, color: "text-blue-600 bg-blue-50 border-blue-200" },
   { key: "ready", label: "Listos", icon: Check, color: "text-green-600 bg-green-50 border-green-200" },
   { key: "delivered", label: "Entregados", icon: Truck, color: "text-muted-foreground bg-muted/50 border-border" },
+  { key: "paid", label: "Pagados", icon: Receipt, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
   { key: "cancelled", label: "Cancelados", icon: XCircle, color: "text-red-600 bg-red-50 border-red-200" },
 ];
 
@@ -100,6 +101,7 @@ export default function PedidosPage() {
   const [cancelOrder, setCancelOrder] = useState<OrderRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [paidOrderIds, setPaidOrderIds] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     const today = new Date();
@@ -139,6 +141,32 @@ export default function PedidosPage() {
       setItemsMap(map);
     }
 
+    // Fetch paid bill_requests to identify paid orders
+    const { data: paidBills } = await supabase
+      .from('bill_requests')
+      .select('session_id')
+      .eq('branch_id', branchId)
+      .eq('status', 'paid')
+      .gte('requested_at', today.toISOString());
+
+    if (paidBills && paidBills.length > 0) {
+      const paidSessionIds = new Set(paidBills.map(b => b.session_id));
+      const { data: orderSessions } = await supabase
+        .from('orders')
+        .select('id, session_id')
+        .eq('branch_id', branchId)
+        .gte('confirmed_at', today.toISOString());
+
+      const paidIds = new Set(
+        (orderSessions ?? [])
+          .filter(o => paidSessionIds.has(o.session_id))
+          .map(o => o.id)
+      );
+      setPaidOrderIds(paidIds);
+    } else {
+      setPaidOrderIds(new Set());
+    }
+
     setOrders(ordersData);
     setLoading(false);
   };
@@ -150,17 +178,25 @@ export default function PedidosPage() {
     const channel = supabase
       .channel("admin-pedidos")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "bill_requests", filter: `branch_id=eq.${branchId}` }, () => fetchData())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [branchId]);
 
-  const filteredOrders = useMemo(() => {
-    if (filterTable === "all") return orders;
-    return orders.filter(o => o.table_id === filterTable);
-  }, [orders, filterTable]);
+  const ordersWithPaidStatus = useMemo(() => {
+    return orders.map(o => ({
+      ...o,
+      effectiveStatus: (o.status === 'delivered' && paidOrderIds.has(o.id)) ? 'paid' : o.status,
+    }));
+  }, [orders, paidOrderIds]);
 
-  const columnOrders = (status: string) => filteredOrders.filter(o => o.status === status);
+  const filteredOrders = useMemo(() => {
+    if (filterTable === "all") return ordersWithPaidStatus;
+    return ordersWithPaidStatus.filter(o => o.table_id === filterTable);
+  }, [ordersWithPaidStatus, filterTable]);
+
+  const columnOrders = (status: string) => filteredOrders.filter(o => o.effectiveStatus === status);
 
   const uniqueTables = useMemo(() => {
     const ids = [...new Set(orders.map(o => o.table_id))];
@@ -272,7 +308,7 @@ export default function PedidosPage() {
       </div>
 
       {/* Desktop: horizontal columns */}
-      <div className="hidden md:grid md:grid-cols-5 gap-3">
+      <div className="hidden md:grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(200px, 1fr))` }}>
         {COLUMNS.map(col => {
           const colOrders = columnOrders(col.key);
           return (
@@ -293,7 +329,7 @@ export default function PedidosPage() {
       {/* Mobile: tabs */}
       <div className="md:hidden">
         <Tabs value={mobileTab} onValueChange={setMobileTab}>
-          <TabsList className="w-full grid grid-cols-5 mb-3">
+          <TabsList className="w-full grid mb-3" style={{ gridTemplateColumns: `repeat(${COLUMNS.length}, 1fr)` }}>
             {COLUMNS.map(col => (
               <TabsTrigger key={col.key} value={col.key} className="text-xs px-1">
                 {col.label.split(" ")[0]}

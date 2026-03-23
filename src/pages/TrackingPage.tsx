@@ -114,6 +114,11 @@ export default function TrackingPage() {
   const [waiterCallId, setWaiterCallId] = useState<string | null>(null);
   const [waiterCallStatus, setWaiterCallStatus] = useState<string | null>(null);
 
+  // Bill status & rating
+  const [billStatus, setBillStatus] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
   // QR scanner state for waiter call
   const [waiterScanOpen, setWaiterScanOpen] = useState(false);
   const [waiterReason, setWaiterReason] = useState("");
@@ -262,7 +267,7 @@ export default function TrackingPage() {
           const updated = payload.new as { is_active: boolean };
           if (!updated.is_active) {
             toast({ title: "✅ ¡Gracias por tu visita!", description: "Esperamos verte pronto" });
-            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 2000);
+            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 8000);
           }
         }
       )
@@ -304,6 +309,34 @@ export default function TrackingPage() {
       supabase.removeChannel(channel);
     };
   }, [waiterCallId]);
+
+  // Bill status realtime
+  useEffect(() => {
+    if (!tableData?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('bill_requests')
+        .select('status')
+        .eq('table_id', tableData.id)
+        .order('requested_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setBillStatus(data.status);
+    })();
+    const channel = supabase
+      .channel(`bill-status-${tableData.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bill_requests',
+        filter: `table_id=eq.${tableData.id}`,
+      }, (payload) => {
+        const updated = payload.new as { status: string };
+        setBillStatus(updated.status);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tableData?.id]);
 
   // Current order
   const currentOrder = useMemo(() => {
@@ -350,6 +383,12 @@ export default function TrackingPage() {
     await supabase.from("waiter_calls").update({ status: "cancelled" }).eq("id", waiterCallId);
     setWaiterCallId(null);
     setWaiterCallStatus(null);
+  };
+
+  // Submit rating
+  const submitRating = async (stars: number) => {
+    setRatingValue(stars);
+    setRatingSubmitted(true);
   };
 
   // Waiter call — select reason then open scanner
@@ -727,6 +766,47 @@ export default function TrackingPage() {
                 Cancelar llamada
               </button>
             )}
+          </div>
+        )}
+
+        {/* ── BILL STATUS BANNER ── */}
+        {billStatus && billStatus !== 'paid' && (
+          <div className="mb-4">
+            <div className={`w-full rounded-xl p-4 flex items-center gap-3 ${
+              billStatus === 'attending' ? 'bg-green-500' : 'bg-orange-500'
+            }`}>
+              <span className="text-2xl">{billStatus === 'attending' ? '🧑‍🍳' : '🧾'}</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white">
+                  {billStatus === 'attending' ? 'Tu cuenta viene en camino' : 'Cuenta solicitada — el mozo fue notificado'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {billStatus === 'paid' && !ratingSubmitted && (
+          <div className="mb-4 rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-lg font-bold text-foreground mb-1">¡Gracias por tu visita! 🎉</p>
+            <p className="text-sm text-muted-foreground mb-4">¿Cómo estuvo tu experiencia?</p>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => submitRating(star)}
+                  className="text-3xl transition-transform active:scale-125"
+                  style={{ color: star <= ratingValue ? '#E8531D' : '#BEBDB8' }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ratingSubmitted && (
+          <div className="mb-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 p-4 text-center">
+            <p className="text-sm font-bold text-green-700">¡Gracias por calificarnos! Nos vemos pronto 🧡</p>
           </div>
         )}
 

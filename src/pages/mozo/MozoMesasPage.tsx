@@ -24,6 +24,8 @@ interface TableData {
   sessionTotal: number;
   sessionOpenedAt: string | null;
   activeOrdersCount: number;
+  tipAmount: number;
+  tipPercentage: number;
 }
 
 interface OrderWithItems {
@@ -117,6 +119,7 @@ export default function MozoMesasPage() {
     let ordersMap: Record<string, { confirmed: number; ready: number; inKitchen: number }> = {};
     let billMap: Record<string, number> = {};
     let callMap: Record<string, number> = {};
+    let tipMap: Record<string, { amount: number; percentage: number }> = {};
 
     if (occupiedIds.length > 0) {
       const [{ data: sessions }, { data: activeOrders }, { data: billReqs }, { data: waiterCalls }] = await Promise.all([
@@ -132,7 +135,7 @@ export default function MozoMesasPage() {
           .in('status', ['confirmed', 'in_kitchen', 'ready']),
         supabase
           .from('bill_requests')
-          .select('id, table_id, status')
+          .select('id, table_id, status, tip_amount, tip_percentage')
           .in('table_id', occupiedIds)
           .eq('status', 'pending'),
         supabase
@@ -153,6 +156,7 @@ export default function MozoMesasPage() {
       });
       billReqs?.forEach(b => {
         billMap[b.table_id] = (billMap[b.table_id] ?? 0) + 1;
+        tipMap[b.table_id] = { amount: (b as any).tip_amount ?? 0, percentage: (b as any).tip_percentage ?? 0 };
       });
       waiterCalls?.forEach(wc => {
         callMap[wc.table_id] = (callMap[wc.table_id] ?? 0) + 1;
@@ -171,6 +175,8 @@ export default function MozoMesasPage() {
         sessionTotal: sessionsMap[t.id]?.total ?? 0,
         sessionOpenedAt: sessionsMap[t.id]?.opened ?? null,
         activeOrdersCount: om.confirmed + om.ready + om.inKitchen,
+        tipAmount: tipMap[t.id]?.amount ?? 0,
+        tipPercentage: tipMap[t.id]?.percentage ?? 0,
       };
     }));
     setLoading(false);
@@ -562,6 +568,16 @@ export default function MozoMesasPage() {
                     : '—'}
                 </span>
               </div>
+              {confirmBillTable.tipAmount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Propina {confirmBillTable.tipPercentage > 0 ? `(${confirmBillTable.tipPercentage}%)` : ''}
+                  </span>
+                  <span className="text-base font-bold text-green-600">
+                    {formatCLP(confirmBillTable.tipAmount)}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Mesa</span>
                 <span className="text-sm font-medium text-foreground">Mesa {confirmBillTable.number}</span>
