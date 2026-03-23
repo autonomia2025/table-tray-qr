@@ -184,12 +184,19 @@ export default function PedidosPage() {
     return () => { supabase.removeChannel(channel); };
   }, [branchId]);
 
-  const filteredOrders = useMemo(() => {
-    if (filterTable === "all") return orders;
-    return orders.filter(o => o.table_id === filterTable);
-  }, [orders, filterTable]);
+  const ordersWithPaidStatus = useMemo(() => {
+    return orders.map(o => ({
+      ...o,
+      effectiveStatus: (o.status === 'delivered' && paidOrderIds.has(o.id)) ? 'paid' : o.status,
+    }));
+  }, [orders, paidOrderIds]);
 
-  const columnOrders = (status: string) => filteredOrders.filter(o => o.status === status);
+  const filteredOrders = useMemo(() => {
+    if (filterTable === "all") return ordersWithPaidStatus;
+    return ordersWithPaidStatus.filter(o => o.table_id === filterTable);
+  }, [ordersWithPaidStatus, filterTable]);
+
+  const columnOrders = (status: string) => filteredOrders.filter(o => o.effectiveStatus === status);
 
   const uniqueTables = useMemo(() => {
     const ids = [...new Set(orders.map(o => o.table_id))];
