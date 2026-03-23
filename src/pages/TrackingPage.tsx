@@ -114,6 +114,11 @@ export default function TrackingPage() {
   const [waiterCallId, setWaiterCallId] = useState<string | null>(null);
   const [waiterCallStatus, setWaiterCallStatus] = useState<string | null>(null);
 
+  // Bill status & rating
+  const [billStatus, setBillStatus] = useState<string | null>(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
   // QR scanner state for waiter call
   const [waiterScanOpen, setWaiterScanOpen] = useState(false);
   const [waiterReason, setWaiterReason] = useState("");
