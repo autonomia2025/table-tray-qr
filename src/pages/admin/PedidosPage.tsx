@@ -141,6 +141,32 @@ export default function PedidosPage() {
       setItemsMap(map);
     }
 
+    // Fetch paid bill_requests to identify paid orders
+    const { data: paidBills } = await supabase
+      .from('bill_requests')
+      .select('session_id')
+      .eq('branch_id', branchId)
+      .eq('status', 'paid')
+      .gte('requested_at', today.toISOString());
+
+    if (paidBills && paidBills.length > 0) {
+      const paidSessionIds = new Set(paidBills.map(b => b.session_id));
+      const { data: orderSessions } = await supabase
+        .from('orders')
+        .select('id, session_id')
+        .eq('branch_id', branchId)
+        .gte('confirmed_at', today.toISOString());
+
+      const paidIds = new Set(
+        (orderSessions ?? [])
+          .filter(o => paidSessionIds.has(o.session_id))
+          .map(o => o.id)
+      );
+      setPaidOrderIds(paidIds);
+    } else {
+      setPaidOrderIds(new Set());
+    }
+
     setOrders(ordersData);
     setLoading(false);
   };
