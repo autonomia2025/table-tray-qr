@@ -568,6 +568,16 @@ export default function MozoMesasPage() {
                     : '—'}
                 </span>
               </div>
+              {confirmBillTable.tipAmount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Propina {confirmBillTable.tipPercentage > 0 ? `(${confirmBillTable.tipPercentage}%)` : ''}
+                  </span>
+                  <span className="text-base font-bold text-green-600">
+                    {formatCLP(confirmBillTable.tipAmount)}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Mesa</span>
                 <span className="text-sm font-medium text-foreground">Mesa {confirmBillTable.number}</span>

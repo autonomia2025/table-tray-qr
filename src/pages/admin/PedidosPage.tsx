@@ -329,7 +329,7 @@ export default function PedidosPage() {
       {/* Mobile: tabs */}
       <div className="md:hidden">
         <Tabs value={mobileTab} onValueChange={setMobileTab}>
-          <TabsList className="w-full grid grid-cols-5 mb-3">
+          <TabsList className="w-full grid mb-3" style={{ gridTemplateColumns: `repeat(${COLUMNS.length}, 1fr)` }}>
             {COLUMNS.map(col => (
               <TabsTrigger key={col.key} value={col.key} className="text-xs px-1">
                 {col.label.split(" ")[0]}

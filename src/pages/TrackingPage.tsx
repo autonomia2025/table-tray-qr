@@ -769,6 +769,47 @@ export default function TrackingPage() {
           </div>
         )}
 
+        {/* ── BILL STATUS BANNER ── */}
+        {billStatus && billStatus !== 'paid' && (
+          <div className="mb-4">
+            <div className={`w-full rounded-xl p-4 flex items-center gap-3 ${
+              billStatus === 'attending' ? 'bg-green-500' : 'bg-orange-500'
+            }`}>
+              <span className="text-2xl">{billStatus === 'attending' ? '🧑‍🍳' : '🧾'}</span>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-white">
+                  {billStatus === 'attending' ? 'Tu cuenta viene en camino' : 'Cuenta solicitada — el mozo fue notificado'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {billStatus === 'paid' && !ratingSubmitted && (
+          <div className="mb-4 rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-lg font-bold text-foreground mb-1">¡Gracias por tu visita! 🎉</p>
+            <p className="text-sm text-muted-foreground mb-4">¿Cómo estuvo tu experiencia?</p>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => submitRating(star)}
+                  className="text-3xl transition-transform active:scale-125"
+                  style={{ color: star <= ratingValue ? '#E8531D' : '#BEBDB8' }}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ratingSubmitted && (
+          <div className="mb-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 p-4 text-center">
+            <p className="text-sm font-bold text-green-700">¡Gracias por calificarnos! Nos vemos pronto 🧡</p>
+          </div>
+        )}
+
         {/* ── ACTION BUTTONS ── */}
         {!isCancelled && (
           <div className="space-y-3 mb-6">
