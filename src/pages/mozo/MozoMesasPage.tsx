@@ -153,8 +153,10 @@ export default function MozoMesasPage() {
         else if (o.status === 'ready') ordersMap[o.table_id].ready++;
         else if (o.status === 'in_kitchen') ordersMap[o.table_id].inKitchen++;
       });
+      let tipMap: Record<string, { amount: number; percentage: number }> = {};
       billReqs?.forEach(b => {
         billMap[b.table_id] = (billMap[b.table_id] ?? 0) + 1;
+        tipMap[b.table_id] = { amount: (b as any).tip_amount ?? 0, percentage: (b as any).tip_percentage ?? 0 };
       });
       waiterCalls?.forEach(wc => {
         callMap[wc.table_id] = (callMap[wc.table_id] ?? 0) + 1;
