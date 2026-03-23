@@ -24,6 +24,8 @@ interface TableData {
   sessionTotal: number;
   sessionOpenedAt: string | null;
   activeOrdersCount: number;
+  tipAmount: number;
+  tipPercentage: number;
 }
 
 interface OrderWithItems {
