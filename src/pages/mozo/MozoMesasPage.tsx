@@ -119,6 +119,7 @@ export default function MozoMesasPage() {
     let ordersMap: Record<string, { confirmed: number; ready: number; inKitchen: number }> = {};
     let billMap: Record<string, number> = {};
     let callMap: Record<string, number> = {};
+    let tipMap: Record<string, { amount: number; percentage: number }> = {};
 
     if (occupiedIds.length > 0) {
       const [{ data: sessions }, { data: activeOrders }, { data: billReqs }, { data: waiterCalls }] = await Promise.all([
