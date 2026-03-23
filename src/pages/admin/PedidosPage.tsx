@@ -101,6 +101,7 @@ export default function PedidosPage() {
   const [cancelOrder, setCancelOrder] = useState<OrderRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [paidOrderIds, setPaidOrderIds] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     const today = new Date();
