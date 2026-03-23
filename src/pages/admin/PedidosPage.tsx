@@ -46,6 +46,7 @@ const COLUMNS = [
   { key: "in_kitchen", label: "En cocina", icon: ChefHat, color: "text-blue-600 bg-blue-50 border-blue-200" },
   { key: "ready", label: "Listos", icon: Check, color: "text-green-600 bg-green-50 border-green-200" },
   { key: "delivered", label: "Entregados", icon: Truck, color: "text-muted-foreground bg-muted/50 border-border" },
+  { key: "paid", label: "Pagados", icon: Receipt, color: "text-emerald-600 bg-emerald-50 border-emerald-200" },
   { key: "cancelled", label: "Cancelados", icon: XCircle, color: "text-red-600 bg-red-50 border-red-200" },
 ];
 
