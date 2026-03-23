@@ -389,6 +389,11 @@ export default function TrackingPage() {
   const submitRating = async (stars: number) => {
     setRatingValue(stars);
     setRatingSubmitted(true);
+    if (!session?.id) return;
+    await supabase
+      .from('table_sessions')
+      .update({ rating: stars } as any)
+      .eq('id', session.id);
   };
 
   // Waiter call — select reason then open scanner
