@@ -51,7 +51,7 @@ export default function FinanzasCostosPage() {
       ]);
       const paying = (t.data || []).filter((x: any) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
       setTenantCount(paying.length);
-      setMrr(paying.reduce((s: number, x: any) => s + 299, 0)); // simplified
+      setMrr(paying.reduce((s: number, x: any) => s + 299000, 0)); // simplified
       setLeadCount((l.data || []).length);
     };
     load();

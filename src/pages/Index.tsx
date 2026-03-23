@@ -174,7 +174,7 @@ export default function Index() {
             <QrCode className="w-4 h-4 text-primary" />
             tablio.
           </div>
-          <p>© {new Date().getFullYear()} MenuQR. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} tablio. Todos los derechos reservados.</p>
           <button
             onClick={() => navigate("/superadmin")}
             className="text-muted-foreground/40 hover:text-muted-foreground text-xs transition-colors"

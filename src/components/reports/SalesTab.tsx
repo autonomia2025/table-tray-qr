@@ -44,7 +44,8 @@ export default function SalesTab({ orders, prevOrders, daysInPeriod, sessions, b
   const avgTicket = totalOrders > 0 ? Math.round(totalSales / totalOrders) : 0;
 
   // Tips from bill_requests (most accurate source)
-  const totalTips = billRequests.reduce((s, b) => s + (b.tip_amount ?? 0), 0);
+  const paidBillRequests = billRequests.filter(b => (b as any).status === 'paid');
+  const totalTips = paidBillRequests.reduce((s, b) => s + (b.tip_amount ?? 0), 0);
   // Fallback: also sum from sessions if bill_requests is empty
   const totalTipsFromSessions = sessions.reduce((s, ses) => s + (ses.tip_amount ?? 0), 0);
   const tips = totalTips > 0 ? totalTips : totalTipsFromSessions;
