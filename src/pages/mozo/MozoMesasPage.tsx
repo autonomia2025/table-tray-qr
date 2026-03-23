@@ -134,7 +134,7 @@ export default function MozoMesasPage() {
           .in('status', ['confirmed', 'in_kitchen', 'ready']),
         supabase
           .from('bill_requests')
-          .select('id, table_id, status')
+          .select('id, table_id, status, tip_amount, tip_percentage')
           .in('table_id', occupiedIds)
           .eq('status', 'pending'),
         supabase
