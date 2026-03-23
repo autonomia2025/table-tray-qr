@@ -55,7 +55,7 @@ export default function Index() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Smartphone className="w-4 h-4" />
-            La forma moderna de atender
+            tablio — la forma moderna de atender
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-4">
