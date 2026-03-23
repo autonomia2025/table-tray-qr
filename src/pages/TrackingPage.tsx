@@ -385,6 +385,12 @@ export default function TrackingPage() {
     setWaiterCallStatus(null);
   };
 
+  // Submit rating
+  const submitRating = async (stars: number) => {
+    setRatingValue(stars);
+    setRatingSubmitted(true);
+  };
+
   // Waiter call — select reason then open scanner
   const onReasonSelected = (reason: string) => {
     setWaiterReason(reason);
