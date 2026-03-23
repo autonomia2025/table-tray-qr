@@ -7,9 +7,9 @@ import { DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-rea
 
 // Plan pricing
 const PLAN_PRICES: Record<string, number> = {
-  'solo_menu': 149,
-  'restaurante': 299,
-  'cadena': 599,
+  'solo_menu': 49000,
+  'restaurante': 299000,
+  'cadena': 599000,
 };
 
 const PLAN_LABELS: Record<string, string> = {

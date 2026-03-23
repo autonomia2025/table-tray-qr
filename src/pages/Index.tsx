@@ -55,7 +55,7 @@ export default function Index() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
             <Smartphone className="w-4 h-4" />
-            La forma moderna de atender
+            tablio — la forma moderna de atender
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.1] mb-4">
@@ -64,7 +64,7 @@ export default function Index() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-8">
-            MenuQR digitaliza pedidos, conecta tu cocina en tiempo real y te da el control total de tu operación. Todo desde un QR.
+            tablio digitaliza pedidos, conecta tu cocina en tiempo real y te da el control total de tu operación. Todo desde un QR.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
@@ -172,9 +172,9 @@ export default function Index() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-semibold text-foreground">
             <QrCode className="w-4 h-4 text-primary" />
-            MenuQR
+            tablio.
           </div>
-          <p>© {new Date().getFullYear()} MenuQR. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} tablio. Todos los derechos reservados.</p>
           <button
             onClick={() => navigate("/superadmin")}
             className="text-muted-foreground/40 hover:text-muted-foreground text-xs transition-colors"

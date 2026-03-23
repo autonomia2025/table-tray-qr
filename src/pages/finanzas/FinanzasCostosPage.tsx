@@ -9,7 +9,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Download, Plus, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
-const PLAN_PRICES: Record<string, number> = { solo_menu: 149, restaurante: 299, cadena: 599 };
+const PLAN_PRICES: Record<string, number> = { solo_menu: 49000, restaurante: 299000, cadena: 599000 };
 
 // Local storage for expenses (no DB table yet)
 const EXPENSES_KEY = 'tablio_expenses';
@@ -51,7 +51,7 @@ export default function FinanzasCostosPage() {
       ]);
       const paying = (t.data || []).filter((x: any) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
       setTenantCount(paying.length);
-      setMrr(paying.reduce((s: number, x: any) => s + 299, 0)); // simplified
+      setMrr(paying.reduce((s: number, x: any) => s + 299000, 0)); // simplified
       setLeadCount((l.data || []).length);
     };
     load();

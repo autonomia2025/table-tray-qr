@@ -9,7 +9,7 @@ import { Download, TrendingDown, Users, DollarSign } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const PLAN_PRICES: Record<string, number> = { solo_menu: 149, restaurante: 299, cadena: 599 };
+const PLAN_PRICES: Record<string, number> = { solo_menu: 49000, restaurante: 299000, cadena: 599000 };
 
 interface Tenant {
   id: string;
