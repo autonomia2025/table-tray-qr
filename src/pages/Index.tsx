@@ -172,7 +172,7 @@ export default function Index() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-semibold text-foreground">
             <QrCode className="w-4 h-4 text-primary" />
-            MenuQR
+            tablio.
           </div>
           <p>© {new Date().getFullYear()} MenuQR. Todos los derechos reservados.</p>
           <button
