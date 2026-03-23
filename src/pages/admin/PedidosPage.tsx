@@ -308,7 +308,7 @@ export default function PedidosPage() {
       </div>
 
       {/* Desktop: horizontal columns */}
-      <div className="hidden md:grid md:grid-cols-5 gap-3">
+      <div className="hidden md:grid gap-3 overflow-x-auto" style={{ gridTemplateColumns: `repeat(${COLUMNS.length}, minmax(200px, 1fr))` }}>
         {COLUMNS.map(col => {
           const colOrders = columnOrders(col.key);
           return (
