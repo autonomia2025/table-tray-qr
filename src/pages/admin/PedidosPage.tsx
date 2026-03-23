@@ -178,6 +178,7 @@ export default function PedidosPage() {
     const channel = supabase
       .channel("admin-pedidos")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "bill_requests", filter: `branch_id=eq.${branchId}` }, () => fetchData())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
