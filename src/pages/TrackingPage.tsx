@@ -267,7 +267,7 @@ export default function TrackingPage() {
           const updated = payload.new as { is_active: boolean };
           if (!updated.is_active) {
             toast({ title: "✅ ¡Gracias por tu visita!", description: "Esperamos verte pronto" });
-            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 2000);
+            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 8000);
           }
         }
       )
