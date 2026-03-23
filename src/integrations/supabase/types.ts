@@ -1074,6 +1074,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           opened_at: string | null
+          rating: number | null
           table_id: string
           tenant_id: string
           tip_amount: number | null
@@ -1085,6 +1086,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           opened_at?: string | null
+          rating?: number | null
           table_id: string
           tenant_id: string
           tip_amount?: number | null
@@ -1096,6 +1098,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           opened_at?: string | null
+          rating?: number | null
           table_id?: string
           tenant_id?: string
           tip_amount?: number | null
