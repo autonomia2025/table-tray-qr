@@ -64,7 +64,7 @@ export default function Index() {
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-8">
-            MenuQR digitaliza pedidos, conecta tu cocina en tiempo real y te da el control total de tu operación. Todo desde un QR.
+            tablio digitaliza pedidos, conecta tu cocina en tiempo real y te da el control total de tu operación. Todo desde un QR.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
