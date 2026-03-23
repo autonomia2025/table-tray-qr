@@ -23,6 +23,7 @@ interface BillRequest {
   tip_amount: number | null;
   tip_percentage: number | null;
   total_amount: number;
+  status?: string;
 }
 
 interface Props {
