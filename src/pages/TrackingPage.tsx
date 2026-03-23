@@ -310,6 +310,34 @@ export default function TrackingPage() {
     };
   }, [waiterCallId]);
 
+  // Bill status realtime
+  useEffect(() => {
+    if (!tableData?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('bill_requests')
+        .select('status')
+        .eq('table_id', tableData.id)
+        .order('requested_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) setBillStatus(data.status);
+    })();
+    const channel = supabase
+      .channel(`bill-status-${tableData.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bill_requests',
+        filter: `table_id=eq.${tableData.id}`,
+      }, (payload) => {
+        const updated = payload.new as { status: string };
+        setBillStatus(updated.status);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [tableData?.id]);
+
   // Current order
   const currentOrder = useMemo(() => {
     if (!orders.length) return null;
