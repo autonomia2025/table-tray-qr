@@ -17,7 +17,7 @@ import KDSPage from "./pages/KDSPage";
 import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminGuard from "./pages/admin/AdminGuard";
-import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import UnifiedLoginPage from "./pages/UnifiedLoginPage";
 import MozoJoinPage from "./pages/mozo/MozoJoinPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
@@ -71,9 +71,10 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* Admin login (no slug needed) */}
-          <Route path="/admin" element={<AdminLoginPage />} />
-          <Route path="/admin/login" element={<AdminLoginPage />} />
+          {/* Unified login */}
+          <Route path="/login" element={<UnifiedLoginPage />} />
+          <Route path="/admin" element={<UnifiedLoginPage />} />
+          <Route path="/admin/login" element={<UnifiedLoginPage />} />
           <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           {/* Admin with slug (protected) */}
@@ -98,7 +99,7 @@ const App = () => (
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/kds" element={<KDSPage />} />
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
-          <Route path="/mozo/login" element={<WaitersProvider><MozoLoginPage /></WaitersProvider>} />
+          <Route path="/mozo/login" element={<UnifiedLoginPage />} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
             <Route index element={<Navigate to="/mozo/mesas" replace />} />
             <Route path="mesas" element={<MozoMesasPage />} />
