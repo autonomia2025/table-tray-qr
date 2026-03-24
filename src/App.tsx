@@ -26,6 +26,7 @@ import SucursalPage from "./pages/admin/SucursalPage";
 import EquipoPage from "./pages/admin/EquipoPage";
 import PedidosPage from "./pages/admin/PedidosPage";
 import ReportesPage from "./pages/admin/ReportesPage";
+import SoportePage from "./pages/admin/SoportePage";
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLoginPage from "./pages/mozo/MozoLoginPage";
 import MozoLayout from "./pages/mozo/MozoLayout";
