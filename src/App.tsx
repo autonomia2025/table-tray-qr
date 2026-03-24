@@ -17,7 +17,7 @@ import KDSPage from "./pages/KDSPage";
 import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminGuard from "./pages/admin/AdminGuard";
-import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import UnifiedLoginPage from "./pages/UnifiedLoginPage";
 import MozoJoinPage from "./pages/mozo/MozoJoinPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
