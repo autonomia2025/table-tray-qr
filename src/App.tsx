@@ -99,7 +99,7 @@ const App = () => (
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/kds" element={<KDSPage />} />
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
-          <Route path="/mozo/login" element={<WaitersProvider><MozoLoginPage /></WaitersProvider>} />
+          <Route path="/mozo/login" element={<UnifiedLoginPage />} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
             <Route index element={<Navigate to="/mozo/mesas" replace />} />
             <Route path="mesas" element={<MozoMesasPage />} />
