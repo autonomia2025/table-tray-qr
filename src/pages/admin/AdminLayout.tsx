@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat } from "lucide-react";
+import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export default function AdminLayout() {
     { path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode, external: false },
     { path: `/kds?branch=${branchId}`, label: "KDS Cocina", icon: ChefHat, external: true },
     { path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings, external: false },
+    { path: `/admin/${effectiveSlug}/soporte`, label: "Soporte", icon: Headset, external: false },
   ];
 
   if (isLoading) {
