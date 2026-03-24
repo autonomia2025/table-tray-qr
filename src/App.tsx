@@ -70,10 +70,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<UnifiedLoginPage />} />
           {/* Unified login */}
           <Route path="/login" element={<UnifiedLoginPage />} />
-          <Route path="/admin" element={<UnifiedLoginPage />} />
           <Route path="/admin/login" element={<UnifiedLoginPage />} />
           <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
