@@ -46,13 +46,11 @@ export default function FinanzasChurnPage() {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
 
-  const getPlanName = (id: string | null) => {
-    if (!id) return 'restaurante';
-    return plans.find(p => p.id === id)?.name || 'restaurante';
-  };
-  const getPlanDisplay = (id: string | null) => {
-    if (!id) return 'Restaurante';
-    return plans.find(p => p.id === id)?.display_name || 'Restaurante';
+  const getPrice = (index: number) => index < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE;
+  const getPlanDisplay = (status: string | null) => {
+    if (status === 'active' || status === 'paying') return 'Pagando';
+    if (status === 'pilot') return 'Piloto';
+    return 'Trial';
   };
 
   const paying = tenants.filter(t => (t.plan_status === 'active' || t.plan_status === 'paying') && t.is_active !== false);
