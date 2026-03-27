@@ -5,17 +5,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid, Legend } from 'recharts';
 import { DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
-// Plan pricing
-const PLAN_PRICES: Record<string, number> = {
-  'solo_menu': 49000,
-  'restaurante': 299000,
-  'cadena': 599000,
-};
+// Tablio pricing phases
+const PILOT_THRESHOLD = 5;
+const PILOT_PRICE = 199000;
+const COMMERCIAL_PRICE = 299000;
 
 const PLAN_LABELS: Record<string, string> = {
-  'solo_menu': 'Solo Menú',
-  'restaurante': 'Restaurante',
-  'cadena': 'Cadena',
+  'pilot': 'Piloto ($199k)',
+  'trial': 'Trial',
+  'active': 'Activo ($299k)',
+  'paying': 'Pagando ($299k)',
 };
 
 interface Tenant {
