@@ -60,6 +60,14 @@ import FinanzasRevenuePage from "./pages/finanzas/FinanzasRevenuePage";
 import FinanzasClientesPage from "./pages/finanzas/FinanzasClientesPage";
 import FinanzasChurnPage from "./pages/finanzas/FinanzasChurnPage";
 import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
+import { JefeVentasProvider } from "./contexts/JefeVentasContext";
+import JefeVentasLayout from "./pages/jefe-ventas/JefeVentasLayout";
+import JVDashboardPage from "./pages/jefe-ventas/JVDashboardPage";
+import JVEquipoPage from "./pages/jefe-ventas/JVEquipoPage";
+import JVComisionesPage from "./pages/jefe-ventas/JVComisionesPage";
+import JVPipelinePage from "./pages/jefe-ventas/JVPipelinePage";
+import JVPerfilPage from "./pages/jefe-ventas/JVPerfilPage";
+import SellerComisionesPage from "./pages/seller/SellerComisionesPage";
 
 const queryClient = new QueryClient();
 
