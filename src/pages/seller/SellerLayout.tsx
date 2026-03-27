@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { CalendarCheck, ClipboardList, BarChart3, BookOpen, PlusCircle, LogIn, LogOut } from 'lucide-react';
+import { CalendarCheck, ClipboardList, BarChart3, BookOpen, PlusCircle, LogIn, LogOut, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
