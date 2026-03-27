@@ -58,30 +58,40 @@ export default function FinanzasRevenuePage() {
     );
   }
 
-  const getPlanName = (planId: string | null) => {
-    if (!planId) return 'restaurante';
-    const plan = plans.find(p => p.id === planId);
-    return plan?.name || 'restaurante';
+  const getPlanLabel = (status: string | null) => PLAN_LABELS[status || 'trial'] || status || 'Trial';
+
+  const getPrice = (t: Tenant, index: number) => {
+    // Global: first 5 tenants at pilot price, rest at commercial
+    return index < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE;
   };
 
   const payingTenants = tenants.filter(t => t.plan_status === 'active' || t.plan_status === 'paying');
   const pilotTenants = tenants.filter(t => t.plan_status === 'trial' || t.plan_status === 'pilot');
   const churnedTenants = tenants.filter(t => t.is_active === false);
 
-  // MRR calculation
-  const mrr = payingTenants.reduce((sum, t) => {
-    const planName = getPlanName(t.plan_id);
-    return sum + (PLAN_PRICES[planName] || 299);
+  // All active tenants sorted by creation for pricing
+  const allActive = [...payingTenants, ...pilotTenants].sort((a, b) =>
+    new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime()
+  );
+
+  // MRR calculation with phase logic
+  const mrr = allActive.reduce((sum, t, i) => {
+    if (t.plan_status === 'active' || t.plan_status === 'paying') {
+      return sum + getPrice(t, i);
+    }
+    return sum; // pilots/trial don't pay yet
   }, 0);
   const arr = mrr * 12;
 
-  // Plan breakdown
-  const planBreakdown = Object.entries(PLAN_PRICES).map(([key, price]) => {
-    const count = payingTenants.filter(t => getPlanName(t.plan_id) === key).length;
-    return { plan: PLAN_LABELS[key] || key, count, revenue: count * price };
-  });
+  // Plan breakdown by phase
+  const pilotCount = payingTenants.filter((_, i) => i < PILOT_THRESHOLD).length;
+  const commercialCount = Math.max(0, payingTenants.length - PILOT_THRESHOLD);
+  const planBreakdown = [
+    { plan: `Piloto ($${PILOT_PRICE.toLocaleString('es-CL')})`, count: Math.min(pilotCount, PILOT_THRESHOLD), revenue: Math.min(pilotCount, PILOT_THRESHOLD) * PILOT_PRICE },
+    { plan: `Comercial ($${COMMERCIAL_PRICE.toLocaleString('es-CL')})`, count: commercialCount, revenue: commercialCount * COMMERCIAL_PRICE },
+  ].filter(p => p.count > 0);
 
-  // Historical MRR (simulated based on tenant creation dates)
+  // Historical MRR
   const now = new Date();
   const monthlyData = Array.from({ length: 12 }, (_, i) => {
     const date = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
@@ -89,10 +99,7 @@ export default function FinanzasRevenuePage() {
     const activeAtDate = payingTenants.filter(t =>
       t.created_at && new Date(t.created_at) <= new Date(date.getFullYear(), date.getMonth() + 1, 0)
     );
-    const mrrAtDate = activeAtDate.reduce((sum, t) => {
-      const planName = getPlanName(t.plan_id);
-      return sum + (PLAN_PRICES[planName] || 299);
-    }, 0);
+    const mrrAtDate = activeAtDate.reduce((sum, t, idx) => sum + (idx < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE), 0);
     return { month: monthStr, mrr: mrrAtDate };
   });
 

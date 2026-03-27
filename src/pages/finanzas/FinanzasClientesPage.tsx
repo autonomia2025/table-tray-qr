@@ -165,13 +165,12 @@ export default function FinanzasClientesPage() {
               </thead>
               <tbody>
                 {pilots.map(t => {
-                  const plan = getPlan(t.plan_id);
                   const trialEnd = t.trial_ends_at ? new Date(t.trial_ends_at) : null;
                   const isExpiring = trialEnd && trialEnd.getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
                   return (
                     <tr key={t.id} className="border-b border-border/50">
                       <td className="py-2 text-foreground font-medium">{t.name}</td>
-                      <td className="py-2"><Badge variant="outline" className="text-xs">{plan.display}</Badge></td>
+                      <td className="py-2"><Badge variant="outline" className="text-xs">Piloto</Badge></td>
                       <td className="py-2 text-muted-foreground">
                         {trialEnd ? format(trialEnd, 'd MMM yyyy', { locale: es }) : '—'}
                       </td>
