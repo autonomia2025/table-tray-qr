@@ -9,7 +9,9 @@ import { Download, TrendingDown, Users, DollarSign } from 'lucide-react';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const PLAN_PRICES: Record<string, number> = { solo_menu: 49000, restaurante: 299000, cadena: 599000 };
+const PILOT_THRESHOLD = 5;
+const PILOT_PRICE = 199000;
+const COMMERCIAL_PRICE = 299000;
 
 interface Tenant {
   id: string;
@@ -44,27 +46,26 @@ export default function FinanzasChurnPage() {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
 
-  const getPlanName = (id: string | null) => {
-    if (!id) return 'restaurante';
-    return plans.find(p => p.id === id)?.name || 'restaurante';
-  };
-  const getPlanDisplay = (id: string | null) => {
-    if (!id) return 'Restaurante';
-    return plans.find(p => p.id === id)?.display_name || 'Restaurante';
+  const getPrice = (index: number) => index < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE;
+  const getPlanDisplay = (status: string | null) => {
+    if (status === 'active' || status === 'paying') return 'Pagando';
+    if (status === 'pilot') return 'Piloto';
+    return 'Trial';
   };
 
-  const paying = tenants.filter(t => (t.plan_status === 'active' || t.plan_status === 'paying') && t.is_active !== false);
+  const paying = tenants.filter(t => (t.plan_status === 'active' || t.plan_status === 'paying') && t.is_active !== false)
+    .sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
   const churned = tenants.filter(t => t.is_active === false);
 
   // Churn rate
   const totalEver = paying.length + churned.length;
   const churnRate = totalEver > 0 ? ((churned.length / totalEver) * 100) : 0;
 
-  // Revenue churned
-  const churnedRevenue = churned.reduce((s, t) => s + (PLAN_PRICES[getPlanName(t.plan_id)] || 299), 0);
-  const currentMRR = paying.reduce((s, t) => s + (PLAN_PRICES[getPlanName(t.plan_id)] || 299), 0);
+  // Revenue churned (assume avg commercial price for churned)
+  const churnedRevenue = churned.length * COMMERCIAL_PRICE;
+  const currentMRR = paying.reduce((s, _, i) => s + getPrice(i), 0);
 
-  // NRR (simplified: current MRR / (current MRR + churned revenue))
+  // NRR
   const nrr = currentMRR > 0 ? Math.round(((currentMRR) / (currentMRR + churnedRevenue)) * 100) : 100;
 
   // Cohort data (simplified by month)
@@ -175,8 +176,8 @@ export default function FinanzasChurnPage() {
                 {churned.map(t => (
                   <tr key={t.id} className="border-b border-border/50">
                     <td className="py-2 text-foreground font-medium">{t.name}</td>
-                    <td className="py-2"><Badge variant="outline" className="text-xs">{getPlanDisplay(t.plan_id)}</Badge></td>
-                    <td className="py-2 text-destructive">${(PLAN_PRICES[getPlanName(t.plan_id)] || 299).toLocaleString()}</td>
+                    <td className="py-2"><Badge variant="outline" className="text-xs">{getPlanDisplay(t.plan_status)}</Badge></td>
+                    <td className="py-2 text-destructive">${COMMERCIAL_PRICE.toLocaleString('es-CL')}</td>
                     <td className="py-2 text-muted-foreground">
                       {t.created_at ? format(new Date(t.created_at), 'd MMM yyyy', { locale: es }) : '—'}
                     </td>

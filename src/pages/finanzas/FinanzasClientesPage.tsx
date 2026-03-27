@@ -8,7 +8,9 @@ import { Download, Calendar, AlertTriangle } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const PLAN_PRICES: Record<string, number> = { solo_menu: 49000, restaurante: 299000, cadena: 599000 };
+const PILOT_THRESHOLD = 5;
+const PILOT_PRICE = 199000;
+const COMMERCIAL_PRICE = 299000;
 
 interface Tenant {
   id: string;
@@ -49,30 +51,31 @@ export default function FinanzasClientesPage() {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
 
-  const getPlan = (planId: string | null) => {
-    if (!planId) return { name: 'restaurante', display: 'Restaurante' };
-    const plan = plans.find(p => p.id === planId);
-    return { name: plan?.name || 'restaurante', display: plan?.display_name || 'Restaurante' };
+  const getPrice = (index: number) => index < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE;
+  const getPlanLabel = (status: string | null) => {
+    if (status === 'active' || status === 'paying') return 'Pagando';
+    if (status === 'pilot') return 'Piloto';
+    return 'Trial';
   };
 
-  const paying = tenants.filter(t => t.plan_status === 'active' || t.plan_status === 'paying');
+  const paying = tenants.filter(t => t.plan_status === 'active' || t.plan_status === 'paying')
+    .sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
   const pilots = tenants.filter(t => t.plan_status === 'trial' || t.plan_status === 'pilot');
 
-  // Projections
-  const currentMRR = paying.reduce((s, t) => s + (PLAN_PRICES[getPlan(t.plan_id).name] || 299), 0);
+  // MRR with phase pricing
+  const currentMRR = paying.reduce((s, _, i) => s + getPrice(i), 0);
   const expectedConversions = pilots.length;
-  const avgPlanPrice = paying.length > 0 ? currentMRR / paying.length : 299;
-  const proj30 = currentMRR + Math.round(expectedConversions * 0.3 * avgPlanPrice);
-  const proj60 = currentMRR + Math.round(expectedConversions * 0.5 * avgPlanPrice);
-  const proj90 = currentMRR + Math.round(expectedConversions * 0.7 * avgPlanPrice);
+  const nextPrice = paying.length >= PILOT_THRESHOLD ? COMMERCIAL_PRICE : PILOT_PRICE;
+  const proj30 = currentMRR + Math.round(expectedConversions * 0.3 * nextPrice);
+  const proj60 = currentMRR + Math.round(expectedConversions * 0.5 * nextPrice);
+  const proj90 = currentMRR + Math.round(expectedConversions * 0.7 * nextPrice);
 
   const handleExport = (data: any[], name: string) => {
-    exportToCSV(data.map(t => ({
+    exportToCSV(data.map((t, i) => ({
       Nombre: t.name,
       Email: t.email,
-      Plan: getPlan(t.plan_id).display,
-      Estado: t.plan_status,
-      'Monto USD': PLAN_PRICES[getPlan(t.plan_id).name] || 299,
+      Estado: getPlanLabel(t.plan_status),
+      'Monto CLP': getPrice(i).toLocaleString('es-CL'),
       'Fecha inicio': t.created_at ? format(new Date(t.created_at), 'dd/MM/yyyy') : '',
     })), name);
   };
@@ -119,13 +122,13 @@ export default function FinanzasClientesPage() {
                 </tr>
               </thead>
               <tbody>
-                {paying.map(t => {
-                  const plan = getPlan(t.plan_id);
+                {paying.map((t, i) => {
+                  const price = getPrice(i);
                   return (
                     <tr key={t.id} className="border-b border-border/50">
                       <td className="py-2 text-foreground font-medium">{t.name}</td>
-                      <td className="py-2"><Badge variant="outline" className="text-xs">{plan.display}</Badge></td>
-                      <td className="py-2 text-foreground">${(PLAN_PRICES[plan.name] || 299).toLocaleString()}</td>
+                      <td className="py-2"><Badge variant="outline" className="text-xs">{i < PILOT_THRESHOLD ? 'Piloto' : 'Comercial'}</Badge></td>
+                      <td className="py-2 text-foreground">${price.toLocaleString('es-CL')}</td>
                       <td className="py-2 text-muted-foreground">
                         {t.created_at ? format(new Date(t.created_at), 'd MMM yyyy', { locale: es }) : '—'}
                       </td>
@@ -162,13 +165,12 @@ export default function FinanzasClientesPage() {
               </thead>
               <tbody>
                 {pilots.map(t => {
-                  const plan = getPlan(t.plan_id);
                   const trialEnd = t.trial_ends_at ? new Date(t.trial_ends_at) : null;
                   const isExpiring = trialEnd && trialEnd.getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
                   return (
                     <tr key={t.id} className="border-b border-border/50">
                       <td className="py-2 text-foreground font-medium">{t.name}</td>
-                      <td className="py-2"><Badge variant="outline" className="text-xs">{plan.display}</Badge></td>
+                      <td className="py-2"><Badge variant="outline" className="text-xs">Piloto</Badge></td>
                       <td className="py-2 text-muted-foreground">
                         {trialEnd ? format(trialEnd, 'd MMM yyyy', { locale: es }) : '—'}
                       </td>

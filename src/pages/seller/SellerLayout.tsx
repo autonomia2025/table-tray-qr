@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { CalendarCheck, ClipboardList, BarChart3, BookOpen, PlusCircle, LogIn, LogOut } from 'lucide-react';
+import { CalendarCheck, ClipboardList, BarChart3, BookOpen, PlusCircle, LogIn, LogOut, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/vendedor/mi-dia', icon: CalendarCheck, label: 'Mi día' },
   { path: '/vendedor/registro', icon: PlusCircle, label: 'Visita' },
   { path: '/vendedor/pipeline', icon: ClipboardList, label: 'Pipeline' },
+  { path: '/vendedor/comisiones', icon: DollarSign, label: 'Comisiones' },
   { path: '/vendedor/numeros', icon: BarChart3, label: 'Números' },
   { path: '/vendedor/recursos', icon: BookOpen, label: 'Recursos' },
 ];

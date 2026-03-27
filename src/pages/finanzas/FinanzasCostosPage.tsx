@@ -9,7 +9,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Download, Plus, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
-const PLAN_PRICES: Record<string, number> = { solo_menu: 49000, restaurante: 299000, cadena: 599000 };
+const PILOT_THRESHOLD = 5;
+const PILOT_PRICE = 199000;
+const COMMERCIAL_PRICE = 299000;
+const CLOSE_COMMISSION = 50000;
+const PILOT_ACTIVE_COMMISSION = 30000;
+const COMMERCIAL_ACTIVE_COMMISSION = 40000;
 
 // Local storage for expenses (no DB table yet)
 const EXPENSES_KEY = 'tablio_expenses';
@@ -22,7 +27,7 @@ interface Expense {
   date: string;
 }
 
-const CATEGORIES = ['Salarios', 'Marketing', 'Infraestructura', 'Software', 'Oficina', 'Otros'];
+const CATEGORIES = ['Salarios', 'Marketing', 'Infraestructura', 'Software', 'Oficina', 'Comisiones', 'Otros'];
 const COLORS = [
   'hsl(var(--primary))',
   'hsl(var(--destructive))',
@@ -46,13 +51,28 @@ export default function FinanzasCostosPage() {
   useEffect(() => {
     const load = async () => {
       const [t, l] = await Promise.all([
-        supabase.from('tenants').select('plan_id, plan_status, is_active'),
-        supabase.from('leads').select('id, source'),
+        supabase.from('tenants').select('plan_id, plan_status, is_active, created_at'),
+        supabase.from('leads').select('id, source, stage'),
       ]);
-      const paying = (t.data || []).filter((x: any) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
+      const tenants = (t.data || []).sort((a: any, b: any) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
+      const paying = tenants.filter((x: any) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
       setTenantCount(paying.length);
-      setMrr(paying.reduce((s: number, x: any) => s + 299000, 0)); // simplified
+      setMrr(paying.reduce((s: number, _: any, i: number) => s + (i < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE), 0));
       setLeadCount((l.data || []).length);
+
+      // Calculate commission costs
+      const closedLeads = (l.data || []).filter((x: any) => x.stage === 'cliente_pagando').length;
+      const commissionCosts = closedLeads * CLOSE_COMMISSION + paying.reduce((s: number, _: any, i: number) =>
+        s + (i < PILOT_THRESHOLD ? PILOT_ACTIVE_COMMISSION : COMMERCIAL_ACTIVE_COMMISSION), 0);
+
+      // Auto-add commission as expense category if not present
+      setExpenses(prev => {
+        const hasComm = prev.some(e => e.category === 'Comisiones');
+        if (!hasComm && commissionCosts > 0) {
+          return [...prev, { id: 'auto-comisiones', category: 'Comisiones', description: 'Comisiones vendedores (auto)', amount: commissionCosts, date: new Date().toISOString() }];
+        }
+        return prev.map(e => e.id === 'auto-comisiones' ? { ...e, amount: commissionCosts } : e);
+      });
     };
     load();
   }, []);

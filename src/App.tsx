@@ -60,6 +60,14 @@ import FinanzasRevenuePage from "./pages/finanzas/FinanzasRevenuePage";
 import FinanzasClientesPage from "./pages/finanzas/FinanzasClientesPage";
 import FinanzasChurnPage from "./pages/finanzas/FinanzasChurnPage";
 import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
+import { JefeVentasProvider } from "./contexts/JefeVentasContext";
+import JefeVentasLayout from "./pages/jefe-ventas/JefeVentasLayout";
+import JVDashboardPage from "./pages/jefe-ventas/JVDashboardPage";
+import JVEquipoPage from "./pages/jefe-ventas/JVEquipoPage";
+import JVComisionesPage from "./pages/jefe-ventas/JVComisionesPage";
+import JVPipelinePage from "./pages/jefe-ventas/JVPipelinePage";
+import JVPerfilPage from "./pages/jefe-ventas/JVPerfilPage";
+import SellerComisionesPage from "./pages/seller/SellerComisionesPage";
 
 const queryClient = new QueryClient();
 
@@ -129,8 +137,18 @@ const App = () => (
             <Route path="mi-dia" element={<SellerMiDiaPage />} />
             <Route path="registro" element={<SellerRegistroPage />} />
             <Route path="pipeline" element={<SellerPipelinePage />} />
+            <Route path="comisiones" element={<SellerComisionesPage />} />
             <Route path="numeros" element={<SellerNumerosPage />} />
             <Route path="recursos" element={<SellerRecursosPage />} />
+          </Route>
+          {/* Jefe de Ventas panel */}
+          <Route path="/jefe-ventas" element={<JefeVentasProvider><JefeVentasLayout /></JefeVentasProvider>}>
+            <Route index element={<Navigate to="/jefe-ventas/dashboard" replace />} />
+            <Route path="dashboard" element={<JVDashboardPage />} />
+            <Route path="equipo" element={<JVEquipoPage />} />
+            <Route path="comisiones" element={<JVComisionesPage />} />
+            <Route path="pipeline" element={<JVPipelinePage />} />
+            <Route path="perfil" element={<JVPerfilPage />} />
           </Route>
           {/* Finance panel */}
           <Route path="/finanzas" element={<FinanzasLayout />}>
