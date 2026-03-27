@@ -70,7 +70,7 @@ function getRedirectPath(role: ResolvedRole): string {
       return "/superadmin";
     case "backoffice":
       if (role.role === "vendedor") return "/vendedor/mi-dia";
-      if (role.role === "jefe_ventas") return "/backoffice/dashboard";
+      if (role.role === "jefe_ventas") return "/jefe-ventas/dashboard";
       if (role.role === "finanzas") return "/finanzas/revenue";
       return "/backoffice/dashboard";
     case "admin":

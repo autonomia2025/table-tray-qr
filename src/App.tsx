@@ -140,6 +140,15 @@ const App = () => (
             <Route path="numeros" element={<SellerNumerosPage />} />
             <Route path="recursos" element={<SellerRecursosPage />} />
           </Route>
+          {/* Jefe de Ventas panel */}
+          <Route path="/jefe-ventas" element={<JefeVentasProvider><JefeVentasLayout /></JefeVentasProvider>}>
+            <Route index element={<Navigate to="/jefe-ventas/dashboard" replace />} />
+            <Route path="dashboard" element={<JVDashboardPage />} />
+            <Route path="equipo" element={<JVEquipoPage />} />
+            <Route path="comisiones" element={<JVComisionesPage />} />
+            <Route path="pipeline" element={<JVPipelinePage />} />
+            <Route path="perfil" element={<JVPerfilPage />} />
+          </Route>
           {/* Finance panel */}
           <Route path="/finanzas" element={<FinanzasLayout />}>
             <Route index element={<Navigate to="/finanzas/revenue" replace />} />

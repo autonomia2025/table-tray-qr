@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/vendedor/mi-dia', icon: CalendarCheck, label: 'Mi día' },
   { path: '/vendedor/registro', icon: PlusCircle, label: 'Visita' },
   { path: '/vendedor/pipeline', icon: ClipboardList, label: 'Pipeline' },
+  { path: '/vendedor/comisiones', icon: DollarSign, label: 'Comisiones' },
   { path: '/vendedor/numeros', icon: BarChart3, label: 'Números' },
   { path: '/vendedor/recursos', icon: BookOpen, label: 'Recursos' },
 ];
