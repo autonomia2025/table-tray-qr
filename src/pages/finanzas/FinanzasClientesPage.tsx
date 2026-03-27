@@ -122,13 +122,13 @@ export default function FinanzasClientesPage() {
                 </tr>
               </thead>
               <tbody>
-                {paying.map(t => {
-                  const plan = getPlan(t.plan_id);
+                {paying.map((t, i) => {
+                  const price = getPrice(i);
                   return (
                     <tr key={t.id} className="border-b border-border/50">
                       <td className="py-2 text-foreground font-medium">{t.name}</td>
-                      <td className="py-2"><Badge variant="outline" className="text-xs">{plan.display}</Badge></td>
-                      <td className="py-2 text-foreground">${(PLAN_PRICES[plan.name] || 299).toLocaleString()}</td>
+                      <td className="py-2"><Badge variant="outline" className="text-xs">{i < PILOT_THRESHOLD ? 'Piloto' : 'Comercial'}</Badge></td>
+                      <td className="py-2 text-foreground">${price.toLocaleString('es-CL')}</td>
                       <td className="py-2 text-muted-foreground">
                         {t.created_at ? format(new Date(t.created_at), 'd MMM yyyy', { locale: es }) : '—'}
                       </td>
