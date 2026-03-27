@@ -51,22 +51,24 @@ export default function FinanzasClientesPage() {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
   }
 
-  const getPlan = (planId: string | null) => {
-    if (!planId) return { name: 'restaurante', display: 'Restaurante' };
-    const plan = plans.find(p => p.id === planId);
-    return { name: plan?.name || 'restaurante', display: plan?.display_name || 'Restaurante' };
+  const getPrice = (index: number) => index < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE;
+  const getPlanLabel = (status: string | null) => {
+    if (status === 'active' || status === 'paying') return 'Pagando';
+    if (status === 'pilot') return 'Piloto';
+    return 'Trial';
   };
 
-  const paying = tenants.filter(t => t.plan_status === 'active' || t.plan_status === 'paying');
+  const paying = tenants.filter(t => t.plan_status === 'active' || t.plan_status === 'paying')
+    .sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
   const pilots = tenants.filter(t => t.plan_status === 'trial' || t.plan_status === 'pilot');
 
-  // Projections
-  const currentMRR = paying.reduce((s, t) => s + (PLAN_PRICES[getPlan(t.plan_id).name] || 299), 0);
+  // MRR with phase pricing
+  const currentMRR = paying.reduce((s, _, i) => s + getPrice(i), 0);
   const expectedConversions = pilots.length;
-  const avgPlanPrice = paying.length > 0 ? currentMRR / paying.length : 299;
-  const proj30 = currentMRR + Math.round(expectedConversions * 0.3 * avgPlanPrice);
-  const proj60 = currentMRR + Math.round(expectedConversions * 0.5 * avgPlanPrice);
-  const proj90 = currentMRR + Math.round(expectedConversions * 0.7 * avgPlanPrice);
+  const nextPrice = paying.length >= PILOT_THRESHOLD ? COMMERCIAL_PRICE : PILOT_PRICE;
+  const proj30 = currentMRR + Math.round(expectedConversions * 0.3 * nextPrice);
+  const proj60 = currentMRR + Math.round(expectedConversions * 0.5 * nextPrice);
+  const proj90 = currentMRR + Math.round(expectedConversions * 0.7 * nextPrice);
 
   const handleExport = (data: any[], name: string) => {
     exportToCSV(data.map(t => ({
