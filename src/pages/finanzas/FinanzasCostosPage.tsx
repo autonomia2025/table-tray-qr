@@ -9,7 +9,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Download, Plus, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
-const PLAN_PRICES: Record<string, number> = { solo_menu: 49000, restaurante: 299000, cadena: 599000 };
+const PILOT_THRESHOLD = 5;
+const PILOT_PRICE = 199000;
+const COMMERCIAL_PRICE = 299000;
+const CLOSE_COMMISSION = 50000;
+const PILOT_ACTIVE_COMMISSION = 30000;
+const COMMERCIAL_ACTIVE_COMMISSION = 40000;
 
 // Local storage for expenses (no DB table yet)
 const EXPENSES_KEY = 'tablio_expenses';
