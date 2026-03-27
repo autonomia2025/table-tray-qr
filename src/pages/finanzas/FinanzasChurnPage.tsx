@@ -53,18 +53,19 @@ export default function FinanzasChurnPage() {
     return 'Trial';
   };
 
-  const paying = tenants.filter(t => (t.plan_status === 'active' || t.plan_status === 'paying') && t.is_active !== false);
+  const paying = tenants.filter(t => (t.plan_status === 'active' || t.plan_status === 'paying') && t.is_active !== false)
+    .sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
   const churned = tenants.filter(t => t.is_active === false);
 
   // Churn rate
   const totalEver = paying.length + churned.length;
   const churnRate = totalEver > 0 ? ((churned.length / totalEver) * 100) : 0;
 
-  // Revenue churned
-  const churnedRevenue = churned.reduce((s, t) => s + (PLAN_PRICES[getPlanName(t.plan_id)] || 299), 0);
-  const currentMRR = paying.reduce((s, t) => s + (PLAN_PRICES[getPlanName(t.plan_id)] || 299), 0);
+  // Revenue churned (assume avg commercial price for churned)
+  const churnedRevenue = churned.length * COMMERCIAL_PRICE;
+  const currentMRR = paying.reduce((s, _, i) => s + getPrice(i), 0);
 
-  // NRR (simplified: current MRR / (current MRR + churned revenue))
+  // NRR
   const nrr = currentMRR > 0 ? Math.round(((currentMRR) / (currentMRR + churnedRevenue)) * 100) : 100;
 
   // Cohort data (simplified by month)
