@@ -176,8 +176,8 @@ export default function FinanzasChurnPage() {
                 {churned.map(t => (
                   <tr key={t.id} className="border-b border-border/50">
                     <td className="py-2 text-foreground font-medium">{t.name}</td>
-                    <td className="py-2"><Badge variant="outline" className="text-xs">{getPlanDisplay(t.plan_id)}</Badge></td>
-                    <td className="py-2 text-destructive">${(PLAN_PRICES[getPlanName(t.plan_id)] || 299).toLocaleString()}</td>
+                    <td className="py-2"><Badge variant="outline" className="text-xs">{getPlanDisplay(t.plan_status)}</Badge></td>
+                    <td className="py-2 text-destructive">${COMMERCIAL_PRICE.toLocaleString('es-CL')}</td>
                     <td className="py-2 text-muted-foreground">
                       {t.created_at ? format(new Date(t.created_at), 'd MMM yyyy', { locale: es }) : '—'}
                     </td>

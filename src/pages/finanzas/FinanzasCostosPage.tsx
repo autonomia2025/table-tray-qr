@@ -27,7 +27,7 @@ interface Expense {
   date: string;
 }
 
-const CATEGORIES = ['Salarios', 'Marketing', 'Infraestructura', 'Software', 'Oficina', 'Otros'];
+const CATEGORIES = ['Salarios', 'Marketing', 'Infraestructura', 'Software', 'Oficina', 'Comisiones', 'Otros'];
 const COLORS = [
   'hsl(var(--primary))',
   'hsl(var(--destructive))',
