@@ -137,6 +137,7 @@ const App = () => (
             <Route path="mi-dia" element={<SellerMiDiaPage />} />
             <Route path="registro" element={<SellerRegistroPage />} />
             <Route path="pipeline" element={<SellerPipelinePage />} />
+            <Route path="comisiones" element={<SellerComisionesPage />} />
             <Route path="numeros" element={<SellerNumerosPage />} />
             <Route path="recursos" element={<SellerRecursosPage />} />
           </Route>
