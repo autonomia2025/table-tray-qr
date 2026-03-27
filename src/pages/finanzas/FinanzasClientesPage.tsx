@@ -71,12 +71,11 @@ export default function FinanzasClientesPage() {
   const proj90 = currentMRR + Math.round(expectedConversions * 0.7 * nextPrice);
 
   const handleExport = (data: any[], name: string) => {
-    exportToCSV(data.map(t => ({
+    exportToCSV(data.map((t, i) => ({
       Nombre: t.name,
       Email: t.email,
-      Plan: getPlan(t.plan_id).display,
-      Estado: t.plan_status,
-      'Monto USD': PLAN_PRICES[getPlan(t.plan_id).name] || 299,
+      Estado: getPlanLabel(t.plan_status),
+      'Monto CLP': getPrice(i).toLocaleString('es-CL'),
       'Fecha inicio': t.created_at ? format(new Date(t.created_at), 'dd/MM/yyyy') : '',
     })), name);
   };
