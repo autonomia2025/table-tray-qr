@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, DollarSign, Kanban, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, DollarSign, Kanban, Settings, LogOut, Eye, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useJefeVentas } from '@/contexts/JefeVentasContext';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -16,11 +17,19 @@ const NAV_ITEMS = [
 export default function JefeVentasLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, isLoading, isAuthenticated } = useJefeVentas();
+  const { profile, isLoading, isAuthenticated, impersonatingId, setImpersonatingId } = useJefeVentas();
 
   const handleLogout = async () => {
+    sessionStorage.removeItem('jv_impersonating');
+    sessionStorage.removeItem('superadmin_impersonating');
     await supabase.auth.signOut();
     navigate('/login');
+  };
+
+  const exitImpersonation = () => {
+    setImpersonatingId(null);
+    sessionStorage.removeItem('superadmin_impersonating');
+    navigate('/superadmin/equipo');
   };
 
   if (isLoading) {
@@ -38,7 +47,18 @@ export default function JefeVentasLayout() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <aside className="w-56 border-r border-border bg-card flex flex-col shrink-0">
+      {/* Impersonation banner */}
+      {impersonatingId && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-black text-center py-1.5 text-sm font-medium flex items-center justify-center gap-2">
+          <Eye className="w-4 h-4" />
+          VISTA PREVIA — Estás viendo como otro usuario
+          <Button variant="ghost" size="sm" onClick={exitImpersonation} className="h-6 text-black hover:bg-amber-600 gap-1 ml-2">
+            <X className="w-3 h-3" />Salir
+          </Button>
+        </div>
+      )}
+
+      <aside className={`w-56 border-r border-border bg-card flex flex-col shrink-0 ${impersonatingId ? 'pt-10' : ''}`}>
         <div className="h-14 flex items-center gap-2 px-5 border-b border-border">
           <span className="font-bold text-foreground text-lg tracking-tight">tablio</span>
           <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">Jefe Ventas</Badge>
@@ -77,7 +97,7 @@ export default function JefeVentasLayout() {
           </button>
         </div>
       </aside>
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${impersonatingId ? 'pt-10' : ''}`}>
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>

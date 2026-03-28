@@ -1,12 +1,9 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { DollarSign, Users, TrendingDown, PieChart, LogIn, LogOut } from 'lucide-react';
+import { DollarSign, Users, TrendingDown, PieChart, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
-import GlobalSearch from '@/components/GlobalSearch';
 
 const NAV_ITEMS = [
   { path: '/finanzas/revenue', icon: DollarSign, label: 'Revenue' },
@@ -14,40 +11,6 @@ const NAV_ITEMS = [
   { path: '/finanzas/churn', icon: TrendingDown, label: 'Churn' },
   { path: '/finanzas/costos', icon: PieChart, label: 'Costos' },
 ];
-
-function FinanzasLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    setLoading(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Tablio</h1>
-          <Badge className="bg-secondary text-secondary-foreground mt-1">Finanzas</Badge>
-        </div>
-        <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <Input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-        {error && <p className="text-destructive text-sm">{error}</p>}
-        <Button type="submit" className="w-full gap-2" disabled={loading}>
-          <LogIn className="w-4 h-4" />
-          {loading ? 'Ingresando...' : 'Ingresar'}
-        </Button>
-      </form>
-    </div>
-  );
-}
 
 export default function FinanzasLayout() {
   const navigate = useNavigate();
@@ -57,27 +20,41 @@ export default function FinanzasLayout() {
 
   useEffect(() => {
     const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { setIsLoading(false); return; }
-      // Allow platform admins or backoffice members with role 'finanzas' or 'jefe_ventas'
-      const [adminRes, memberRes] = await Promise.all([
-        supabase.from('platform_admins').select('id').eq('user_id', session.user.id).maybeSingle(),
-        supabase.from('backoffice_members').select('id, role').eq('user_id', session.user.id).eq('is_active', true).maybeSingle(),
-      ]);
-      const isAdmin = !!adminRes.data;
-      const member = memberRes.data as any;
-      const allowedRoles = ['finanzas', 'jefe_ventas', 'superadmin'];
-      setAuthorized(isAdmin || (member && allowedRoles.includes(member.role)));
-      setIsLoading(false);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setIsLoading(false);
+          navigate('/login', { replace: true });
+          return;
+        }
+        // Allow platform admins or backoffice members with role 'finanzas' or 'jefe_ventas'
+        const [adminRes, memberRes] = await Promise.all([
+          supabase.from('platform_admins').select('id').eq('user_id', session.user.id).maybeSingle(),
+          supabase.from('backoffice_members').select('id, role').eq('user_id', session.user.id).eq('is_active', true).maybeSingle(),
+        ]);
+        const isAdmin = !!adminRes.data;
+        const member = memberRes.data as any;
+        const allowedRoles = ['finanzas', 'jefe_ventas', 'superadmin'];
+        const auth = isAdmin || (member && allowedRoles.includes(member.role));
+        setAuthorized(auth);
+        if (!auth) {
+          navigate('/login', { replace: true });
+        }
+        setIsLoading(false);
+      } catch (err) {
+        console.error('FinanzasLayout: auth check error', err);
+        setIsLoading(false);
+        navigate('/login', { replace: true });
+      }
     };
     check();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => check());
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/finanzas');
+    navigate('/login');
   };
 
   if (isLoading) {
@@ -88,7 +65,7 @@ export default function FinanzasLayout() {
     );
   }
 
-  if (!authorized) return <FinanzasLogin />;
+  if (!authorized) return null;
 
   return (
     <div className="min-h-screen bg-background flex">

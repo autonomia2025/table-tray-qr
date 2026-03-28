@@ -37,11 +37,11 @@ interface AuditEntry {
 
 const ROLE_CONFIG: Record<string, { label: string; icon: any; color: string; panel: string }> = {
   superadmin: { label: 'Superadmin', icon: Shield, color: 'bg-secondary text-secondary-foreground', panel: '/superadmin' },
-  jefe_ventas: { label: 'Jefe de Ventas', icon: Users, color: 'bg-primary text-primary-foreground', panel: '/backoffice' },
-  vendedor: { label: 'Vendedor', icon: UserCheck, color: 'bg-primary/20 text-primary', panel: '/vendedor' },
-  finanzas: { label: 'Finanzas', icon: DollarSign, color: 'bg-muted text-muted-foreground', panel: '/finanzas' },
-  marketing: { label: 'Marketing', icon: Megaphone, color: 'bg-muted text-muted-foreground', panel: '#' },
-  customer_success: { label: 'Customer Success', icon: HeartPulse, color: 'bg-muted text-muted-foreground', panel: '#' },
+  jefe_ventas: { label: 'Jefe de Ventas', icon: Users, color: 'bg-primary text-primary-foreground', panel: '/jefe-ventas/dashboard' },
+  vendedor: { label: 'Vendedor', icon: UserCheck, color: 'bg-primary/20 text-primary', panel: '/vendedor/mi-dia' },
+  finanzas: { label: 'Finanzas', icon: DollarSign, color: 'bg-muted text-muted-foreground', panel: '/finanzas/revenue' },
+  marketing: { label: 'Marketing', icon: Megaphone, color: 'bg-muted text-muted-foreground', panel: '/jefe-ventas/dashboard' },
+  customer_success: { label: 'Customer Success', icon: HeartPulse, color: 'bg-muted text-muted-foreground', panel: '/jefe-ventas/dashboard' },
 };
 
 const ZONES = ['Barrio Italia', 'Ñuñoa', 'Lastarria', 'Providencia', 'Las Condes', 'Vitacura', 'Santiago Centro'];
@@ -82,7 +82,11 @@ export default function SAEquipoPage() {
   const [sellerStats, setSellerStats] = useState<Record<string, { leads: number; closes: number; visits: number }>>({});
 
   const fetchMembers = async () => {
-    const { data } = await supabase.from('backoffice_members').select('*').order('role');
+    const { data, error } = await supabase.from('backoffice_members').select('*').order('role');
+    if (error) {
+      console.error('Error fetching members:', error.message);
+      toast({ title: 'Error cargando equipo', description: error.message, variant: 'destructive' });
+    }
     setMembers((data || []) as Member[]);
     setLoading(false);
   };
@@ -99,7 +103,7 @@ export default function SAEquipoPage() {
       if (!l.assigned_seller_id) return;
       if (!stats[l.assigned_seller_id]) stats[l.assigned_seller_id] = { leads: 0, closes: 0, visits: 0 };
       stats[l.assigned_seller_id].leads++;
-      if (l.stage === 'cerrado') stats[l.assigned_seller_id].closes++;
+      if (l.stage === 'cerrado' || l.stage === 'cliente_pagando') stats[l.assigned_seller_id].closes++;
     });
     activities.forEach(a => {
       if (a.type !== 'visita') return;
@@ -115,6 +119,8 @@ export default function SAEquipoPage() {
 
   const impersonate = (member: Member) => {
     const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.vendedor;
+    // Store in sessionStorage for the target panel's context to pick up
+    sessionStorage.setItem('superadmin_impersonating', member.id);
     setImpersonating(member.user_id);
     navigate(config.panel);
   };
@@ -157,29 +163,41 @@ export default function SAEquipoPage() {
   const createMember = async () => {
     if (!newName.trim() || !newEmail.trim()) return;
     setCreating(true);
-    // Create invitation
-    const { data: inv, error } = await supabase.from('backoffice_invitations').insert({
-      role: newRole, zone: newZone || null,
-    }).select('token').single();
+    
+    try {
+      // Create invitation first
+      const { data: inv, error: invError } = await supabase.from('backoffice_invitations').insert({
+        role: newRole, zone: newZone || null,
+      }).select('token').maybeSingle();
 
-    if (error || !inv) {
-      toast({ title: 'Error', description: error?.message, variant: 'destructive' });
+      if (invError || !inv) {
+        toast({ title: 'Error al crear invitación', description: invError?.message, variant: 'destructive' });
+        setCreating(false);
+        return;
+      }
+
+      // Also create the member record
+      const { error: memberError } = await supabase.from('backoffice_members').insert({
+        name: newName.trim(), email: newEmail.trim(), role: newRole, zone: newZone || null, is_active: true,
+      });
+
+      if (memberError) {
+        toast({ title: 'Error al crear miembro', description: memberError.message, variant: 'destructive' });
+        setCreating(false);
+        return;
+      }
+
+      const link = `${window.location.origin}/backoffice/join/${inv.token}`;
+      setInviteLink(link);
+      toast({ title: 'Miembro creado e invitación generada' });
       setCreating(false);
-      return;
+      setCreateOpen(false);
+      setNewName(''); setNewEmail(''); setNewRole('vendedor'); setNewZone('');
+      fetchMembers();
+    } catch (err) {
+      toast({ title: 'Error inesperado', variant: 'destructive' });
+      setCreating(false);
     }
-
-    // Also create the member record
-    await supabase.from('backoffice_members').insert({
-      name: newName.trim(), email: newEmail.trim(), role: newRole, zone: newZone || null, is_active: true,
-    });
-
-    const link = `${window.location.origin}/backoffice/join/${inv.token}`;
-    setInviteLink(link);
-    toast({ title: 'Miembro creado e invitación generada' });
-    setCreating(false);
-    setCreateOpen(false);
-    setNewName(''); setNewEmail(''); setNewRole('vendedor'); setNewZone('');
-    fetchMembers();
   };
 
   if (loading) {
@@ -388,16 +406,13 @@ export default function SAEquipoPage() {
           {auditLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin" /></div>
           ) : auditLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground mt-6">Sin registros de auditoría</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">Sin registros de auditoría</p>
           ) : (
-            <div className="mt-4 space-y-3 max-h-[70vh] overflow-auto">
+            <div className="space-y-3 mt-4">
               {auditLogs.map(log => (
                 <div key={log.id} className="border-b border-border pb-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-foreground">{log.action}</span>
-                    <span className="text-xs text-muted-foreground">{log.created_at ? new Date(log.created_at).toLocaleString('es-CL') : ''}</span>
-                  </div>
-                  {log.entity_type && <p className="text-xs text-muted-foreground">{log.entity_type}</p>}
+                  <p className="text-sm font-medium text-foreground">{log.action}</p>
+                  <p className="text-xs text-muted-foreground">{log.entity_type} — {log.created_at ? new Date(log.created_at).toLocaleString('es-CL') : ''}</p>
                 </div>
               ))}
             </div>

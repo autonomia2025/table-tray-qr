@@ -1456,6 +1456,10 @@ export type Database = {
     }
     Functions: {
       get_tenant_id: { Args: never; Returns: string }
+      has_backoffice_role: {
+        Args: { _role: string; _user_id: string }
+        Returns: boolean
+      }
       has_staff_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean

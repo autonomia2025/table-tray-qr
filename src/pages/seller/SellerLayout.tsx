@@ -1,11 +1,9 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { CalendarCheck, ClipboardList, BarChart3, BookOpen, PlusCircle, LogIn, LogOut, DollarSign } from 'lucide-react';
+import { CalendarCheck, ClipboardList, BarChart3, BookOpen, PlusCircle, LogOut, DollarSign, Eye, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useSeller } from '@/contexts/SellerContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useState } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
@@ -17,48 +15,20 @@ const NAV_ITEMS = [
   { path: '/vendedor/recursos', icon: BookOpen, label: 'Recursos' },
 ];
 
-function SellerLogin() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    setLoading(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Tablio</h1>
-          <Badge className="bg-primary text-primary-foreground mt-1">Vendedor</Badge>
-        </div>
-        <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <Input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-        {error && <p className="text-destructive text-sm">{error}</p>}
-        <Button type="submit" className="w-full gap-2" disabled={loading}>
-          <LogIn className="w-4 h-4" />
-          {loading ? 'Ingresando...' : 'Ingresar'}
-        </Button>
-      </form>
-    </div>
-  );
-}
-
 export default function SellerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { seller, isLoading, isAuthenticated } = useSeller();
+  const { seller, isLoading, isAuthenticated, impersonatingId } = useSeller();
 
   const handleLogout = async () => {
+    sessionStorage.removeItem('superadmin_impersonating');
     await supabase.auth.signOut();
-    navigate('/vendedor');
+    navigate('/login');
+  };
+
+  const exitImpersonation = () => {
+    sessionStorage.removeItem('superadmin_impersonating');
+    navigate('/superadmin/equipo');
   };
 
   if (isLoading) {
@@ -70,11 +40,23 @@ export default function SellerLayout() {
   }
 
   if (!isAuthenticated) {
-    return <SellerLogin />;
+    navigate('/login');
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Impersonation banner */}
+      {impersonatingId && (
+        <div className="bg-amber-500 text-black text-center py-1.5 text-sm font-medium flex items-center justify-center gap-2 shrink-0">
+          <Eye className="w-4 h-4" />
+          VISTA PREVIA
+          <Button variant="ghost" size="sm" onClick={exitImpersonation} className="h-6 text-black hover:bg-amber-600 gap-1 ml-2">
+            <X className="w-3 h-3" />Salir
+          </Button>
+        </div>
+      )}
+
       {/* Top header - compact */}
       <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-2">

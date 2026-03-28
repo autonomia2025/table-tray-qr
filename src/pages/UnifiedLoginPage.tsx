@@ -15,50 +15,58 @@ type ResolvedRole =
   | null;
 
 async function resolveRole(userId: string): Promise<ResolvedRole> {
-  // 1. Platform admin?
-  const { data: pa } = await supabase
-    .from("platform_admins")
-    .select("id")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (pa) return { type: "superadmin" };
+  try {
+    // 1. Platform admin?
+    const { data: pa } = await supabase
+      .from("platform_admins")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (pa) return { type: "superadmin" };
 
-  // 2. Backoffice member (vendedor, jefe_ventas, finanzas, etc.)?
-  const { data: bo } = await supabase
-    .from("backoffice_members")
-    .select("id, role")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (bo) return { type: "backoffice", role: bo.role };
-
-  // 3. Tenant member (admin de restaurante)?
-  const { data: tm } = await supabase
-    .from("tenant_members")
-    .select("tenant_id, role")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (tm) {
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("slug")
-      .eq("id", tm.tenant_id)
+    // 2. Backoffice member (vendedor, jefe_ventas, finanzas, etc.)?
+    const { data: bo, error: boError } = await supabase
+      .from("backoffice_members")
+      .select("id, role")
+      .eq("user_id", userId)
       .eq("is_active", true)
-      .single();
-    if (tenant) return { type: "admin", slug: tenant.slug };
-  }
+      .maybeSingle();
+    
+    if (boError) {
+      console.warn("resolveRole: Error querying backoffice_members", boError.message);
+    }
+    if (bo) return { type: "backoffice", role: bo.role };
 
-  // 4. Staff user (mozo)?
-  const { data: staff } = await supabase
-    .from("staff_users")
-    .select("id")
-    .eq("auth_user_id", userId)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (staff) return { type: "mozo" };
+    // 3. Tenant member (admin de restaurante)?
+    const { data: tm } = await supabase
+      .from("tenant_members")
+      .select("tenant_id, role")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (tm) {
+      const { data: tenant } = await supabase
+        .from("tenants")
+        .select("slug")
+        .eq("id", tm.tenant_id)
+        .eq("is_active", true)
+        .single();
+      if (tenant) return { type: "admin", slug: tenant.slug };
+    }
+
+    // 4. Staff user (mozo)?
+    const { data: staff } = await supabase
+      .from("staff_users")
+      .select("id")
+      .eq("auth_user_id", userId)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (staff) return { type: "mozo" };
+  } catch (err) {
+    console.error("resolveRole: Unexpected error", err);
+  }
 
   return null;
 }
@@ -72,25 +80,12 @@ function getRedirectPath(role: ResolvedRole): string {
       if (role.role === "vendedor") return "/vendedor/mi-dia";
       if (role.role === "jefe_ventas") return "/jefe-ventas/dashboard";
       if (role.role === "finanzas") return "/finanzas/revenue";
-      return "/backoffice/dashboard";
+      if (role.role === "marketing") return "/jefe-ventas/dashboard";
+      return "/jefe-ventas/dashboard";
     case "admin":
       return `/admin/${role.slug}/mesas`;
     case "mozo":
       return "/mozo/mesas";
-  }
-}
-
-function getRoleBadge(role: ResolvedRole): string {
-  if (!role) return "";
-  switch (role.type) {
-    case "superadmin": return "Superadmin";
-    case "backoffice":
-      if (role.role === "vendedor") return "Vendedor";
-      if (role.role === "jefe_ventas") return "Jefe de Ventas";
-      if (role.role === "finanzas") return "Finanzas";
-      return role.role;
-    case "admin": return "Admin Restaurante";
-    case "mozo": return "Mozo";
   }
 }
 
@@ -105,17 +100,28 @@ export default function UnifiedLoginPage() {
 
   // Auto-redirect if already logged in
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      // Safety: if checking takes >5s, stop and show form
+      setChecking(false);
+    }, 5000);
+
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const role = await resolveRole(session.user.id);
-        if (role) {
-          navigate(getRedirectPath(role), { replace: true });
-          return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const role = await resolveRole(session.user.id);
+          if (role) {
+            navigate(getRedirectPath(role), { replace: true });
+            return;
+          }
         }
+      } catch (err) {
+        console.error("Login auto-redirect error", err);
       }
       setChecking(false);
     })();
+
+    return () => clearTimeout(timeout);
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,29 +129,34 @@ export default function UnifiedLoginPage() {
     setError("");
     setSubmitting(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    if (authError || !data.user) {
-      setError(authError?.message === "Invalid login credentials"
-        ? "Email o contraseña incorrectos"
-        : authError?.message ?? "Error al iniciar sesión");
+      if (authError || !data.user) {
+        setError(authError?.message === "Invalid login credentials"
+          ? "Email o contraseña incorrectos"
+          : authError?.message ?? "Error al iniciar sesión");
+        setSubmitting(false);
+        return;
+      }
+
+      const role = await resolveRole(data.user.id);
+
+      if (!role) {
+        await supabase.auth.signOut();
+        setError("Esta cuenta no tiene acceso a ningún panel");
+        setSubmitting(false);
+        return;
+      }
+
+      navigate(getRedirectPath(role), { replace: true });
+    } catch (err) {
+      setError("Error de conexión. Intenta de nuevo.");
       setSubmitting(false);
-      return;
     }
-
-    const role = await resolveRole(data.user.id);
-
-    if (!role) {
-      await supabase.auth.signOut();
-      setError("Esta cuenta no tiene acceso a ningún panel");
-      setSubmitting(false);
-      return;
-    }
-
-    navigate(getRedirectPath(role), { replace: true });
   };
 
   if (checking) {
