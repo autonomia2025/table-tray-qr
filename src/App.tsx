@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import RestaurantSplash from "./pages/RestaurantSplash";
 import MenuPage from "./pages/MenuPage";
@@ -43,10 +42,6 @@ import SAConfigPage from "./pages/superadmin/SAConfigPage";
 import SAEquipoPage from "./pages/superadmin/SAEquipoPage";
 import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/admin/ResetPasswordPage";
-import BackofficeLayout from "./pages/backoffice/BackofficeLayout";
-import BackofficeDashboard from "./pages/backoffice/BackofficeDashboard";
-import BackofficeVendedores from "./pages/backoffice/BackofficeVendedores";
-import BackofficePipeline from "./pages/backoffice/BackofficePipeline";
 import BackofficeJoinPage from "./pages/backoffice/BackofficeJoinPage";
 import { SellerProvider } from "./contexts/SellerContext";
 import SellerLayout from "./pages/seller/SellerLayout";
@@ -107,8 +102,9 @@ const App = () => (
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/kds" element={<KDSPage />} />
+          {/* Mozo */}
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
-          <Route path="/mozo/login" element={<UnifiedLoginPage />} />
+          <Route path="/mozo/login" element={<MozoLoginPage />} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
             <Route index element={<Navigate to="/mozo/mesas" replace />} />
             <Route path="mesas" element={<MozoMesasPage />} />
@@ -116,6 +112,7 @@ const App = () => (
             <Route path="perfil" element={<MozoPerfilPage />} />
             <Route path="pedido-manual/:tableId" element={<MozoPedidoManualPage />} />
           </Route>
+          {/* Superadmin */}
           <Route path="/superadmin" element={<SuperAdminProvider><SuperAdminLayout /></SuperAdminProvider>}>
             <Route index element={<Navigate to="/superadmin/tenants" replace />} />
             <Route path="tenants" element={<SATenantsPage />} />
@@ -124,13 +121,11 @@ const App = () => (
             <Route path="flags" element={<SAFlagsPage />} />
             <Route path="config" element={<SAConfigPage />} />
           </Route>
+          {/* Backoffice join (kept for invitation links) */}
           <Route path="/backoffice/join/:token" element={<BackofficeJoinPage />} />
-          <Route path="/backoffice" element={<SuperAdminProvider><BackofficeLayout /></SuperAdminProvider>}>
-            <Route index element={<Navigate to="/backoffice/dashboard" replace />} />
-            <Route path="dashboard" element={<BackofficeDashboard />} />
-            <Route path="vendedores" element={<BackofficeVendedores />} />
-            <Route path="pipeline" element={<BackofficePipeline />} />
-          </Route>
+          {/* Redirect old backoffice routes to jefe-ventas */}
+          <Route path="/backoffice" element={<Navigate to="/jefe-ventas/dashboard" replace />} />
+          <Route path="/backoffice/*" element={<Navigate to="/jefe-ventas/dashboard" replace />} />
           {/* Seller panel - mobile-first */}
           <Route path="/vendedor" element={<SellerProvider><SellerLayout /></SellerProvider>}>
             <Route index element={<Navigate to="/vendedor/mi-dia" replace />} />

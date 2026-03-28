@@ -41,7 +41,6 @@ export default function MozoLayout() {
     if (!isLoggedIn) return;
 
     const fetchCounts = async () => {
-      // First get my table IDs (assigned to me or unassigned)
       const { data: tablesData } = await supabase
         .from('tables')
         .select('id, assigned_waiter_id')
@@ -83,6 +82,7 @@ export default function MozoLayout() {
     prevNotifCountRef.current = notifCount;
   }, [notifCount]);
 
+  // Fix: redirect to dedicated mozo login, not the unified one
   if (!isLoggedIn) return <Navigate to="/mozo/login" replace />;
 
   const tabs = [
@@ -100,7 +100,7 @@ export default function MozoLayout() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="h-14 border-b border-border bg-card flex items-center px-4 shrink-0">
-        <span className="text-sm font-semibold text-foreground truncate flex-1">MenuQR</span>
+        <span className="text-sm font-semibold text-foreground truncate flex-1">tablio</span>
         <span className="text-sm text-muted-foreground mr-3 truncate">{staffName}</span>
         <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-foreground">
           <LogOut className="w-5 h-5" />

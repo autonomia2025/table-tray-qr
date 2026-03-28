@@ -4,8 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Users, Loader2, Copy, Check } from 'lucide-react';
+import { Plus, Users, Loader2, Copy, Check, Trophy, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Member {
@@ -17,13 +19,7 @@ interface Member {
   is_active: boolean | null;
   role: string;
   created_at: string | null;
-}
-
-interface SellerStats {
-  totalLeads: number;
-  closedLeads: number;
-  pipelineLeads: number;
-  projectedCommission: number;
+  user_id: string | null;
 }
 
 export default function JVEquipoPage() {
@@ -36,23 +32,35 @@ export default function JVEquipoPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [membersRes, leadsRes] = await Promise.all([
-        supabase.from('backoffice_members').select('*').eq('role', 'vendedor').order('created_at', { ascending: false }),
-        supabase.from('leads').select('id, stage, assigned_seller_id, monthly_value'),
-      ]);
-      setMembers((membersRes.data || []) as Member[]);
-      setLeads(leadsRes.data || []);
+      try {
+        const [membersRes, leadsRes] = await Promise.all([
+          supabase.from('backoffice_members').select('*').eq('role', 'vendedor').order('created_at', { ascending: false }),
+          supabase.from('leads').select('id, stage, assigned_seller_id, monthly_value, updated_at, restaurant_name'),
+        ]);
+        setMembers((membersRes.data || []) as Member[]);
+        setLeads(leadsRes.data || []);
+      } catch (err) {
+        console.error('JVEquipo: load error', err);
+      }
       setLoading(false);
     };
     load();
   }, []);
 
-  const getStats = (sellerId: string): SellerStats => {
+  const getStats = (sellerId: string) => {
     const myLeads = leads.filter(l => l.assigned_seller_id === sellerId);
     const closed = myLeads.filter(l => l.stage === 'cliente_pagando').length;
     const pipeline = myLeads.filter(l => !['cliente_pagando', 'frio'].includes(l.stage)).length;
-    const commission = closed * 50000 + closed * 40000; // close + active recurring
-    return { totalLeads: myLeads.length, closedLeads: closed, pipelineLeads: pipeline, projectedCommission: commission };
+    const demos = myLeads.filter(l => ['demo_agendada', 'demo_hecha'].includes(l.stage)).length;
+    const commission = closed * 50000 + closed * 40000;
+    const conversion = myLeads.length > 0 ? ((closed / myLeads.length) * 100).toFixed(0) : '0';
+    // Stale: no update in 48h
+    const stale = myLeads.filter(l => {
+      if (l.stage === 'cliente_pagando' || l.stage === 'frio') return false;
+      if (!l.updated_at) return true;
+      return (Date.now() - new Date(l.updated_at).getTime()) / 86400000 > 2;
+    }).length;
+    return { totalLeads: myLeads.length, closedLeads: closed, pipelineLeads: pipeline, demos, projectedCommission: commission, conversion, stale };
   };
 
   const toggleActive = async (member: Member) => {
@@ -64,9 +72,9 @@ export default function JVEquipoPage() {
   const createInvite = async () => {
     const { data, error } = await supabase.from('backoffice_invitations').insert({
       role: 'vendedor',
-    }).select('token').single();
+    }).select('token').maybeSingle();
 
-    if (error) { toast.error(error.message); return; }
+    if (error || !data) { toast.error(error?.message || 'Error al crear invitación'); return; }
     const link = `${window.location.origin}/backoffice/join/${data.token}`;
     setInviteLink(link);
   };
@@ -78,10 +86,16 @@ export default function JVEquipoPage() {
     toast.success('Link copiado');
   };
 
+  // Ranking
+  const ranking = members
+    .filter(m => !!m.is_active)
+    .map(m => ({ ...m, stats: getStats(m.id) }))
+    .sort((a, b) => b.stats.closedLeads - a.stats.closedLeads || Number(b.stats.conversion) - Number(a.stats.conversion));
+
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <div className="p-6 space-y-6 max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Equipo de ventas</h1>
@@ -106,56 +120,92 @@ export default function JVEquipoPage() {
         </Card>
       )}
 
-      {/* Team table */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="pb-3 font-medium text-muted-foreground">Vendedor</th>
-                  <th className="pb-3 font-medium text-muted-foreground">Zona</th>
-                  <th className="pb-3 font-medium text-muted-foreground text-center">Leads</th>
-                  <th className="pb-3 font-medium text-muted-foreground text-center">Cierres</th>
-                  <th className="pb-3 font-medium text-muted-foreground text-center">Pipeline</th>
-                  <th className="pb-3 font-medium text-muted-foreground text-right">Comisión proj.</th>
-                  <th className="pb-3 font-medium text-muted-foreground text-center">Activo</th>
-                  <th className="pb-3 font-medium text-muted-foreground"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map(m => {
-                  const stats = getStats(m.id);
-                  return (
-                    <tr key={m.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="py-3">
-                        <p className="font-medium text-foreground">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.email}</p>
-                      </td>
-                      <td className="py-3">
-                        <Badge variant="outline" className="text-xs">{m.zone || 'Sin zona'}</Badge>
-                      </td>
-                      <td className="py-3 text-center text-foreground">{stats.totalLeads}</td>
-                      <td className="py-3 text-center font-semibold text-primary">{stats.closedLeads}</td>
-                      <td className="py-3 text-center text-foreground">{stats.pipelineLeads}</td>
-                      <td className="py-3 text-right font-medium text-foreground">${stats.projectedCommission.toLocaleString('es-CL')}</td>
-                      <td className="py-3 text-center">
-                        <Switch checked={!!m.is_active} onCheckedChange={() => toggleActive(m)} />
-                      </td>
-                      <td className="py-3">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedSeller(m)}>Ver</Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {members.length === 0 && (
-                  <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">Sin vendedores. Invita al primero.</td></tr>
-                )}
-              </tbody>
-            </table>
+      <Tabs defaultValue="team">
+        <TabsList>
+          <TabsTrigger value="team">Equipo</TabsTrigger>
+          <TabsTrigger value="ranking">🏆 Ranking</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="team">
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Zona</TableHead>
+                    <TableHead className="text-center">Leads</TableHead>
+                    <TableHead className="text-center">Demos</TableHead>
+                    <TableHead className="text-center">Cierres</TableHead>
+                    <TableHead className="text-center">Conv.</TableHead>
+                    <TableHead className="text-center">⚠️</TableHead>
+                    <TableHead className="text-right">Comisión proj.</TableHead>
+                    <TableHead className="text-center">Activo</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map(m => {
+                    const stats = getStats(m.id);
+                    return (
+                      <TableRow key={m.id} className={!m.is_active ? 'opacity-50' : ''}>
+                        <TableCell>
+                          <p className="font-medium text-foreground">{m.name}</p>
+                          <p className="text-xs text-muted-foreground">{m.email}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{m.zone || 'Sin zona'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center text-foreground">{stats.totalLeads}</TableCell>
+                        <TableCell className="text-center text-foreground">{stats.demos}</TableCell>
+                        <TableCell className="text-center font-semibold text-primary">{stats.closedLeads}</TableCell>
+                        <TableCell className="text-center text-foreground">{stats.conversion}%</TableCell>
+                        <TableCell className="text-center">
+                          {stats.stale > 0 && <Badge variant="destructive" className="text-[10px]">{stats.stale}</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-foreground">${stats.projectedCommission.toLocaleString('es-CL')}</TableCell>
+                        <TableCell className="text-center">
+                          <Switch checked={!!m.is_active} onCheckedChange={() => toggleActive(m)} />
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedSeller(m)}>Ver</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {members.length === 0 && (
+                    <TableRow><TableCell colSpan={10} className="py-8 text-center text-muted-foreground">Sin vendedores. Invita al primero.</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ranking">
+          <div className="space-y-3">
+            {ranking.map((s, i) => (
+              <Card key={s.id} className={i === 0 ? 'border-primary/30 bg-primary/5' : ''}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-foreground font-bold text-lg shrink-0">
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground text-sm">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">{s.zone || 'Sin zona'}</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-center">
+                    <div><p className="text-lg font-bold text-foreground">{s.stats.closedLeads}</p><p className="text-[10px] text-muted-foreground">cierres</p></div>
+                    <div><p className="text-lg font-bold text-foreground">{s.stats.totalLeads}</p><p className="text-[10px] text-muted-foreground">leads</p></div>
+                    <div><p className="text-lg font-bold text-primary">{s.stats.conversion}%</p><p className="text-[10px] text-muted-foreground">conv.</p></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {ranking.length === 0 && <p className="text-center text-muted-foreground py-8">No hay vendedores activos</p>}
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Seller detail sheet */}
       <Sheet open={!!selectedSeller} onOpenChange={() => setSelectedSeller(null)}>
