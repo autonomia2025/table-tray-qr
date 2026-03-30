@@ -347,7 +347,10 @@ export default function MozoMesasPage() {
           const priority = getTablePriority(t, staffId);
           const isMine = t.assigned_waiter_id === staffId;
           const isOccupied = t.status === 'occupied' || t.status === 'waiting_bill';
+          const isFree = (t.status ?? 'free') === 'free';
+          const isUnassigned = !t.assigned_waiter_id;
           const styles = getPriorityStyles(priority);
+          const canTake = isUnassigned && (isFree || isOccupied);
 
           return (
             <div
@@ -382,8 +385,8 @@ export default function MozoMesasPage() {
                   <p className="text-sm font-bold text-foreground mb-1.5">{formatCLP(t.sessionTotal)}</p>
                 )}
 
-                {/* Primary action button */}
-                {priority === 4 && (
+                {/* Take table - available for ANY unassigned table */}
+                {canTake && (
                   <Button
                     size="sm"
                     className="w-full h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white"
@@ -393,7 +396,7 @@ export default function MozoMesasPage() {
                     {actionLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Tomar mesa →'}
                   </Button>
                 )}
-                {priority === 2 && (
+                {!canTake && priority === 2 && (
                   <Button
                     size="sm"
                     className="w-full h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
@@ -403,7 +406,7 @@ export default function MozoMesasPage() {
                     {actionLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Marcar entregado ✓'}
                   </Button>
                 )}
-                {priority === 3 && (
+                {!canTake && priority === 3 && (
                   <Button
                     size="sm"
                     className="w-full h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
