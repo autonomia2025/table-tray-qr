@@ -348,7 +348,6 @@ export default function MozoMesasPage() {
           const isMine = t.assigned_waiter_id === staffId;
           const isOccupied = t.status === 'occupied' || t.status === 'waiting_bill';
           const isFree = (t.status ?? 'free') === 'free';
-          const isMine = t.assigned_waiter_id === staffId;
           const isUnassigned = !t.assigned_waiter_id;
           const styles = getPriorityStyles(priority);
           const canTake = isUnassigned && (isFree || isOccupied);
