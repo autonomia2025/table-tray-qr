@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useWaiters } from '@/contexts/WaitersContext';
-import { LayoutGrid, Bell, User, LogOut } from 'lucide-react';
+import { LayoutGrid, Bell, User, LogOut, Loader2 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
