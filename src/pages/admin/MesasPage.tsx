@@ -193,21 +193,6 @@ export default function MesasPage() {
         </button>
       </div>
 
-      {/* Close table dialog */}
-      <Dialog open={!!closeTarget} onOpenChange={() => setCloseTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cerrar mesa {closeTarget?.number}</DialogTitle>
-            <DialogDescription>¿Deseas liberar esta mesa y cerrar la sesión activa?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCloseTarget(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleCloseTable} disabled={closing}>
-              {closing ? "Cerrando..." : "Cerrar mesa"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Create table dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
