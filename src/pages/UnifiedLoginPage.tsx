@@ -37,7 +37,7 @@ async function resolveRole(userId: string): Promise<ResolvedRole> {
     }
     if (bo) return { type: "backoffice", role: bo.role };
 
-    // 3. Tenant member (admin de restaurante)?
+    // 3. Tenant member (admin de restaurante o mozo)?
     const { data: tm } = await supabase
       .from("tenant_members")
       .select("tenant_id, role")
@@ -46,6 +46,9 @@ async function resolveRole(userId: string): Promise<ResolvedRole> {
       .limit(1)
       .maybeSingle();
     if (tm) {
+      // If role is waiter, redirect to mozo panel
+      if (tm.role === "waiter") return { type: "mozo" };
+      
       const { data: tenant } = await supabase
         .from("tenants")
         .select("slug")
