@@ -37,8 +37,6 @@ export default function MesasPage() {
   const { toast } = useToast();
   const [tables, setTables] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [closeTarget, setCloseTarget] = useState<TableRow | null>(null);
-  const [closing, setClosing] = useState(false);
 
   // Create table state
   const [showCreate, setShowCreate] = useState(false);
@@ -93,25 +91,6 @@ export default function MesasPage() {
     return () => { supabase.removeChannel(channel); };
   }, [branchId]);
 
-  const handleCloseTable = async () => {
-    if (!closeTarget) return;
-    setClosing(true);
-    try {
-      await supabase.from("tables").update({ status: "free" }).eq("id", closeTarget.id);
-      await supabase
-        .from("table_sessions")
-        .update({ is_active: false, closed_at: new Date().toISOString() } as any)
-        .eq("table_id", closeTarget.id)
-        .eq("is_active", true);
-      toast({ title: "Mesa cerrada", description: `Mesa ${closeTarget.number} liberada` });
-      setCloseTarget(null);
-      fetchTables();
-    } catch {
-      toast({ title: "Error", description: "No se pudo cerrar la mesa", variant: "destructive" });
-    } finally {
-      setClosing(false);
-    }
-  };
 
   const handleCreateTable = async () => {
     setCreating(true);
@@ -173,13 +152,12 @@ export default function MesasPage() {
           const s = STATUS_MAP[t.status ?? "free"] ?? STATUS_MAP.free;
           const isOccupied = t.status === "occupied" || t.status === "waiting_bill";
           return (
-            <button
+            <div
               key={t.id}
-              onClick={() => isOccupied ? setCloseTarget(t) : undefined}
               className={cn(
-                "rounded-xl p-5 text-left transition-all hover:shadow-lg border border-border",
+                "rounded-xl p-5 text-left transition-all border border-border",
                 s.bg,
-                isOccupied && "cursor-pointer ring-1 ring-orange-300 dark:ring-orange-700"
+                isOccupied && "ring-1 ring-orange-300 dark:ring-orange-700"
               )}
             >
               <div className="flex items-start justify-between">
@@ -199,7 +177,7 @@ export default function MesasPage() {
               {isOccupied && t.session_opened_at && (
                 <div className="text-xs text-muted-foreground mt-1">{minutesSince(t.session_opened_at)} min</div>
               )}
-            </button>
+            </div>
           );
         })}
 
@@ -215,21 +193,6 @@ export default function MesasPage() {
         </button>
       </div>
 
-      {/* Close table dialog */}
-      <Dialog open={!!closeTarget} onOpenChange={() => setCloseTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cerrar mesa {closeTarget?.number}</DialogTitle>
-            <DialogDescription>¿Deseas liberar esta mesa y cerrar la sesión activa?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCloseTarget(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleCloseTable} disabled={closing}>
-              {closing ? "Cerrando..." : "Cerrar mesa"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Create table dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
