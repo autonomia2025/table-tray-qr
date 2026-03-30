@@ -37,8 +37,6 @@ export default function MesasPage() {
   const { toast } = useToast();
   const [tables, setTables] = useState<TableRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [closeTarget, setCloseTarget] = useState<TableRow | null>(null);
-  const [closing, setClosing] = useState(false);
 
   // Create table state
   const [showCreate, setShowCreate] = useState(false);
