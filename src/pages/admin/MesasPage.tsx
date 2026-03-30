@@ -91,25 +91,6 @@ export default function MesasPage() {
     return () => { supabase.removeChannel(channel); };
   }, [branchId]);
 
-  const handleCloseTable = async () => {
-    if (!closeTarget) return;
-    setClosing(true);
-    try {
-      await supabase.from("tables").update({ status: "free" }).eq("id", closeTarget.id);
-      await supabase
-        .from("table_sessions")
-        .update({ is_active: false, closed_at: new Date().toISOString() } as any)
-        .eq("table_id", closeTarget.id)
-        .eq("is_active", true);
-      toast({ title: "Mesa cerrada", description: `Mesa ${closeTarget.number} liberada` });
-      setCloseTarget(null);
-      fetchTables();
-    } catch {
-      toast({ title: "Error", description: "No se pudo cerrar la mesa", variant: "destructive" });
-    } finally {
-      setClosing(false);
-    }
-  };
 
   const handleCreateTable = async () => {
     setCreating(true);
