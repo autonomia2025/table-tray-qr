@@ -400,21 +400,12 @@ export default function MozoNotificacionesPage() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="flex-1 h-8"
-                            disabled={actionLoading === bill.id}
-                            onClick={() => handleBillAttend(bill.id, group.tableId)}
-                          >
-                            {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '📋 En camino'}
-                          </Button>
-                          <Button
-                            size="sm"
                             variant="destructive"
                             className="flex-1 h-8"
                             disabled={actionLoading === bill.id}
                             onClick={() => handleBillClose(bill.id, group.tableId)}
                           >
-                            {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Cerrar mesa'}
+                            {actionLoading === bill.id ? <Loader2 className="w-3 h-3 animate-spin" /> : '✓ Cobrar y cerrar mesa'}
                           </Button>
                         </div>
                       </div>
