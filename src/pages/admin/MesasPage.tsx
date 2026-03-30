@@ -177,7 +177,7 @@ export default function MesasPage() {
               {isOccupied && t.session_opened_at && (
                 <div className="text-xs text-muted-foreground mt-1">{minutesSince(t.session_opened_at)} min</div>
               )}
-            </button>
+            </div>
           );
         })}
 
