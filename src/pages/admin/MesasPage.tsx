@@ -152,13 +152,12 @@ export default function MesasPage() {
           const s = STATUS_MAP[t.status ?? "free"] ?? STATUS_MAP.free;
           const isOccupied = t.status === "occupied" || t.status === "waiting_bill";
           return (
-            <button
+            <div
               key={t.id}
-              onClick={() => isOccupied ? setCloseTarget(t) : undefined}
               className={cn(
-                "rounded-xl p-5 text-left transition-all hover:shadow-lg border border-border",
+                "rounded-xl p-5 text-left transition-all border border-border",
                 s.bg,
-                isOccupied && "cursor-pointer ring-1 ring-orange-300 dark:ring-orange-700"
+                isOccupied && "ring-1 ring-orange-300 dark:ring-orange-700"
               )}
             >
               <div className="flex items-start justify-between">
