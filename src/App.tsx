@@ -104,7 +104,7 @@ const App = () => (
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
-          <Route path="/mozo/login" element={<MozoLoginPage />} />
+          <Route path="/mozo/login" element={<WaitersProvider><MozoLoginPage /></WaitersProvider>} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
             <Route index element={<Navigate to="/mozo/mesas" replace />} />
             <Route path="mesas" element={<MozoMesasPage />} />
