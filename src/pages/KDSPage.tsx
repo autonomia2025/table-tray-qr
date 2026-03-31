@@ -245,7 +245,7 @@ function OrderCard({
           <button
             onClick={() => onAction(order.id, "ready")}
             className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
-            style={{ backgroundColor: "#22C55E", minHeight: 56 }}
+            style={{ backgroundColor: "#1A6B45", minHeight: 56 }}
           >
             LISTO
           </button>
