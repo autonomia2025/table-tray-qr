@@ -107,8 +107,8 @@ export default function SellerMiDiaPage() {
 
   const goalItems = [
     { label: 'Visitas', current: weeklyStats.visits, target: goals.visits_goal, color: 'bg-primary' },
-    { label: 'Demos', current: weeklyStats.demos, target: goals.demos_goal, color: 'bg-blue-500' },
-    { label: 'Pilotos', current: weeklyStats.pilots, target: goals.pilots_goal, color: 'bg-emerald-500' },
+    { label: 'Demos', current: weeklyStats.demos, target: goals.demos_goal, color: 'bg-secondary' },
+    { label: 'Pilotos', current: weeklyStats.pilots, target: goals.pilots_goal, color: 'bg-[#1A6B45]' },
   ];
 
   return (
