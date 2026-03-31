@@ -389,7 +389,7 @@ export default function MozoMesasPage() {
                 {canTake && (
                   <Button
                     size="sm"
-                    className="w-full h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white"
+                    className="w-full h-8 text-xs bg-primary hover:bg-[#B83E10] text-white"
                     disabled={actionLoading === t.id}
                     onClick={(e) => { e.stopPropagation(); handleTakeTable(t.id); }}
                   >
