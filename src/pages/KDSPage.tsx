@@ -234,7 +234,7 @@ function OrderCard({
           <button
             onClick={() => onAction(order.id, "in_kitchen")}
             className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
-            style={{ backgroundColor: "#EF4444", minHeight: 56 }}
+            style={{ backgroundColor: "#E8531D", minHeight: 56 }}
           >
             ACEPTAR
           </button>
