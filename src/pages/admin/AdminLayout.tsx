@@ -101,7 +101,6 @@ export default function AdminLayout() {
                 "flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors",
                 active ? "text-primary" : "text-muted-foreground"
               )}
-              style={active ? { color: primaryColor } : undefined}
             >
               <item.icon className="h-5 w-5" />
               {item.label}
