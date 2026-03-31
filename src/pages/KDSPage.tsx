@@ -100,9 +100,9 @@ function formatTimer(seconds: number): string {
 }
 
 function getTimerColor(seconds: number): string {
-  if (seconds < 600) return "#22C55E";
-  if (seconds < 1200) return "#F59E0B";
-  return "#EF4444";
+  if (seconds < 600) return "#1A6B45";
+  if (seconds < 1200) return "#B87C10";
+  return "#C0280F";
 }
 
 /* ===================== COMPONENTS ===================== */
