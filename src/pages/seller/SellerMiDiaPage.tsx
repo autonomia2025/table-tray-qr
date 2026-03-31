@@ -107,8 +107,8 @@ export default function SellerMiDiaPage() {
 
   const goalItems = [
     { label: 'Visitas', current: weeklyStats.visits, target: goals.visits_goal, color: 'bg-primary' },
-    { label: 'Demos', current: weeklyStats.demos, target: goals.demos_goal, color: 'bg-blue-500' },
-    { label: 'Pilotos', current: weeklyStats.pilots, target: goals.pilots_goal, color: 'bg-emerald-500' },
+    { label: 'Demos', current: weeklyStats.demos, target: goals.demos_goal, color: 'bg-secondary' },
+    { label: 'Pilotos', current: weeklyStats.pilots, target: goals.pilots_goal, color: 'bg-[#1A6B45]' },
   ];
 
   return (
@@ -177,8 +177,8 @@ export default function SellerMiDiaPage() {
                     </div>
                     <Badge variant="outline" className={`shrink-0 text-[10px] ${
                       lead.temperature === 'caliente' ? 'border-destructive text-destructive' :
-                      lead.temperature === 'tibio' ? 'border-yellow-500 text-yellow-600' :
-                      'border-blue-400 text-blue-500'
+                      lead.temperature === 'tibio' ? 'border-[#B87C10] text-[#B87C10]' :
+                      'border-muted-foreground text-muted-foreground'
                     }`}>
                       {lead.temperature === 'caliente' ? '🔥' : lead.temperature === 'tibio' ? '🌤' : '❄️'} {lead.temperature}
                     </Badge>

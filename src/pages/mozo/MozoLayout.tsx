@@ -169,7 +169,7 @@ export default function MozoLayout() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="h-14 border-b border-border bg-card flex items-center px-4 shrink-0">
-        <span className="text-sm font-semibold text-foreground truncate flex-1">tablio</span>
+        <span className="text-sm font-extrabold text-foreground truncate flex-1">tablio<span className="text-primary">.</span></span>
         <span className="text-sm text-muted-foreground mr-3 truncate">{staffName}</span>
         <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-foreground">
           <LogOut className="w-5 h-5" />

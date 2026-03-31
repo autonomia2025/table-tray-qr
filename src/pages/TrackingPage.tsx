@@ -40,9 +40,9 @@ interface Order {
 
 const STATUS_MAP: Record<string, { label: string; sublabel: string; color: string; step: number }> = {
   confirmed: { label: "Recibido ✓", sublabel: "El cocinero lo verá en un momento", color: "text-muted-foreground", step: 0 },
-  in_kitchen: { label: "En cocina 🍳", sublabel: "Listo en aprox. 10-15 min", color: "text-orange-500", step: 1 },
-  ready: { label: "¡Listo para entregar! 🔔", sublabel: "El mozo lo trae ahora", color: "text-green-500", step: 2 },
-  delivered: { label: "Entregado ✓", sublabel: "", color: "text-green-700", step: 3 },
+  in_kitchen: { label: "En cocina 🍳", sublabel: "Listo en aprox. 10-15 min", color: "text-primary", step: 1 },
+  ready: { label: "¡Listo para entregar! 🔔", sublabel: "El mozo lo trae ahora", color: "text-[#1A6B45]", step: 2 },
+  delivered: { label: "Entregado ✓", sublabel: "", color: "text-[#1A6B45]", step: 3 },
   cancelled: { label: "Cancelado", sublabel: "", color: "text-destructive", step: -1 },
 };
 
@@ -778,7 +778,7 @@ export default function TrackingPage() {
         {billStatus && billStatus !== 'paid' && (
           <div className="mb-4">
             <div className={`w-full rounded-xl p-4 flex items-center gap-3 ${
-              billStatus === 'attending' ? 'bg-green-500' : 'bg-orange-500'
+              billStatus === 'attending' ? 'bg-[#1A6B45]' : 'bg-primary'
             }`}>
               <span className="text-2xl">{billStatus === 'attending' ? '🧑‍🍳' : '🧾'}</span>
               <div className="flex-1">

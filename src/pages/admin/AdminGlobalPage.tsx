@@ -62,7 +62,7 @@ export default function AdminGlobalPage() {
     <div className="flex h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <h1 className="text-xl font-bold text-foreground">MenuQR Admin</h1>
+          <h1 className="text-xl font-extrabold text-foreground">tablio<span className="text-primary">.</span></h1>
           <p className="text-sm text-muted-foreground">Ingresa el slug de tu restaurante</p>
         </CardHeader>
         <CardContent>

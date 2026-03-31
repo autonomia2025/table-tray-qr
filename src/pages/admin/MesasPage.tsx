@@ -22,9 +22,9 @@ interface TableRow {
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  free: { label: "Libre", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-800 dark:text-green-300" },
-  occupied: { label: "Ocupada", bg: "bg-orange-100 dark:bg-orange-900/30", text: "text-orange-800 dark:text-orange-300" },
-  waiting_bill: { label: "Esperando cuenta", bg: "bg-red-100 dark:bg-red-900/30", text: "text-red-800 dark:text-red-300" },
+  free: { label: "Libre", bg: "bg-[#E8F5EE]", text: "text-[#1A6B45]" },
+  occupied: { label: "Ocupada", bg: "bg-accent", text: "text-accent-foreground" },
+  waiting_bill: { label: "Esperando cuenta", bg: "bg-[#FDE8E8]", text: "text-[#C0280F]" },
   reserved: { label: "Reservada", bg: "bg-muted", text: "text-muted-foreground" },
 };
 

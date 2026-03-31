@@ -76,7 +76,7 @@ export default function MozoLoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-2 pb-2">
-          <h1 className="text-2xl font-bold text-foreground">MenuQR Mozo</h1>
+          <h1 className="text-2xl font-extrabold text-foreground">tablio<span className="text-primary">.</span> Mozo</h1>
           <p className="text-sm text-muted-foreground">Ingresa con tu email y contraseña</p>
         </CardHeader>
         <CardContent>

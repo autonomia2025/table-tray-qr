@@ -100,9 +100,9 @@ function formatTimer(seconds: number): string {
 }
 
 function getTimerColor(seconds: number): string {
-  if (seconds < 600) return "#22C55E";
-  if (seconds < 1200) return "#F59E0B";
-  return "#EF4444";
+  if (seconds < 600) return "#1A6B45";
+  if (seconds < 1200) return "#B87C10";
+  return "#C0280F";
 }
 
 /* ===================== COMPONENTS ===================== */
@@ -234,7 +234,7 @@ function OrderCard({
           <button
             onClick={() => onAction(order.id, "in_kitchen")}
             className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
-            style={{ backgroundColor: "#EF4444", minHeight: 56 }}
+            style={{ backgroundColor: "#E8531D", minHeight: 56 }}
           >
             ACEPTAR
           </button>
@@ -245,7 +245,7 @@ function OrderCard({
           <button
             onClick={() => onAction(order.id, "ready")}
             className="w-full rounded-lg py-4 text-lg font-bold text-white transition-opacity active:opacity-80"
-            style={{ backgroundColor: "#22C55E", minHeight: 56 }}
+            style={{ backgroundColor: "#1A6B45", minHeight: 56 }}
           >
             LISTO
           </button>
