@@ -67,11 +67,11 @@ function playAlert() {
 
 function getPriorityStyles(priority: number): string {
   switch (priority) {
-    case 1: return 'bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 animate-pulse';
-    case 2: return 'bg-green-50 dark:bg-green-950/20 border-l-4 border-green-500 animate-pulse';
-    case 3: return 'bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 animate-pulse';
-    case 4: return 'bg-orange-50 dark:bg-orange-950/20 border-l-4 border-orange-400 animate-pulse';
-    case 5: return 'bg-blue-50 dark:bg-blue-950/20 border-l-4 border-blue-400';
+    case 1: return 'bg-[#FDE8E8] dark:bg-[#C0280F]/10 border-l-4 border-[#C0280F] animate-pulse';
+    case 2: return 'bg-[#E8F5EE] dark:bg-[#1A6B45]/10 border-l-4 border-[#1A6B45] animate-pulse';
+    case 3: return 'bg-[#FEF0E8] dark:bg-[#B87C10]/10 border-l-4 border-[#B87C10] animate-pulse';
+    case 4: return 'bg-accent dark:bg-accent border-l-4 border-primary animate-pulse';
+    case 5: return 'bg-muted dark:bg-muted border-l-4 border-border';
     case 6: return 'bg-card border-l-4 border-border opacity-60';
     default: return 'bg-card border border-border opacity-40';
   }
