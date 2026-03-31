@@ -36,8 +36,8 @@ export default function AdminLayout() {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 flex-col border-r border-border bg-card">
         <div className="p-4 border-b border-border">
-          <h1 className="font-bold text-lg text-foreground truncate">{tenantName}</h1>
-          <p className="text-xs text-muted-foreground truncate">{branchName}</p>
+          <h1 className="font-extrabold text-lg text-foreground truncate">tablio<span className="text-primary">.</span></h1>
+          <p className="text-xs text-muted-foreground truncate">{tenantName} · {branchName}</p>
         </div>
         <nav className="flex-1 p-2 space-y-1">
           {NAV_ITEMS.map((item) => {
