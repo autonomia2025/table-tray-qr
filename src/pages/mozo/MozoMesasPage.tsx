@@ -467,9 +467,9 @@ export default function MozoMesasPage() {
             <div className="space-y-2 mb-6 max-h-[40vh] overflow-auto">
               {orders.map(o => (
                 <div key={o.id} className={`rounded-lg p-3 border ${
-                  o.status === 'ready' ? 'bg-green-50 dark:bg-green-950/20 border-green-200' :
-                  o.status === 'in_kitchen' ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200' :
-                  o.status === 'confirmed' ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200' :
+                  o.status === 'ready' ? 'bg-[#E8F5EE] dark:bg-[#1A6B45]/10 border-[#1A6B45]/20' :
+                  o.status === 'in_kitchen' ? 'bg-[#FEF0E8] dark:bg-[#B87C10]/10 border-[#B87C10]/20' :
+                  o.status === 'confirmed' ? 'bg-accent dark:bg-accent border-primary/20' :
                   'bg-muted/30 border-border'
                 }`}>
                   <div className="flex items-center justify-between mb-1.5">

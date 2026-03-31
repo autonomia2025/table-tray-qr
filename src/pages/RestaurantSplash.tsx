@@ -207,7 +207,7 @@ export default function RestaurantSplash() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
       >
-        powered by <span className="font-bold tracking-normal">MenuQR</span>
+        powered by <span className="font-bold tracking-normal">tablio.</span>
       </motion.div>
     </div>
   );

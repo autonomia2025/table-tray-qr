@@ -778,7 +778,7 @@ export default function TrackingPage() {
         {billStatus && billStatus !== 'paid' && (
           <div className="mb-4">
             <div className={`w-full rounded-xl p-4 flex items-center gap-3 ${
-              billStatus === 'attending' ? 'bg-green-500' : 'bg-orange-500'
+              billStatus === 'attending' ? 'bg-[#1A6B45]' : 'bg-primary'
             }`}>
               <span className="text-2xl">{billStatus === 'attending' ? '🧑‍🍳' : '🧾'}</span>
               <div className="flex-1">

@@ -222,9 +222,9 @@ export default function BackofficePipeline() {
   const getSellerName = (id: string | null) => sellers.find(s => s.id === id)?.name || '';
 
   const tempColor = (t: string | null) => {
-    if (t === 'caliente') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-    if (t === 'frio') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+    if (t === 'caliente') return 'bg-[#FDE8E8] text-[#C0280F] dark:bg-[#C0280F]/10 dark:text-[#C0280F]';
+    if (t === 'frio') return 'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground';
+    return 'bg-[#FEF0E8] text-[#B87C10] dark:bg-[#B87C10]/10 dark:text-[#B87C10]';
   };
 
   const leadActivities = detailLead ? activities.filter(a => a.lead_id === detailLead.id) : [];

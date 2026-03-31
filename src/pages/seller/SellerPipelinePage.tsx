@@ -179,8 +179,8 @@ export default function SellerPipelinePage() {
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className={`text-[10px] ${
                             lead.temperature === 'caliente' ? 'border-destructive text-destructive' :
-                            lead.temperature === 'tibio' ? 'border-yellow-500 text-yellow-600' :
-                            'border-blue-400 text-blue-500'
+                            lead.temperature === 'tibio' ? 'border-[#B87C10] text-[#B87C10]' :
+                            'border-muted-foreground text-muted-foreground'
                           }`}>
                             {lead.temperature === 'caliente' ? '🔥' : lead.temperature === 'tibio' ? '🌤' : '❄️'}
                           </Badge>

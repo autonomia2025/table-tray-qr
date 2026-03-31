@@ -47,12 +47,11 @@ export default function AdminLayout() {
                 key={item.path}
                 onClick={() => item.external ? window.open(item.path, '_blank') : navigate(item.path)}
                 className={cn(
-                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   active
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
-                style={active ? { backgroundColor: primaryColor } : undefined}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}

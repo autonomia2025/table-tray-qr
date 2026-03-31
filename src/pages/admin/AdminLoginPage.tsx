@@ -88,7 +88,7 @@ export default function AdminLoginPage() {
     <div className="flex h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-2 pb-2">
-          <h1 className="text-xl font-bold text-foreground">MenuQR Admin</h1>
+          <h1 className="text-xl font-extrabold text-foreground">tablio<span className="text-primary">.</span></h1>
           <p className="text-sm text-muted-foreground">Ingresa con tu cuenta</p>
         </CardHeader>
         <CardContent>
