@@ -421,6 +421,46 @@ export default function SATenantsPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Usuarios del tenant */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Usuarios ({tenantUsers.length})</h4>
+                  <span className="text-[10px] text-muted-foreground">Contraseñas no visibles</span>
+                </div>
+                {usersLoading ? (
+                  <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin" /></div>
+                ) : usersError ? (
+                  <p className="text-sm text-destructive">{usersError}</p>
+                ) : tenantUsers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Sin usuarios registrados</p>
+                ) : (
+                  <div className="divide-y divide-border rounded-lg border border-border">
+                    {tenantUsers.map(u => (
+                      <div key={`${u.source}-${u.id}`} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {u.email ?? u.name ?? 'Sin email'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {u.name && u.email ? `${u.name} · ` : ''}
+                            {u.last_sign_in_at
+                              ? `Último acceso ${new Date(u.last_sign_in_at).toLocaleDateString('es-CL')}`
+                              : 'Sin accesos'}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px]">{ROLE_LABELS[u.role] ?? u.role}</Badge>
+                          <Badge variant={u.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                            {u.is_active ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-muted/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-foreground">{detail.totalOrders}</p>
