@@ -82,6 +82,10 @@ export default function SATenantsPage() {
   const [detail, setDetail] = useState<TenantDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
