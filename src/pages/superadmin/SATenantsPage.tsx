@@ -32,11 +32,31 @@ interface TenantRow {
   zone: string | null;
 }
 
+interface TenantUser {
+  id: string;
+  source: 'tenant_member' | 'staff_user';
+  name: string | null;
+  email: string | null;
+  role: string;
+  is_active: boolean | null;
+  last_sign_in_at: string | null;
+}
+
 interface TenantDetail {
   branches: { id: string; name: string; is_open: boolean | null }[];
   totalOrders: number;
   lastOrder: string | null;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Dueño',
+  admin: 'Administrador',
+  manager: 'Encargado',
+  waiter: 'Mozo',
+  kitchen: 'Cocina',
+  cashier: 'Caja',
+};
+
 
 const HEALTH_CONFIG = {
   healthy: { emoji: '🟢', label: 'Saludable', color: 'text-emerald-600' },
