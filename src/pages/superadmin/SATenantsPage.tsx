@@ -179,8 +179,22 @@ export default function SATenantsPage() {
     toast({ title: `${tenant.name} ${!tenant.is_active ? 'activado' : 'desactivado'}` });
   };
 
+  const fetchTenantUsers = async (tenantId: string) => {
+    setUsersLoading(true); setUsersError(''); setTenantUsers([]);
+    const { data, error } = await supabase.functions.invoke('list-tenant-users', {
+      body: { tenant_id: tenantId },
+    });
+    if (error || data?.error) {
+      setUsersError(data?.error || error?.message || 'No se pudieron cargar los usuarios');
+    } else {
+      setTenantUsers((data?.users ?? []) as TenantUser[]);
+    }
+    setUsersLoading(false);
+  };
+
   const openDetail = async (tenant: TenantRow) => {
     setSelectedTenant(tenant); setSheetOpen(true); setDetailLoading(true);
+    fetchTenantUsers(tenant.id);
     const [branchesRes, ordersRes, lastRes] = await Promise.all([
       supabase.from('branches').select('id, name, is_open').eq('tenant_id', tenant.id),
       supabase.from('orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
@@ -188,6 +202,7 @@ export default function SATenantsPage() {
     ]);
     setDetail({ branches: branchesRes.data ?? [], totalOrders: ordersRes.count ?? 0, lastOrder: lastRes.data?.[0]?.confirmed_at ?? null });
     setDetailLoading(false);
+
   };
 
   const impersonate = async (tenantId: string) => {
