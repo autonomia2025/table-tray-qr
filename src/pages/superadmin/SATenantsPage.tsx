@@ -399,7 +399,7 @@ export default function SATenantsPage() {
 
       {/* Detail sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
+        <SheetContent className="overflow-y-auto">
           <SheetHeader><SheetTitle>{selectedTenant?.name}</SheetTitle></SheetHeader>
           {detailLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin" /></div>
