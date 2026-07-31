@@ -32,11 +32,31 @@ interface TenantRow {
   zone: string | null;
 }
 
+interface TenantUser {
+  id: string;
+  source: 'tenant_member' | 'staff_user';
+  name: string | null;
+  email: string | null;
+  role: string;
+  is_active: boolean | null;
+  last_sign_in_at: string | null;
+}
+
 interface TenantDetail {
   branches: { id: string; name: string; is_open: boolean | null }[];
   totalOrders: number;
   lastOrder: string | null;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Dueño',
+  admin: 'Administrador',
+  manager: 'Encargado',
+  waiter: 'Mozo',
+  kitchen: 'Cocina',
+  cashier: 'Caja',
+};
+
 
 const HEALTH_CONFIG = {
   healthy: { emoji: '🟢', label: 'Saludable', color: 'text-emerald-600' },
@@ -62,6 +82,10 @@ export default function SATenantsPage() {
   const [detail, setDetail] = useState<TenantDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState('');
+
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,8 +179,22 @@ export default function SATenantsPage() {
     toast({ title: `${tenant.name} ${!tenant.is_active ? 'activado' : 'desactivado'}` });
   };
 
+  const fetchTenantUsers = async (tenantId: string) => {
+    setUsersLoading(true); setUsersError(''); setTenantUsers([]);
+    const { data, error } = await supabase.functions.invoke('list-tenant-users', {
+      body: { tenant_id: tenantId },
+    });
+    if (error || data?.error) {
+      setUsersError(data?.error || error?.message || 'No se pudieron cargar los usuarios');
+    } else {
+      setTenantUsers((data?.users ?? []) as TenantUser[]);
+    }
+    setUsersLoading(false);
+  };
+
   const openDetail = async (tenant: TenantRow) => {
     setSelectedTenant(tenant); setSheetOpen(true); setDetailLoading(true);
+    fetchTenantUsers(tenant.id);
     const [branchesRes, ordersRes, lastRes] = await Promise.all([
       supabase.from('branches').select('id, name, is_open').eq('tenant_id', tenant.id),
       supabase.from('orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
@@ -164,6 +202,7 @@ export default function SATenantsPage() {
     ]);
     setDetail({ branches: branchesRes.data ?? [], totalOrders: ordersRes.count ?? 0, lastOrder: lastRes.data?.[0]?.confirmed_at ?? null });
     setDetailLoading(false);
+
   };
 
   const impersonate = async (tenantId: string) => {
@@ -360,7 +399,7 @@ export default function SATenantsPage() {
 
       {/* Detail sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
+        <SheetContent className="overflow-y-auto">
           <SheetHeader><SheetTitle>{selectedTenant?.name}</SheetTitle></SheetHeader>
           {detailLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin" /></div>
@@ -382,6 +421,46 @@ export default function SATenantsPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Usuarios del tenant */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold">Usuarios ({tenantUsers.length})</h4>
+                  <span className="text-[10px] text-muted-foreground">Contraseñas no visibles</span>
+                </div>
+                {usersLoading ? (
+                  <div className="flex justify-center py-4"><Loader2 className="w-4 h-4 animate-spin" /></div>
+                ) : usersError ? (
+                  <p className="text-sm text-destructive">{usersError}</p>
+                ) : tenantUsers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Sin usuarios registrados</p>
+                ) : (
+                  <div className="divide-y divide-border rounded-lg border border-border">
+                    {tenantUsers.map(u => (
+                      <div key={`${u.source}-${u.id}`} className="flex items-center justify-between gap-3 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {u.email ?? u.name ?? 'Sin email'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {u.name && u.email ? `${u.name} · ` : ''}
+                            {u.last_sign_in_at
+                              ? `Último acceso ${new Date(u.last_sign_in_at).toLocaleDateString('es-CL')}`
+                              : 'Sin accesos'}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px]">{ROLE_LABELS[u.role] ?? u.role}</Badge>
+                          <Badge variant={u.is_active ? 'default' : 'secondary'} className="text-[10px]">
+                            {u.is_active ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-muted/50 rounded-lg p-3 text-center">
                   <p className="text-2xl font-bold text-foreground">{detail.totalOrders}</p>
