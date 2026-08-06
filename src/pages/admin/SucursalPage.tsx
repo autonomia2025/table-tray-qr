@@ -26,7 +26,7 @@ export default function SucursalPage() {
   const { toast } = useToast();
 
   const [tenantForm, setTenantForm] = useState({ name: "", primary_color: "#E8531D", logo_url: "", cover_image_url: "", welcome_message: "" });
-  const [branchForm, setBranchForm] = useState({ name: "", is_open: true });
+  const [branchForm, setBranchForm] = useState({ name: "", is_open: true, payment_mode: "open_tab" });
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,7 +40,7 @@ export default function SucursalPage() {
     async function load() {
       const [{ data: tenant }, { data: branch }, { data: tabs }] = await Promise.all([
         supabase.from("tenants").select("name, primary_color, logo_url, cover_image_url, welcome_message").eq("id", tenantId).single(),
-        supabase.from("branches").select("name, is_open").eq("id", branchId).single(),
+        supabase.from("branches").select("name, is_open, payment_mode").eq("id", branchId).single(),
         supabase.from("tables").select("id, number, name, capacity").eq("branch_id", branchId).order("number"),
       ]);
       if (tenant) setTenantForm({
@@ -48,7 +48,7 @@ export default function SucursalPage() {
         logo_url: tenant.logo_url ?? "", cover_image_url: tenant.cover_image_url ?? "",
         welcome_message: tenant.welcome_message ?? "",
       });
-      if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true });
+      if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true, payment_mode: branch.payment_mode ?? "open_tab" });
       setTables(tabs ?? []);
       setLoading(false);
     }
@@ -64,8 +64,9 @@ export default function SucursalPage() {
         welcome_message: tenantForm.welcome_message || null,
       }).eq("id", tenantId),
       supabase.from("branches").update({
-        name: branchForm.name, is_open: branchForm.is_open,
+        name: branchForm.name, is_open: branchForm.is_open, payment_mode: branchForm.payment_mode,
       }).eq("id", branchId),
+
     ]);
     setSaving(false);
     toast({ title: "Cambios guardados" });
@@ -142,7 +143,31 @@ export default function SucursalPage() {
             <Switch checked={branchForm.is_open} onCheckedChange={(v) => setBranchForm((p) => ({ ...p, is_open: v }))} />
             <Label className="text-base font-semibold">{branchForm.is_open ? "Abierto" : "Cerrado"}</Label>
           </div>
+
+          <div>
+            <Label>Modo de cobro</Label>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {[
+                { value: "open_tab", title: "Cuenta abierta", desc: "Piden libremente y pagan al final." },
+                { value: "prepaid", title: "Prepago", desc: "Cada pedido se paga antes de ir a cocina." },
+              ].map((opt) => {
+                const active = branchForm.payment_mode === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setBranchForm((p) => ({ ...p, payment_mode: opt.value }))}
+                    className={`rounded-xl border-2 p-3 text-left transition-colors ${active ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
+                    <p className="text-sm font-semibold text-foreground">{opt.title}</p>
+                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </CardContent>
+
       </Card>
 
       <Button onClick={saveSettings} disabled={saving} className="mb-8 w-full md:w-auto">
