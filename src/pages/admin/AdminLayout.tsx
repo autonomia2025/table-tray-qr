@@ -94,8 +94,9 @@ export default function AdminLayout() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-card border-t border-border flex z-50">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((i) => ["Mesas", "Pedidos", "Menú", "Caja", "Lealtad"].includes(i.label)).map((item) => {
           const active = location.pathname.startsWith(item.path);
+
           return (
             <button
               key={item.path}
