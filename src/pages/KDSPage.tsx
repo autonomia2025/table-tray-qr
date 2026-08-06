@@ -809,11 +809,17 @@ function KDSBoard({ branchId }: { branchId: string }) {
         </div>
 
         <div className="flex items-center gap-3">
+          {pendingPayment > 0 && (
+            <span style={{ color: "#F59E0B", fontSize: 13, fontWeight: 700 }}>
+              ⏳ {pendingPayment} esperando pago
+            </span>
+          )}
           {deliveredToday > 0 && (
             <span style={{ color: "#22C55E", fontSize: 13, fontWeight: 700 }}>
               ✓ {deliveredToday} entregados
             </span>
           )}
+
           <span className="text-lg font-mono font-bold text-gray-300">{clock}</span>
         </div>
 
