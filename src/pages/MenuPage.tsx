@@ -9,6 +9,7 @@ import CategoryTabs from "@/components/menu/CategoryTabs";
 import MenuItemCard from "@/components/menu/MenuItemCard";
 import FloatingCartBar from "@/components/menu/FloatingCartBar";
 import MenuSkeleton from "@/components/menu/MenuSkeleton";
+import { useTableSession } from "@/hooks/useTableSession";
 
 /* ---------- types ---------- */
 interface MenuItem {
@@ -110,15 +111,8 @@ export default function MenuPage() {
   const totalItems = useCartStore((s) => s.getTotalItems());
   const totalPrice = useCartStore((s) => s.getTotalPrice());
 
-  // Read ?mesa= query param and store table number
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const mesa = params.get("mesa");
-    if (mesa) {
-      const num = parseInt(mesa, 10);
-      if (!isNaN(num)) setTableNumber(num);
-    }
-  }, [location.search, setTableNumber]);
+  // Un QR por mesa: ?t=token identifica la mesa y queda guardada en el dispositivo
+  const { table: activeTable, status: tableStatus } = useTableSession();
 
   // Resolve branchId if not in state
   const { data: resolvedIds } = useQuery({
@@ -138,8 +132,8 @@ export default function MenuPage() {
     staleTime: Infinity,
   });
 
-  const tenantId = tenantIdFromState || resolvedIds?.tenantId;
-  const branchId = branchIdFromState || resolvedIds?.branchId;
+  const tenantId = activeTable?.tenant_id || tenantIdFromState || resolvedIds?.tenantId;
+  const branchId = activeTable?.branch_id || branchIdFromState || resolvedIds?.branchId;
 
   // Set cart context once
   useEffect(() => {
@@ -268,7 +262,12 @@ export default function MenuPage() {
                 {tenant.name.charAt(0)}
               </div>
             )}
-            <span className="text-sm font-bold text-foreground truncate max-w-[160px]">{tenant.name}</span>
+            <div className="flex min-w-0 flex-col items-center">
+              <span className="text-sm font-bold text-foreground truncate max-w-[160px]">{tenant.name}</span>
+              {activeTable && (
+                <span className="text-[11px] font-semibold text-muted-foreground">Mesa {activeTable.number}</span>
+              )}
+            </div>
             <div className="flex items-center gap-1">
               <button onClick={() => setSearchOpen(true)} className="relative flex h-9 w-9 items-center justify-center rounded-full text-foreground">
                 <Search className="h-5 w-5" />
@@ -282,6 +281,13 @@ export default function MenuPage() {
           </>
         )}
       </header>
+
+      {tableStatus === "invalid" && (
+        <div className="mx-4 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          No pudimos identificar tu mesa con ese código. Escanea nuevamente el QR que está sobre la mesa para poder
+          pedir y pagar.
+        </div>
+      )}
 
       {/* Category tabs */}
       {!searchOpen && categories && categories.length > 0 && (

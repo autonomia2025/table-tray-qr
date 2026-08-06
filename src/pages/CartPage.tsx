@@ -38,7 +38,8 @@ export default function CartPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleConfirm = () => {
-    navigate(`/${slug}/confirm`, { state: { orderNotes: orderNotes.trim(), autoScan: true } });
+    const t = useCartStore.getState().tableToken;
+    navigate(`/${slug}/checkout${t ? `?t=${t}` : ""}`, { state: { orderNotes: orderNotes.trim() } });
   };
 
   return (
@@ -213,7 +214,7 @@ export default function CartPage() {
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white shadow transition-transform active:scale-[0.97]"
             style={{ backgroundColor: primaryColor, minHeight: "3.5rem" }}
           >
-            Confirmar pedido <ArrowRight className="h-5 w-5" />
+            Ir a pagar <ArrowRight className="h-5 w-5" />
           </button>
         </div>
       )}

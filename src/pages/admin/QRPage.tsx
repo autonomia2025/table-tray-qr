@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useToast } from "@/hooks/use-toast";
@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { QRCodeCanvas } from "qrcode.react";
-import { Download, Printer, QrCode, UtensilsCrossed, CreditCard } from "lucide-react";
+import { Download, Printer, QrCode, AlertTriangle } from "lucide-react";
 
 interface TableRow2 {
   id: string;
   number: number;
   name: string | null;
+  zone: string | null;
   status: string | null;
   qr_token: string | null;
 }
@@ -22,27 +23,36 @@ export default function QRPage() {
   const { branchId, slug } = useAdmin();
   const { toast } = useToast();
   const [tables, setTables] = useState<TableRow2[]>([]);
+  const [tenantName, setTenantName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedTable, setSelectedTable] = useState<TableRow2 | null>(null);
-  const generalQrRef = useRef<HTMLDivElement>(null);
-  const cardQrRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<TableRow2 | null>(null);
+  const dialogQrRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
-  const menuUrl = `${window.location.origin}/${slug}/menu`;
+  const tableUrl = (token: string) => `${window.location.origin}/${slug}/menu?t=${token}`;
 
-  const fetchTables = async () => {
-    const { data } = await supabase
-      .from("tables")
-      .select("id, number, name, status, qr_token")
-      .eq("branch_id", branchId)
-      .order("number");
-    setTables(data ?? []);
-    setLoading(false);
-  };
+  useEffect(() => {
+    if (!branchId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("tables")
+        .select("id, number, name, zone, status, qr_token")
+        .eq("branch_id", branchId)
+        .order("number");
+      setTables(data ?? []);
+      setLoading(false);
+    })();
+  }, [branchId]);
 
-  useEffect(() => { fetchTables(); }, [branchId]);
+  useEffect(() => {
+    if (!slug) return;
+    (async () => {
+      const { data } = await supabase.from("tenants").select("name").eq("slug", slug).maybeSingle();
+      setTenantName(data?.name ?? "");
+    })();
+  }, [slug]);
 
-  const downloadQrFromRef = (ref: React.RefObject<HTMLDivElement>, filename: string) => {
-    const canvas = ref.current?.querySelector("canvas");
+  const downloadCanvas = (canvas: HTMLCanvasElement | null | undefined, filename: string) => {
     if (!canvas) return;
     canvas.toBlob((blob) => {
       if (!blob) return;
@@ -55,160 +65,162 @@ export default function QRPage() {
     });
   };
 
-  const downloadCardQr = () => {
-    const canvas = cardQrRef.current?.querySelector("canvas");
-    if (!canvas) return;
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `tarjeta-mesa-${selectedTable?.number}-qr.png`;
-      a.click();
-      URL.revokeObjectURL(url);
+  const downloadAll = () => {
+    const canvases = sheetRef.current?.querySelectorAll("canvas");
+    if (!canvases?.length) return;
+    withToken.forEach((t, i) => {
+      setTimeout(() => downloadCanvas(canvases[i] as HTMLCanvasElement, `qr-mesa-${t.number}.png`), i * 250);
     });
+    toast({ title: "Descargando QRs", description: `${withToken.length} imágenes` });
   };
 
-  const printAllCards = () => {
-    window.print();
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
-  if (loading) return <div className="flex justify-center py-12"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
-
-  const tablesWithToken = tables.filter((t) => t.qr_token);
+  const withToken = tables.filter((t) => t.qr_token);
+  const withoutToken = tables.filter((t) => !t.qr_token);
 
   return (
-    <div className="space-y-8">
-      <h2 className="text-2xl font-bold text-foreground">Códigos QR</h2>
+    <div className="space-y-6">
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #print-sheet, #print-sheet * { visibility: visible; }
+          #print-sheet { position: absolute; inset: 0; padding: 12mm; }
+          .qr-card { break-inside: avoid; page-break-inside: avoid; }
+        }
+      `}</style>
 
-      {/* ── QR MENÚ GENERAL ── */}
-      <Card className="border-primary/30">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <UtensilsCrossed className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">QR Menú General</CardTitle>
-          </div>
-          <CardDescription>
-            Este QR va <strong>pegado en cada mesa</strong>. Al escanearlo, el cliente accede al menú del restaurante. Es único para todas las mesas.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div ref={generalQrRef} className="bg-white rounded-xl p-4 shadow-sm border border-border">
-              <QRCodeCanvas value={menuUrl} size={200} level="H" includeMargin />
-            </div>
-            <div className="flex-1 space-y-3 text-center sm:text-left">
-              <p className="text-sm font-mono text-muted-foreground break-all bg-muted rounded-lg px-3 py-2">{menuUrl}</p>
-              <p className="text-sm text-muted-foreground">Imprime este QR y pégalo en todas las mesas de tu local. Los clientes podrán ver el menú escaneándolo.</p>
-              <div className="flex gap-2 justify-center sm:justify-start">
-                <Button variant="outline" size="sm" onClick={() => downloadQrFromRef(generalQrRef, `qr-menu-${slug}.png`)}>
-                  <Download className="h-4 w-4 mr-1" />Descargar PNG
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => window.print()}>
-                  <Printer className="h-4 w-4 mr-1" />Imprimir
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ── QR TARJETAS POR MESA ── */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">QR Tarjetas por Mesa</CardTitle>
-            </div>
-            {tablesWithToken.length > 0 && (
-              <Button variant="outline" size="sm" onClick={printAllCards}>
-                <Printer className="h-4 w-4 mr-1" />Imprimir todas
-              </Button>
-            )}
-          </div>
-          <CardDescription>
-            Cada mesa tiene un QR único en su <strong>tarjeta</strong>. Se usa para confirmar pedidos, llamar al mozo y pedir la cuenta. Se generan automáticamente al crear una mesa.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {tables.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <QrCode className="h-10 w-10 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">Aún no hay mesas. Crea una mesa en la sección <strong>Mesas</strong> y su QR tarjeta se generará automáticamente.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mesa</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Token</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tables.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-bold">{t.number}</TableCell>
-                    <TableCell>{t.name ?? "—"}</TableCell>
-                    <TableCell><Badge variant="outline">{t.status}</Badge></TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {t.qr_token ? t.qr_token.slice(0, 8) + "…" : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => setSelectedTable(t)} disabled={!t.qr_token}>
-                        <QrCode className="h-4 w-4 mr-1" />Ver QR
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Modal QR Tarjeta */}
-      <Dialog open={!!selectedTable} onOpenChange={() => setSelectedTable(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              QR Tarjeta · Mesa {selectedTable?.number}
-              {selectedTable?.name ? ` · ${selectedTable.name}` : ""}
-            </DialogTitle>
-          </DialogHeader>
-          <div ref={cardQrRef} className="flex flex-col items-center py-4">
-            <QRCodeCanvas value={selectedTable?.qr_token || ""} size={256} level="H" includeMargin />
-            <p className="mt-3 text-center text-sm font-semibold text-foreground">
-              Escanea para confirmar tu pedido ✅
-            </p>
-          </div>
-          <p className="text-center text-xs text-muted-foreground font-mono break-all">
-            {selectedTable?.qr_token}
+      <div className="flex flex-wrap items-start justify-between gap-3 no-print">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">QR por mesa</h1>
+          <p className="text-sm text-muted-foreground">
+            Un solo QR por mesa. El comensal escanea, pide y paga desde su teléfono.
           </p>
-          <div className="flex gap-2 justify-center mt-2">
-            <Button variant="outline" onClick={downloadCardQr}><Download className="h-4 w-4 mr-1" />Descargar PNG</Button>
-            <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4 mr-1" />Imprimir</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Print-all cards (hidden, visible only on print) */}
-      <div className="hidden print:block">
-        <style>{`@media print { body > *:not(.print-qr-grid) { display: none !important; } .print-qr-grid { display: grid !important; } }`}</style>
-        <div className="print-qr-grid grid grid-cols-3 gap-8 p-8">
-          {tablesWithToken.map((t) => (
-            <div key={t.id} className="flex flex-col items-center border border-border rounded-lg p-4 break-inside-avoid">
-              <QRCodeCanvas value={t.qr_token!} size={180} level="H" includeMargin />
-              <p className="mt-2 text-lg font-bold">Mesa {t.number}</p>
-              {t.name && <p className="text-sm text-muted-foreground">{t.name}</p>}
-              <p className="text-xs text-muted-foreground mt-1">Escanea para confirmar ✅</p>
-            </div>
-          ))}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadAll} disabled={!withToken.length}>
+            <Download className="mr-2 h-4 w-4" /> Descargar todos
+          </Button>
+          <Button onClick={() => window.print()} disabled={!withToken.length}>
+            <Printer className="mr-2 h-4 w-4" /> Imprimir tarjetas
+          </Button>
         </div>
       </div>
+
+      {withoutToken.length > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 no-print">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <p className="text-sm text-foreground">
+            {withoutToken.length} mesa(s) sin QR generado ({withoutToken.map((t) => t.number).join(", ")}). Vuelve a
+            guardarlas en Mesas para generar su código.
+          </p>
+        </div>
+      )}
+
+      <Card className="no-print">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <QrCode className="h-4 w-4" /> Mesas
+          </CardTitle>
+          <CardDescription>Cada QR abre el menú con la mesa ya identificada.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mesa</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Zona</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tables.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-bold">{t.number}</TableCell>
+                  <TableCell className="text-muted-foreground">{t.name || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{t.zone || "—"}</TableCell>
+                  <TableCell>
+                    {t.qr_token ? (
+                      <Badge variant="secondary">QR listo</Badge>
+                    ) : (
+                      <Badge variant="destructive">Sin QR</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="outline" disabled={!t.qr_token} onClick={() => setSelected(t)}>
+                      Ver QR
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {tables.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                    Aún no hay mesas creadas.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Hoja imprimible */}
+      <div id="print-sheet" ref={sheetRef} className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        {withToken.map((t) => (
+          <div
+            key={t.id}
+            className="qr-card flex flex-col items-center rounded-2xl border-2 border-dashed border-border bg-white p-5 text-center"
+          >
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">{tenantName}</p>
+            <p className="mt-1 text-2xl font-black text-neutral-900">Mesa {t.number}</p>
+            <div className="my-3">
+              <QRCodeCanvas value={tableUrl(t.qr_token!)} size={168} level="M" includeMargin />
+            </div>
+            <p className="text-[11px] font-semibold text-neutral-700">
+              Escanea, pide y paga desde tu teléfono
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Detalle */}
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mesa {selected?.number}</DialogTitle>
+          </DialogHeader>
+          {selected?.qr_token && (
+            <div className="flex flex-col items-center gap-4">
+              <div ref={dialogQrRef} className="rounded-xl bg-white p-4">
+                <QRCodeCanvas value={tableUrl(selected.qr_token)} size={220} level="M" includeMargin />
+              </div>
+              <p className="break-all text-center text-[11px] text-muted-foreground">
+                {tableUrl(selected.qr_token)}
+              </p>
+              <Button
+                className="w-full"
+                onClick={() =>
+                  downloadCanvas(
+                    dialogQrRef.current?.querySelector("canvas") as HTMLCanvasElement,
+                    `qr-mesa-${selected.number}.png`,
+                  )
+                }
+              >
+                <Download className="mr-2 h-4 w-4" /> Descargar PNG
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
