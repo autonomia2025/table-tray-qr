@@ -96,6 +96,9 @@ const App = () => (
               <Route path="sucursal" element={<SucursalPage />} />
               <Route path="pedidos" element={<PedidosPage />} />
               <Route path="reportes" element={<ReportesPage />} />
+              <Route path="caja" element={<CajaPage />} />
+              <Route path="lealtad" element={<LealtadPage />} />
+
               <Route path="soporte" element={<SoportePage />} />
             </Route>
           </Route>
@@ -106,6 +109,8 @@ const App = () => (
           <Route path="/:slug/confirm" element={<ConfirmPage />} />
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
+          <Route path="/:slug/pay" element={<PayPage />} />
+
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
