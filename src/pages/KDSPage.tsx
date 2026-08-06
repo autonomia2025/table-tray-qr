@@ -24,6 +24,7 @@ interface KDSOrder {
   notes: string | null;
   table_number: number;
   table_name: string | null;
+  payment_status: string;
   items: KDSOrderItem[];
 }
 
@@ -33,7 +34,9 @@ interface BranchInfo {
   restaurant_name: string;
   tenant_name: string;
   primary_color: string;
+  payment_mode: string;
 }
+
 
 interface RecentlyDeliveredEntry {
   id: string;
@@ -64,7 +67,7 @@ function playNewOrderSound() {
 async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
   const { data: o } = await supabase
     .from("orders")
-    .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id")
+    .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id, payment_status")
     .eq("id", orderId)
     .maybeSingle();
   if (!o) return null;
@@ -89,9 +92,11 @@ async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
     notes: o.notes,
     table_number: table?.number || 0,
     table_name: table?.name || null,
+    payment_status: o.payment_status || "unpaid",
     items: items || [],
   };
 }
+
 
 function formatTimer(seconds: number): string {
   const m = Math.floor(seconds / 60);
