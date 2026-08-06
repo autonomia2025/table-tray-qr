@@ -551,13 +551,22 @@ export default function BillPage() {
               )}
 
               <button
-                onClick={startScanning}
-                className="mx-auto flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.97]"
+                onClick={() => navigate(`/${slug}/pay${qs}`)}
+                className="mx-auto mb-3 flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.97]"
                 style={{ backgroundColor: primaryColor, minHeight: "3.5rem" }}
               >
-                <Camera className="h-5 w-5" />
-                Pedir la cuenta →
+                💳 Pagar desde el celular →
               </button>
+
+              <button
+                onClick={startScanning}
+                className="mx-auto flex items-center justify-center gap-2 rounded-2xl border-2 px-8 py-4 text-base font-semibold transition-transform active:scale-[0.97]"
+                style={{ borderColor: primaryColor, color: primaryColor, minHeight: "3.5rem" }}
+              >
+                <Camera className="h-5 w-5" />
+                Pedir la cuenta al mozo →
+              </button>
+
             </div>
           </motion.div>
         )}
