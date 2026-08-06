@@ -548,7 +548,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("branches")
-        .select("id, name, restaurant_id, tenant_id")
+        .select("id, name, restaurant_id, tenant_id, payment_mode")
         .eq("id", branchId)
         .maybeSingle();
       if (!data) return null;
@@ -571,7 +571,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
         restaurant_name: restaurant?.name || "",
         tenant_name: tenant?.name || "",
         primary_color: tenant?.primary_color || "#E8531D",
+        payment_mode: data.payment_mode || "open_tab",
       };
+
     },
     staleTime: Infinity,
   });
@@ -583,7 +585,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
       const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from("orders")
-        .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id")
+        .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id, payment_status")
         .eq("branch_id", branchId)
         .in("status", ["confirmed", "in_kitchen", "ready"])
         .gte("confirmed_at", fourHoursAgo)
@@ -621,7 +623,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
           notes: o.notes,
           table_number: t?.number || 0,
           table_name: t?.name || null,
+          payment_status: o.payment_status || "unpaid",
           items: itemsByOrder.get(o.id) || [],
+
         };
       });
     },
