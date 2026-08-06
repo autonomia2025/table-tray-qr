@@ -9,7 +9,7 @@ import RestaurantSplash from "./pages/RestaurantSplash";
 import MenuPage from "./pages/MenuPage";
 import ItemDetailPage from "./pages/ItemDetailPage";
 import CartPage from "./pages/CartPage";
-import ConfirmPage from "./pages/ConfirmPage";
+import CheckoutPage from "./pages/CheckoutPage";
 import TrackingPage from "./pages/TrackingPage";
 import BillPage from "./pages/BillPage";
 import PayPage from "./pages/PayPage";
@@ -106,7 +106,8 @@ const App = () => (
           <Route path="/:slug/menu" element={<MenuPage />} />
           <Route path="/:slug/item/:id" element={<ItemDetailPage />} />
           <Route path="/:slug/cart" element={<CartPage />} />
-          <Route path="/:slug/confirm" element={<ConfirmPage />} />
+          <Route path="/:slug/checkout" element={<CheckoutPage />} />
+          <Route path="/:slug/confirm" element={<Navigate to="../checkout" replace />} />
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/:slug/pay" element={<PayPage />} />
