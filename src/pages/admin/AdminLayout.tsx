@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset } from "lucide-react";
+import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ export default function AdminLayout() {
     { path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid, external: false },
     { path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList, external: false },
     { path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen, external: false },
+    { path: `/admin/${effectiveSlug}/caja`, label: "Caja", icon: Wallet, external: false },
+    { path: `/admin/${effectiveSlug}/lealtad`, label: "Lealtad", icon: Gift, external: false },
     { path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3, external: false },
+
     { path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users, external: false },
     { path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode, external: false },
     { path: `/kds?branch=${branchId}`, label: "KDS Cocina", icon: ChefHat, external: true },
@@ -91,8 +94,9 @@ export default function AdminLayout() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-card border-t border-border flex z-50">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((i) => ["Mesas", "Pedidos", "Menú", "Caja", "Lealtad"].includes(i.label)).map((item) => {
           const active = location.pathname.startsWith(item.path);
+
           return (
             <button
               key={item.path}

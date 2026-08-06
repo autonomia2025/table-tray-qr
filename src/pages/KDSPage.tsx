@@ -24,6 +24,7 @@ interface KDSOrder {
   notes: string | null;
   table_number: number;
   table_name: string | null;
+  payment_status: string;
   items: KDSOrderItem[];
 }
 
@@ -33,7 +34,9 @@ interface BranchInfo {
   restaurant_name: string;
   tenant_name: string;
   primary_color: string;
+  payment_mode: string;
 }
+
 
 interface RecentlyDeliveredEntry {
   id: string;
@@ -64,7 +67,7 @@ function playNewOrderSound() {
 async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
   const { data: o } = await supabase
     .from("orders")
-    .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id")
+    .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id, payment_status")
     .eq("id", orderId)
     .maybeSingle();
   if (!o) return null;
@@ -89,9 +92,11 @@ async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
     notes: o.notes,
     table_number: table?.number || 0,
     table_name: table?.name || null,
+    payment_status: o.payment_status || "unpaid",
     items: items || [],
   };
 }
+
 
 function formatTimer(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -543,7 +548,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("branches")
-        .select("id, name, restaurant_id, tenant_id")
+        .select("id, name, restaurant_id, tenant_id, payment_mode")
         .eq("id", branchId)
         .maybeSingle();
       if (!data) return null;
@@ -566,7 +571,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
         restaurant_name: restaurant?.name || "",
         tenant_name: tenant?.name || "",
         primary_color: tenant?.primary_color || "#E8531D",
+        payment_mode: data.payment_mode || "open_tab",
       };
+
     },
     staleTime: Infinity,
   });
@@ -578,7 +585,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
       const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from("orders")
-        .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id")
+        .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id, payment_status")
         .eq("branch_id", branchId)
         .in("status", ["confirmed", "in_kitchen", "ready"])
         .gte("confirmed_at", fourHoursAgo)
@@ -616,7 +623,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
           notes: o.notes,
           table_number: t?.number || 0,
           table_name: t?.name || null,
+          payment_status: o.payment_status || "unpaid",
           items: itemsByOrder.get(o.id) || [],
+
         };
       });
     },
@@ -642,7 +651,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
                 if (prev.some((o) => o.id === order.id)) return prev;
                 return [...prev, order];
               });
-              if (soundEnabledRef.current) playNewOrderSound();
+              if (soundEnabledRef.current && order.payment_status === "paid") playNewOrderSound();
             }
           });
         },
@@ -652,19 +661,33 @@ function KDSBoard({ branchId }: { branchId: string }) {
         { event: "UPDATE", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` },
         (payload) => {
           const updated = payload.new as any;
+          const prevRow = payload.old as any;
           if (["delivered", "cancelled"].includes(updated.status)) {
             setOrders((prev) => prev.filter((o) => o.id !== updated.id));
           } else {
+            if (
+              soundEnabledRef.current &&
+              updated.payment_status === "paid" &&
+              prevRow?.payment_status !== "paid"
+            ) {
+              playNewOrderSound();
+            }
             setOrders((prev) =>
               prev.map((o) =>
                 o.id === updated.id
-                  ? { ...o, status: updated.status, kitchen_accepted_at: updated.kitchen_accepted_at }
+                  ? {
+                      ...o,
+                      status: updated.status,
+                      kitchen_accepted_at: updated.kitchen_accepted_at,
+                      payment_status: updated.payment_status ?? o.payment_status,
+                    }
                   : o,
               ),
             );
           }
         },
       )
+
       .subscribe((status) => {
         setIsOnline(status === "SUBSCRIBED");
       });
@@ -739,9 +762,17 @@ function KDSBoard({ branchId }: { branchId: string }) {
   }, [audioUnlocked]);
 
   // Categorize
-  const newOrders = orders.filter((o) => o.status === "confirmed");
-  const kitchenOrders = orders.filter((o) => o.status === "in_kitchen");
-  const readyOrders = orders.filter((o) => o.status === "ready");
+  // En modo prepago, la cocina solo ve pedidos ya pagados
+  const kitchenVisible = branch?.payment_mode === "prepaid"
+    ? orders.filter((o) => o.payment_status === "paid")
+    : orders;
+  const pendingPayment = branch?.payment_mode === "prepaid"
+    ? orders.filter((o) => o.payment_status !== "paid" && o.status === "confirmed").length
+    : 0;
+  const newOrders = kitchenVisible.filter((o) => o.status === "confirmed");
+  const kitchenOrders = kitchenVisible.filter((o) => o.status === "in_kitchen");
+  const readyOrders = kitchenVisible.filter((o) => o.status === "ready");
+
 
   // Grouped new items
   const groupedNewItems = useMemo(() => {
@@ -778,11 +809,17 @@ function KDSBoard({ branchId }: { branchId: string }) {
         </div>
 
         <div className="flex items-center gap-3">
+          {pendingPayment > 0 && (
+            <span style={{ color: "#F59E0B", fontSize: 13, fontWeight: 700 }}>
+              ⏳ {pendingPayment} esperando pago
+            </span>
+          )}
           {deliveredToday > 0 && (
             <span style={{ color: "#22C55E", fontSize: 13, fontWeight: 700 }}>
               ✓ {deliveredToday} entregados
             </span>
           )}
+
           <span className="text-lg font-mono font-bold text-gray-300">{clock}</span>
         </div>
 

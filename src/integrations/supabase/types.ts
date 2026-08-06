@@ -224,6 +224,7 @@ export type Database = {
           is_open: boolean | null
           name: string
           opening_hours: Json | null
+          payment_mode: string
           phone: string | null
           restaurant_id: string
           tenant_id: string
@@ -236,6 +237,7 @@ export type Database = {
           is_open?: boolean | null
           name: string
           opening_hours?: Json | null
+          payment_mode?: string
           phone?: string | null
           restaurant_id: string
           tenant_id: string
@@ -248,6 +250,7 @@ export type Database = {
           is_open?: boolean | null
           name?: string
           opening_hours?: Json | null
+          payment_mode?: string
           phone?: string | null
           restaurant_id?: string
           tenant_id?: string
@@ -472,6 +475,168 @@ export type Database = {
           {
             foreignKeyName: "leads_converted_tenant_id_fkey"
             columns: ["converted_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_customers: {
+        Row: {
+          consent_at: string
+          created_at: string
+          email: string
+          id: string
+          last_visit_at: string | null
+          points: number
+          tenant_id: string
+          total_spent: number
+          updated_at: string
+          visits: number
+        }
+        Insert: {
+          consent_at?: string
+          created_at?: string
+          email: string
+          id?: string
+          last_visit_at?: string | null
+          points?: number
+          tenant_id: string
+          total_spent?: number
+          updated_at?: string
+          visits?: number
+        }
+        Update: {
+          consent_at?: string
+          created_at?: string
+          email?: string
+          id?: string
+          last_visit_at?: string | null
+          points?: number
+          tenant_id?: string
+          total_spent?: number
+          updated_at?: string
+          visits?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_customers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_programs: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          goal_visits: number
+          id: string
+          is_active: boolean
+          points_goal: number
+          points_per_thousand: number
+          reward_description: string
+          tenant_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          goal_visits?: number
+          id?: string
+          is_active?: boolean
+          points_goal?: number
+          points_per_thousand?: number
+          reward_description?: string
+          tenant_id: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          goal_visits?: number
+          id?: string
+          is_active?: boolean
+          points_goal?: number
+          points_per_thousand?: number
+          reward_description?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_programs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_programs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string
+          customer_id: string
+          description: string
+          earned_at: string
+          id: string
+          payment_id: string | null
+          redeemed_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          description: string
+          earned_at?: string
+          id?: string
+          payment_id?: string | null
+          redeemed_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          description?: string
+          earned_at?: string
+          id?: string
+          payment_id?: string | null
+          redeemed_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_rewards_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
@@ -769,6 +934,7 @@ export type Database = {
           kitchen_accepted_at: string | null
           notes: string | null
           order_number: number
+          payment_status: string
           ready_at: string | null
           session_id: string
           source: string | null
@@ -787,6 +953,7 @@ export type Database = {
           kitchen_accepted_at?: string | null
           notes?: string | null
           order_number: number
+          payment_status?: string
           ready_at?: string | null
           session_id: string
           source?: string | null
@@ -805,6 +972,7 @@ export type Database = {
           kitchen_accepted_at?: string | null
           notes?: string | null
           order_number?: number
+          payment_status?: string
           ready_at?: string | null
           session_id?: string
           source?: string | null
@@ -837,6 +1005,180 @@ export type Database = {
           },
           {
             foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_settlements: {
+        Row: {
+          branch_id: string
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          difference: number
+          expected_amount: number
+          id: string
+          notes: string | null
+          payments_count: number
+          provider: string
+          settled_amount: number
+          settlement_date: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          difference?: number
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          payments_count?: number
+          provider?: string
+          settled_amount?: number
+          settlement_date: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          difference?: number
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          payments_count?: number
+          provider?: string
+          settled_amount?: number
+          settlement_date?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_settlements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_settlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          branch_id: string
+          created_at: string
+          customer_email: string | null
+          external_reference: string | null
+          id: string
+          idempotency_key: string | null
+          method: string
+          order_id: string | null
+          provider: string
+          provider_payload: Json | null
+          refunded_amount: number
+          session_id: string | null
+          settlement_id: string | null
+          status: string
+          table_id: string | null
+          tenant_id: string
+          tip_amount: number
+          updated_at: string
+          wallet: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id: string
+          created_at?: string
+          customer_email?: string | null
+          external_reference?: string | null
+          id?: string
+          idempotency_key?: string | null
+          method?: string
+          order_id?: string | null
+          provider?: string
+          provider_payload?: Json | null
+          refunded_amount?: number
+          session_id?: string | null
+          settlement_id?: string | null
+          status?: string
+          table_id?: string | null
+          tenant_id: string
+          tip_amount?: number
+          updated_at?: string
+          wallet?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string
+          created_at?: string
+          customer_email?: string | null
+          external_reference?: string | null
+          id?: string
+          idempotency_key?: string | null
+          method?: string
+          order_id?: string | null
+          provider?: string
+          provider_payload?: Json | null
+          refunded_amount?: number
+          session_id?: string | null
+          settlement_id?: string | null
+          status?: string
+          table_id?: string | null
+          tenant_id?: string
+          tip_amount?: number
+          updated_at?: string
+          wallet?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -891,6 +1233,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      refunds: {
+        Row: {
+          amount: number
+          authorized_by: string | null
+          authorized_by_name: string | null
+          created_at: string
+          external_reference: string | null
+          id: string
+          payment_id: string
+          reason: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          authorized_by?: string | null
+          authorized_by_name?: string | null
+          created_at?: string
+          external_reference?: string | null
+          id?: string
+          payment_id: string
+          reason: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          authorized_by?: string | null
+          authorized_by_name?: string | null
+          created_at?: string
+          external_reference?: string | null
+          id?: string
+          payment_id?: string
+          reason?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurants: {
         Row: {
@@ -1115,6 +1511,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           opened_at: string | null
+          paid_amount: number
           rating: number | null
           table_id: string
           tenant_id: string
@@ -1127,6 +1524,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           opened_at?: string | null
+          paid_amount?: number
           rating?: number | null
           table_id: string
           tenant_id: string
@@ -1139,6 +1537,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           opened_at?: string | null
+          paid_amount?: number
           rating?: number | null
           table_id?: string
           tenant_id?: string

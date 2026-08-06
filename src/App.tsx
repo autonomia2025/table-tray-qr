@@ -12,7 +12,9 @@ import CartPage from "./pages/CartPage";
 import ConfirmPage from "./pages/ConfirmPage";
 import TrackingPage from "./pages/TrackingPage";
 import BillPage from "./pages/BillPage";
+import PayPage from "./pages/PayPage";
 import KDSPage from "./pages/KDSPage";
+
 import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminGuard from "./pages/admin/AdminGuard";
@@ -26,6 +28,9 @@ import EquipoPage from "./pages/admin/EquipoPage";
 import PedidosPage from "./pages/admin/PedidosPage";
 import ReportesPage from "./pages/admin/ReportesPage";
 import SoportePage from "./pages/admin/SoportePage";
+import CajaPage from "./pages/admin/CajaPage";
+import LealtadPage from "./pages/admin/LealtadPage";
+
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLoginPage from "./pages/mozo/MozoLoginPage";
 import MozoLayout from "./pages/mozo/MozoLayout";
@@ -91,6 +96,9 @@ const App = () => (
               <Route path="sucursal" element={<SucursalPage />} />
               <Route path="pedidos" element={<PedidosPage />} />
               <Route path="reportes" element={<ReportesPage />} />
+              <Route path="caja" element={<CajaPage />} />
+              <Route path="lealtad" element={<LealtadPage />} />
+
               <Route path="soporte" element={<SoportePage />} />
             </Route>
           </Route>
@@ -101,6 +109,8 @@ const App = () => (
           <Route path="/:slug/confirm" element={<ConfirmPage />} />
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
+          <Route path="/:slug/pay" element={<PayPage />} />
+
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />

@@ -829,6 +829,15 @@ export default function TrackingPage() {
             </button>
 
             <button
+              onClick={() => navigate(`/${slug}/pay${qs}`)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Receipt className="h-4 w-4" />
+              Pagar desde el celular 💳
+            </button>
+
+            <button
               onClick={() => {
                 if (hasDelivered) {
                   navigate(`/${slug}/bill${qs}`);
@@ -841,8 +850,9 @@ export default function TrackingPage() {
               style={{ color: hasDelivered ? primaryColor : undefined }}
             >
               <Receipt className="h-4 w-4" />
-              Pedir la cuenta 🧾
+              Pedir la cuenta al mozo 🧾
             </button>
+
             {!hasDelivered && (
               <p className="text-[11px] text-muted-foreground text-center -mt-1">
                 Disponible cuando tu pedido sea entregado
