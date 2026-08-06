@@ -282,6 +282,13 @@ export default function MenuPage() {
         )}
       </header>
 
+      {tableStatus === "invalid" && (
+        <div className="mx-4 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          No pudimos identificar tu mesa con ese código. Escanea nuevamente el QR que está sobre la mesa para poder
+          pedir y pagar.
+        </div>
+      )}
+
       {/* Category tabs */}
       {!searchOpen && categories && categories.length > 0 && (
         <div className="sticky top-14 z-30">
