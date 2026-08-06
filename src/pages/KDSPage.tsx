@@ -651,7 +651,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
                 if (prev.some((o) => o.id === order.id)) return prev;
                 return [...prev, order];
               });
-              if (soundEnabledRef.current) playNewOrderSound();
+              if (soundEnabledRef.current && order.payment_status === "paid") playNewOrderSound();
             }
           });
         },
@@ -661,19 +661,33 @@ function KDSBoard({ branchId }: { branchId: string }) {
         { event: "UPDATE", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` },
         (payload) => {
           const updated = payload.new as any;
+          const prevRow = payload.old as any;
           if (["delivered", "cancelled"].includes(updated.status)) {
             setOrders((prev) => prev.filter((o) => o.id !== updated.id));
           } else {
+            if (
+              soundEnabledRef.current &&
+              updated.payment_status === "paid" &&
+              prevRow?.payment_status !== "paid"
+            ) {
+              playNewOrderSound();
+            }
             setOrders((prev) =>
               prev.map((o) =>
                 o.id === updated.id
-                  ? { ...o, status: updated.status, kitchen_accepted_at: updated.kitchen_accepted_at }
+                  ? {
+                      ...o,
+                      status: updated.status,
+                      kitchen_accepted_at: updated.kitchen_accepted_at,
+                      payment_status: updated.payment_status ?? o.payment_status,
+                    }
                   : o,
               ),
             );
           }
         },
       )
+
       .subscribe((status) => {
         setIsOnline(status === "SUBSCRIBED");
       });
@@ -748,9 +762,17 @@ function KDSBoard({ branchId }: { branchId: string }) {
   }, [audioUnlocked]);
 
   // Categorize
-  const newOrders = orders.filter((o) => o.status === "confirmed");
-  const kitchenOrders = orders.filter((o) => o.status === "in_kitchen");
-  const readyOrders = orders.filter((o) => o.status === "ready");
+  // En modo prepago, la cocina solo ve pedidos ya pagados
+  const kitchenVisible = branch?.payment_mode === "prepaid"
+    ? orders.filter((o) => o.payment_status === "paid")
+    : orders;
+  const pendingPayment = branch?.payment_mode === "prepaid"
+    ? orders.filter((o) => o.payment_status !== "paid" && o.status === "confirmed").length
+    : 0;
+  const newOrders = kitchenVisible.filter((o) => o.status === "confirmed");
+  const kitchenOrders = kitchenVisible.filter((o) => o.status === "in_kitchen");
+  const readyOrders = kitchenVisible.filter((o) => o.status === "ready");
+
 
   // Grouped new items
   const groupedNewItems = useMemo(() => {
