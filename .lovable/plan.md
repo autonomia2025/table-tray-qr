@@ -1,125 +1,74 @@
+# Mesa como punto de venta + Lealtad
 
+Convertir cada mesa en un punto de venta: el comensal escanea el QR, pide y paga desde su celular. Solo los pedidos pagados llegan a la cocina (KDS) y a los ingresos del local. Además, un programa de lealtad por email pensado para bares y cafeterías.
 
-# Plan: Reestructurar Backoffice — Jefe de Ventas, Comisiones y Sincronización
+El panel del dueño actual se mantiene tal cual; solo se le agregan secciones nuevas.
 
-## Resumen
+## 1. Pago desde la mesa (prepago)
 
-Crear un sistema de ventas con dos paneles diferenciados: uno para el **Jefe de Ventas** (gestiona equipo, ve comisiones con pilotos, invita vendedores) y otro para **Vendedores** (ven solo sus proyecciones a $299k). Borrar datos existentes del backoffice, crear la cuenta de Agustín, y sincronizar con Finanzas y Superadmin.
+Flujo del comensal:
 
----
+```text
+Escanea QR -> Menú -> Carrito -> Pantalla de pago
+   -> ingresa email (opcional, para lealtad)
+   -> paga -> pago aprobado -> pedido entra a KDS
+   -> pago rechazado -> pedido queda pendiente, no llega a cocina
+```
 
-## Paso 1 — Limpiar datos del backoffice
+- Pantalla de pago nueva con resumen, propina sugerida (0/5/10/15%) y campo de email.
+- Por ahora el cobro es **simulado**: una pasarela de prueba dentro de la app que aprueba o rechaza (con opción de forzar rechazo para probar). Todo el resto del sistema — registro de pago, control de acceso a cocina, ingresos, lealtad — funciona como en producción, así que cuando conectes Mercado Pago, Transbank o Stripe solo se reemplaza el paso del cobro.
+- Comprobante en pantalla al finalizar, con número de pedido y monto pagado.
 
-Ejecutar DELETE vía insert tool en las tablas:
-- `lead_activities` (todo)
-- `leads` (todo)
-- `seller_goals` (todo)
-- `backoffice_invitations` (todo)
-- `backoffice_members` (todo)
+## 2. Dos modos de cobro, elegibles por local
 
----
+En la configuración de la sucursal, el dueño elige:
 
-## Paso 2 — Crear cuenta del Jefe de Ventas
+- **Prepago obligatorio**: cada pedido se paga al confirmarlo. Sin pago aprobado no entra a cocina.
+- **Cuenta abierta**: el comensal pide libremente y paga todo al final desde la app (o pide la cuenta al mozo, como hoy).
 
-- Usar edge function `create-platform-admin` o similar para crear el usuario `agustin.menesesgalda@gmail.com` con contraseña `123456789` (con auto-confirm habilitado temporalmente o via edge function con service_role)
-- Insertar en `backoffice_members` con `role: 'jefe_ventas'`, `name: 'Agustín Meneses'`
-- Vincular `user_id` al auth user creado
+El KDS y el panel de mozo respetan el modo del local: en prepago, los pedidos no pagados aparecen en un estado "esperando pago" separado y no ocupan la cocina.
 
----
+## 3. Ingresos solo de lo pagado
 
-## Paso 3 — Panel Jefe de Ventas (`/jefe-ventas`)
+- Nueva sección **Caja / Ingresos** en el panel del dueño: ventas pagadas del día, por método, propinas, ticket promedio, y detalle por mesa y pedido.
+- Los reportes existentes suman únicamente pagos aprobados; los pedidos no pagados o rechazados quedan fuera.
+- Cada local ve solo sus propios ingresos (aislamiento por tenant y sucursal, como ya funciona el resto del sistema).
 
-Crear nueva ruta `/jefe-ventas` con layout propio. Páginas:
+## 4. Lealtad por email
 
-### 3a. Dashboard (`/jefe-ventas/dashboard`)
-- KPIs: pilotos cerrados (de 5), clientes activos, MRR proyectado
-- Fase actual: si <5 pilotos → "Fase Piloto (199k)", si >=5 → "Fase Comercial (299k)"
-- Funnel visual del pipeline
+Identificación sin contraseña: el comensal escribe su email al pagar y queda reconocido en ese local. La próxima vez que escanee un QR del mismo local, el email se recuerda automáticamente y se le muestra su progreso.
 
-### 3b. Equipo (`/jefe-ventas/equipo`)
-- Tabla de vendedores con stats (leads, cierres, comisiones proyectadas)
-- Botón invitar vendedor (genera link con `backoffice_invitations`)
-- Activar/desactivar vendedores
-- Ver detalle de cada vendedor
+Dos programas, y cada local elige cuál usar (o ninguno):
 
-### 3c. Comisiones (`/jefe-ventas/comisiones`)
-**Calculadora de proyecciones para el jefe:**
-- Fase Piloto (primeros 5): $199.000/cliente → comisión $50.000 cierre + $30.000 por cliente activo recurrente
-- Fase Comercial (post-5): $299.000/cliente → comisión $50.000 cierre + $40.000 por cliente activo
-- Input slider: "¿Cuántos clientes?" → muestra:
-  - Total por cierres (N × $50.000)
-  - Recurrente mensual (N × $30k o $40k según fase)
-  - Total mensual proyectado
-  - Tabla mes a mes acumulada
+- **Sellos por visita**: 1 sello por visita pagada. Al llegar a N visitas (configurable, ej. 5) se desbloquea una recompensa definida por el local (ej. bebida gratis).
+- **Puntos por gasto**: acumula X puntos por cada $1.000 gastados, canjeables por un descuento o producto.
 
-### 3d. Pipeline (`/jefe-ventas/pipeline`)
-- Kanban reutilizando lógica de BackofficePipeline
-- Filtrar por vendedor asignado
+En la app del comensal:
+- Barra de progreso ("3 de 5 visitas · te falta 2 para tu café gratis").
+- Recompensa disponible aplicable en el siguiente pago, con confirmación del mozo o canje automático.
 
-### 3e. Configuración (`/jefe-ventas/perfil`)
-- Cambiar contraseña
-- Editar nombre, teléfono
+En el panel del dueño, nueva sección **Lealtad**:
+- Activar/desactivar programa, elegir tipo, meta y recompensa.
+- Lista de clientes con email, visitas, gasto total, última visita y recompensas canjeadas.
+- Exportable a CSV, como los demás reportes.
 
----
+## 5. Privacidad
 
-## Paso 4 — Módulo Comisiones para Vendedores (`/vendedor/comisiones`)
+Los emails de clientes quedan aislados por local: un restaurante nunca ve los clientes de otro. Se guarda un consentimiento simple al momento de ingresar el email.
 
-Agregar nueva página al panel vendedor existente:
-- Precio fijo: $299.000
-- Comisión por cierre: $50.000
-- Comisión cliente activo: $40.000/mes
-- Bono: $100.000 si cierra 7+ en un mes
-- Calculadora: input "¿Cuántos clientes puedo cerrar?" → proyección:
-  - Cierres × $50.000
-  - Activos × $40.000/mes recurrente
-  - Bono si ≥7
-  - Total proyectado
+## Detalles técnicos
 
----
+- Nuevas tablas: `payments` (pedido, sesión, monto, propina, método, estado, referencia externa), `loyalty_programs` (config por tenant/sucursal), `loyalty_customers` (email + tenant, visitas, puntos, último acceso), `loyalty_rewards` (recompensas ganadas/canjeadas). Todas con RLS por `tenant_id` y GRANTs explícitos.
+- Nuevos campos: `branches.payment_mode` (`prepaid` | `open_tab`), `orders.payment_status` (`unpaid` | `paid` | `failed`).
+- El KDS filtra por `payment_status = 'paid'` cuando la sucursal está en prepago; sin cambios cuando es cuenta abierta.
+- El cobro se implementa en una edge function `process-payment` con un adaptador "simulado" aislado, para cambiar de proveedor sin tocar el resto del flujo.
+- La acumulación de lealtad ocurre en el servidor al confirmar el pago, no en el cliente, para evitar manipulación.
+- Reportes e ingresos se recalculan desde `payments`, no desde el carrito local.
 
-## Paso 5 — Sincronización con Finanzas
+## Orden de trabajo
 
-Actualizar los 4 paneles de Finanzas para que reflejen datos reales:
-- **FinanzasRevenuePage**: MRR basado en `tenants` con `plan_status` — distinguir pilotos ($199k) vs activos ($299k)
-- **FinanzasClientesPage**: Mostrar cuáles están "pagando" y cuáles en "piloto", con fecha de próximo cobro
-- **FinanzasChurnPage**: Churn calculado sobre tenants que pasaron de activo a inactivo
-- **FinanzasCostosPage**: Incluir comisiones proyectadas como costo variable
-
-Agregar a tenants la distinción `plan_status`: `pilot` (199k), `active` (299k) ya existente.
-
----
-
-## Paso 6 — Sincronización con Superadmin
-
-- En `SATenantsPage` o `BackofficeDashboard`: mostrar fase actual (piloto/comercial)
-- En `SAMetricsPage`: agregar KPI de comisiones totales pagadas/proyectadas
-- El superadmin ya ve todo por ser platform_admin
-
----
-
-## Paso 7 — Routing y Auth
-
-Archivos a crear/modificar:
-- `src/pages/jefe-ventas/JefeVentasLayout.tsx` — Layout con sidebar
-- `src/pages/jefe-ventas/JVDashboardPage.tsx`
-- `src/pages/jefe-ventas/JVEquipoPage.tsx`
-- `src/pages/jefe-ventas/JVComisionesPage.tsx`
-- `src/pages/jefe-ventas/JVPipelinePage.tsx`
-- `src/pages/jefe-ventas/JVPerfilPage.tsx`
-- `src/pages/seller/SellerComisionesPage.tsx` — Nueva página
-- `src/App.tsx` — Agregar rutas `/jefe-ventas/*`
-- `src/pages/UnifiedLoginPage.tsx` — Redirigir `jefe_ventas` a `/jefe-ventas/dashboard`
-- `src/pages/seller/SellerLayout.tsx` — Agregar nav item "Comisiones"
-- Finanzas pages — Actualizar lógica de pricing con pilotos
-
-Context nuevo: `JefeVentasContext.tsx` que verifica rol `jefe_ventas` en `backoffice_members`.
-
----
-
-## Funcionalidades extra para facilitar la gestión
-
-1. **Alertas de inactividad**: leads sin actualizar >48h destacados en rojo
-2. **Resumen semanal**: card con cierres de la semana vs meta
-3. **Vista rápida de vendedor**: click en vendedor → sheet con sus leads, actividad reciente, comisiones
-4. **Cambio de contraseña**: en perfil del jefe de ventas con `supabase.auth.updateUser`
-
+1. Base de datos: pagos, lealtad, campos nuevos y políticas de acceso.
+2. Flujo de pago del comensal (pantalla, propina, email, comprobante).
+3. Bloqueo de cocina e ingresos según pago.
+4. Configuración de modo de cobro por sucursal.
+5. Programa de lealtad: progreso del comensal y panel del dueño.
