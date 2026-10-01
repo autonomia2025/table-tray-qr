@@ -1,1 +1,33 @@
-project_id = "ooyvkdjlerehvtivorec"
+project_id = "iznwvklzmyhzalabgfxl"
+
+# Igual que en Lovable Cloud: las funciones no verifican la sesión en la entrada
+# (verify_jwt = false) y cada una valida al usuario dentro de su código.
+# Se revisa en la fase 3.
+# create-platform-admin y create-jefe-ventas no se publican (ver docs/BUILD_LOG.md).
+
+[functions.create-tenant-user]
+verify_jwt = false
+
+[functions.list-tenant-users]
+verify_jwt = false
+
+[functions.loyalty-status]
+verify_jwt = false
+
+[functions.process-payment]
+verify_jwt = false
+
+[functions.reconcile-payments]
+verify_jwt = false
+
+[functions.refund-payment]
+verify_jwt = false
+
+[functions.register-seller]
+verify_jwt = false
+
+[functions.register-waiter]
+verify_jwt = false
+
+[functions.support-chat]
+verify_jwt = false

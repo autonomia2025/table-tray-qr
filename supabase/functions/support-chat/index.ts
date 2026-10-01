@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Anthropic from "npm:@anthropic-ai/sdk@0.131.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,61 +27,78 @@ Reglas:
 - No inventes funcionalidades que no existen.
 - Puedes ayudar con: uso del panel admin, configuración de menú, gestión de mesas, reportes, problemas comunes, y dudas generales sobre el software.`;
 
-serve(async (req) => {
+// Antes usaba el gateway de IA de Lovable (LOVABLE_API_KEY). Ahora usa Claude Haiku 4.5
+// con el SDK oficial de Anthropic (ANTHROPIC_API_KEY). La pantalla de soporte espera
+// el formato de streaming "OpenAI" (choices[0].delta.content y [DONE]), así que la
+// función traduce cada trozo de texto a ese formato y la pantalla no cambia.
+const MODEL = "claude-haiku-4-5";
+
+const jsonError = (message: string, status: number) =>
+  new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY no está configurada");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Demasiadas solicitudes, intenta de nuevo en unos segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Servicio no disponible temporalmente." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Error en el servicio de IA" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // La API de Claude solo acepta turnos de usuario y asistente con texto.
+    const history: Anthropic.MessageParam[] = (Array.isArray(messages) ? messages : [])
+      .filter((m) => (m?.role === "user" || m?.role === "assistant") && typeof m?.content === "string" && m.content)
+      .map((m) => ({ role: m.role, content: m.content }));
+    if (history.length === 0 || history[0].role !== "user") {
+      return jsonError("Escribe tu consulta para comenzar.", 400);
     }
 
-    return new Response(response.body, {
+    const client = new Anthropic({ apiKey });
+    const stream = await client.messages.create({
+      model: MODEL,
+      max_tokens: 8000,
+      system: SYSTEM_PROMPT,
+      messages: history,
+      stream: true,
+    });
+
+    const encoder = new TextEncoder();
+    const body = new ReadableStream({
+      async start(controller) {
+        const send = (data: string) => controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        try {
+          for await (const event of stream) {
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              send(JSON.stringify({ choices: [{ delta: { content: event.delta.text } }] }));
+            }
+          }
+          send("[DONE]");
+        } catch (e) {
+          console.error("support-chat stream error:", e);
+          send(JSON.stringify({ choices: [{ delta: { content: "\n\nSe cortó la respuesta. Intenta de nuevo." } }] }));
+          send("[DONE]");
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
+    if (e instanceof Anthropic.RateLimitError) {
+      return jsonError("Demasiadas solicitudes, intenta de nuevo en unos segundos.", 429);
+    }
+    if (e instanceof Anthropic.APIError) {
+      console.error("support-chat API error:", e.status, e.message);
+      return jsonError("Servicio no disponible temporalmente.", 502);
+    }
     console.error("support-chat error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Error desconocido" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonError("Error en el servicio de IA", 500);
   }
 });

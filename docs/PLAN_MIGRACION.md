@@ -152,9 +152,9 @@ Pendiente: el dominio definitivo (ver `docs/PLAN_FASES.md`).
 
 **Hoy:** `support-chat` llama a la IA de Lovable (modelo Gemini) y le devuelve a la pantalla las respuestas en formato "OpenAI", palabra por palabra (`SoportePage.tsx:41-46`).
 
-**Recomendación: usar Claude (Anthropic) con el modelo Claude Haiku 4.5** (`claude-haiku-4-5-20251001`). Es rápido, barato y de sobra bueno para soporte en español.
+**Recomendación: usar Claude (Anthropic) con el modelo Claude Haiku 4.5** (`claude-haiku-4-5`). Es rápido, barato y de sobra bueno para soporte en español.
 
-- Anthropic ofrece una **entrada compatible con el formato OpenAI**. Con eso el cambio en `supabase/functions/support-chat/index.ts` es mínimo: la dirección, la clave (`ANTHROPIC_API_KEY` en vez de `LOVABLE_API_KEY`) y el nombre del modelo.
+- ✅ **Hecho en el código:** `supabase/functions/support-chat/index.ts` usa el SDK oficial de Anthropic (no la entrada compatible con OpenAI, que la documentación oficial desaconseja) y traduce cada trozo de la respuesta al formato que ya espera la pantalla. La clave pasa a ser `ANTHROPIC_API_KEY`.
 - **La pantalla no se toca** y las instrucciones del asistente (el texto de soporte) quedan iguales.
 - Antes de darlo por listo, pruebo que las respuestas lleguen palabra por palabra igual que hoy. Si la entrada compatible da problemas, la alternativa es traducir el formato dentro de la función, sin tocar la pantalla.
 - Costo: se paga por uso. Con el volumen de un chat de soporte es bajo.
