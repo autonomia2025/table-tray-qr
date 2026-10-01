@@ -1,0 +1,9 @@
+Bucket: menu-images (público)
+URL pública base: https://ooyvkdjlerehvtivorec.supabase.co/storage/v1/object/public/menu-images/<ruta>
+
+bff4a8b9-fbb3-4431-94b0-0f03048de1df/1773032106814-oiwzxc.png  (1409555 bytes, image/png)
+bff4a8b9-fbb3-4431-94b0-0f03048de1df/1773032196728-bmo2p.png  (1493206 bytes, image/png)
+bff4a8b9-fbb3-4431-94b0-0f03048de1df/1774844324840-kfgnym.png  (2712345 bytes, image/png)
+bff4a8b9-fbb3-4431-94b0-0f03048de1df/1774844381986-g23zz1.png  (2712345 bytes, image/png)
+bff4a8b9-fbb3-4431-94b0-0f03048de1df/1774844417379-kacptd.png  (2132867 bytes, image/png)
+bff4a8b9-fbb3-4431-94b0-0f03048de1df/logo/1773979063387-yqg6yk.png  (2092037 bytes, image/png)

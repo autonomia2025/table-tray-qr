@@ -23,6 +23,32 @@ Hasta tener un producto seguro para un primer local real (fases 2 a 5): **unas 5
 
 ---
 
+## Pruebas (en todas las fases)
+
+El fundador pidió muchas pruebas, también contra la base real. Hay cuatro capas:
+
+| Capa | Qué prueba | Herramienta | Cuándo se corre |
+|---|---|---|---|
+| 1. Humo | Que cada pantalla abra sin romperse | Playwright (`e2e/humo.spec.ts`) | En cada cambio |
+| 2. Recorridos por rol | Comensal pide y paga, cocina avanza, mozo entrega y cierra, dueño reembolsa, cuadra la caja | Playwright contra el **local de demo** en la base real | En cada cambio que toque esas pantallas, y antes de cada demo de venta |
+| 3. Seguridad | Que un anónimo, un mozo o el dueño de otro local **no** puedan hacer lo que no deben | Pruebas contra la base (paso 3.17) | En cada cambio de base |
+| 4. Plata | Pago repetido, pago tardío, dos personas pagando lo último, reembolso doble | Pruebas contra las funciones de servidor (paso 5.11) | En cada cambio de pagos |
+
+Comando: `bun run test:e2e`. Se prueba en tamaño computador y tamaño celular. Con `E2E_BASE_URL` se pueden correr contra la app publicada en Vercel.
+
+## Local de demo (para pruebas y para vender)
+
+Un local ficticio, **"Demo Tablio"** (`/demo-tablio`), que vive en la base real y sirve para dos cosas: que las pruebas automáticas tengan dónde correr y que el fundador pueda mostrar el producto en vivo a un cliente.
+
+- **Contenido:** una sucursal en prepago, una carta de bar creíble con fotos (cervezas, tragos, picoteo, platos), modificadores y alérgenos, y 10 mesas en dos zonas (interior y terraza) con sus QR.
+- **Una cuenta por rol:** dueño, administrador, 2 mozos y cocina (KDS) del local. Del lado de Tablio: superadmin, jefe de ventas, vendedor y finanzas. El cajero se agrega cuando exista ese rol (paso 5.6).
+- **Correos:** todos van a la casilla del fundador con el truco del "+" de Gmail (por ejemplo `jtmeneses.autonomia+dueno@gmail.com`). No se crea ninguna cuenta con correos de terceros.
+- **Contraseñas:** en un archivo local que no se sube a GitHub. `docs/DEMO_ACCESS.md` explica cómo entrar, sin las contraseñas.
+- **Reinicio:** un script deja el local de demo limpio antes de cada demo de venta, sin tocar los demás locales.
+- **Cuándo se crea:** apenas esté aplicada la estructura en la base nueva. No depende de los datos de Lovable y no se mezcla con ellos.
+
+---
+
 ## Fase 1 — Diagnóstico ✅
 
 - [x] `CLAUDE.md`, `docs/DIAGNOSTICO.md`, `docs/PLAN_MIGRACION.md` y este plan.
@@ -78,6 +104,7 @@ Cierra los problemas de la sección 10 del brief más los nuevos N1–N4, N8, N1
 | 3.14 | Lealtad: búsqueda exacta del email (sin comodines), sin mostrar premios a cualquiera, canje solo con verificación | N4 | 0,5 día |
 | 3.15 | Chat de soporte: solo para usuarios con sesión, con límite de uso | 9 (resto) | 0,5 h |
 | 3.16 | Sacar `.env` del repositorio. El comensal nunca ve `error.message` | N13, N15 | 0,5 h |
+| 3.16b | **Cerrar el registro público** de cuentas en Supabase Auth. La app no tiene formulario de registro: todas las cuentas se crean desde el servidor | hallazgo de la exportación | 0,5 h |
 | 3.17 | **Pruebas de seguridad automáticas:** un set que intenta cada ataque del diagnóstico como anónimo, como mozo, como dueño de otro local y como superadmin. Tiene que fallar todo lo que debe fallar. Se corre en cada cambio futuro | todos | 1 día |
 
 **Terminado cuando:** las pruebas de 3.17 pasan y la lista de la fase 2 sigue funcionando igual para el usuario.

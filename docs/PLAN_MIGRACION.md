@@ -72,6 +72,8 @@ Lovable no nos da acceso directo a su base, pero su asistente sí puede leerla, 
    - comparo con el esquema real que entregue Lovable (paso 1). Si Lovable tiene algo que no está en las migraciones, lo agrego como migración nueva y lo anoto.
 
 ### Paso 4 — Usuarios (1 h)
+**Actualización:** el respaldo oficial trae las contraseñas cifradas, así que se usa el **camino A**.
+
 Hay dos caminos, según lo que Lovable entregue:
 - **A (ideal):** si entrega los hashes de contraseña, inserto los usuarios con su mismo identificador y su misma contraseña. Nadie nota nada.
 - **B:** si no los entrega, creo cada usuario con su **mismo identificador** y email, y cada persona define una contraseña nueva con "¿Olvidaste tu contraseña?". Como son usuarios de prueba, esto es simple.
@@ -89,7 +91,7 @@ Hay dos caminos, según lo que Lovable entregue:
 
 ### Paso 7 — Edge functions y secretos (1 h)
 1. Publico **9 de las 11** funciones **sin cambiar su código**, salvo `support-chat` (sección 4). `create-platform-admin` y `create-jefe-ventas` no se publican (excepción aprobada).
-2. Uso la misma configuración de verificación (`verify_jwt`) que tenga cada una en Lovable (paso 1). Si no se puede saber, uso la que tiene hoy por defecto la CLI y pruebo que cada pantalla funcione igual.
+2. Lovable confirmó que todas usan `verify_jwt = false`. Lo declaro en `supabase/config.toml` para cada función, porque el valor por defecto de Supabase es el contrario. Es lo necesario para que funcionen igual que hoy.
 3. El único secreto propio, `ANTHROPIC_API_KEY`, lo cargas tú en el panel de Supabase.
 4. **Comprobación:** llamo a cada función desde la app (sección 5).
 

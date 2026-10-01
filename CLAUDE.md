@@ -101,6 +101,20 @@ Ningún cambio puede romper estas reglas. Si una tarea obliga a romper una, **se
 - Mientras el proyecto siga conectado a Lovable, Lovable puede hacer commits a `main`. Desde la fase 2 no se edita más en Lovable.
 - Los estados de pedidos y mesas están en inglés (`confirmed`, `in_kitchen`, `waiting_bill`...) y **se quedan así en la base** (decisión del 1 de octubre de 2026). Lo que ve el usuario pasa siempre por una sola capa de traducción (se crea en el paso 4.3). No renombrar estados en la base.
 
+## Estética (se mantiene en todo lo nuevo)
+
+El fundador pidió explícitamente conservar el diseño actual. Toda pantalla nueva tiene que verse como parte de la misma app:
+
+- **Componentes:** los de shadcn/ui que ya están en `src/components/ui/`. No agregar otra librería de componentes.
+- **Colores:** siempre con los tokens de `src/index.css` (`bg-background`, `text-foreground`, `bg-primary`, `bg-accent`, `border`...), nunca colores escritos a mano. Naranjo Tablio `hsl(16 82% 51%)` como primario y fondo crema claro. Hay modo oscuro (`ThemeContext`), así que todo se revisa en los dos modos.
+- **Color de cada local:** en las pantallas del comensal se usa el color del local (`--tenant-primary`, que sale de `tenants.primary_color`), no el naranjo de Tablio.
+- **Tipografía:** Plus Jakarta Sans (cargada en `index.html`). Títulos en `font-bold` o `font-extrabold`.
+- **Forma:** bordes redondeados (`--radius: 0.75rem`, tarjetas `rounded-2xl`), íconos de `lucide-react` y animaciones suaves con `framer-motion`, como en las pantallas actuales.
+- **Marca:** el logo es texto: `tablio` con el punto final en naranjo (`tablio<span className="text-primary">.</span>`).
+- **Celular primero** en las pantallas del comensal, del mozo y del vendedor. El KDS se diseña para pantalla fija y letra grande.
+- **Textos** en español de Chile, cercanos y cortos.
+- Antes de crear una pantalla, se mira una parecida que ya exista y se copia su estructura.
+
 ## Convenciones
 
 - Montos en pesos chilenos, **enteros** (sin decimales). Formatear con `src/lib/format.ts`.

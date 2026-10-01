@@ -1,0 +1,16 @@
+CONFIGURACIÓN — Lovable Cloud (proyecto ooyvkdjlerehvtivorec)
+
+AUTH
+- Proveedores con usuarios reales: solo email + contraseña (los 5 usuarios tienen provider "email"). Sin Google ni otros en uso.
+- Los 5 correos están confirmados.
+- URL del sitio / redirecciones: NO VERIFICABLE desde aquí. Dominios en uso: https://tabliochile.lovable.app (publicado) y https://id-preview--a87adc3f-9233-4871-ac41-d13323a2540b.lovable.app (vista previa). La app redirige a <origen>/reset-password.
+- Registro público abierto/cerrado: NO VERIFICABLE desde aquí. El código crea cuentas desde funciones de servidor (create-tenant-user, register-waiter, register-seller), no desde un formulario público.
+- Plantillas de correo personalizadas: no hay (no existen plantillas en el repositorio; se usan las por defecto).
+
+EDGE FUNCTIONS — verify_jwt
+supabase/config.toml no define ninguna función, así que todas usan el valor por defecto de Lovable Cloud: verify_jwt = false.
+La validación de usuario se hace dentro del código de cada función.
+Funciones: create-jefe-ventas, create-platform-admin, create-tenant-user, list-tenant-users, loyalty-status, process-payment, reconcile-payments, refund-payment, register-seller, register-waiter, support-chat.
+
+SECRETOS (respuesta de Lovable)
+Además de LOVABLE_API_KEY, solo los que crea el sistema: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL, SUPABASE_JWKS, SUPABASE_PUBLISHABLE_KEYS, SUPABASE_SECRET_KEYS.

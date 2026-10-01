@@ -22,3 +22,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Exportación de Lovable: datos personales, no subir a GitHub
+migracion/lovable/usuarios.sql
+migracion/lovable/datos*
+migracion/lovable/*.csv
+migracion/lovable/export/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Respaldo privado de Lovable (datos personales): nunca subir
+/migracion-privada*/
