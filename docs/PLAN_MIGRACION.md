@@ -61,6 +61,7 @@ Lovable no nos da acceso directo a su base, pero su asistente sí puede leerla, 
 - Región: **São Paulo (`sa-east-1`)**, la más cercana a Chile.
 - Plan: **Free** mientras migramos y probamos. **Pro** (unos US$25 al mes) antes del primer local real, para tener respaldos diarios y que el proyecto no se pause por inactividad.
 - **Decidido:** lo creas tú con el correo de la empresa, organización "Tablio", plan gratis, y me das acceso por el conector de Supabase.
+- ✅ **Hecho:** proyecto "Tablio", identificador `iznwvklzmyhzalabgfxl`, São Paulo, Postgres 17, vacío.
 
 ### Paso 3 — Estructura (1 h)
 1. Enlazo la CLI de Supabase al proyecto nuevo y aplico las 22 migraciones en orden (`supabase db push`).

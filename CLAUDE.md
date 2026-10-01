@@ -22,7 +22,7 @@ El fundador **no es desarrollador**. Todo se le explica en español simple, sin 
 
 - Frontend: React 18 + Vite + TypeScript + Tailwind + shadcn/ui. Carrito en Zustand (`src/store/cartStore.ts`), datos con React Query.
 - Backend: Supabase (Postgres + Auth + Realtime + Storage + Edge Functions en Deno).
-- Hoy la base vive en Lovable Cloud (proyecto `ooyvkdjlerehvtivorec`). La fase 2 la mueve a un Supabase propio.
+- Hoy la base vive en Lovable Cloud (proyecto `ooyvkdjlerehvtivorec`). La fase 2 la mueve al Supabase propio **`iznwvklzmyhzalabgfxl`** (São Paulo, Postgres 17), hoy vacío.
 
 ## Comandos
 

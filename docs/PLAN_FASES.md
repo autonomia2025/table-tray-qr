@@ -37,7 +37,7 @@ Detalle completo en `docs/PLAN_MIGRACION.md`. Regla: **tal cual, sin corregir na
 |---|---|---|
 | 2.1 | ✅ Congelar Lovable, marcar el punto de partida en git y comprobar que la app compila | 0,5 h |
 | 2.2 | Pedir la exportación a Lovable (tú, con el mensaje listo) · pedida | espera |
-| 2.3 | Crear el proyecto Supabase en São Paulo (lo creas tú y me das acceso por el conector) | 0,5 h |
+| 2.3 | ✅ Crear el proyecto Supabase en São Paulo (`iznwvklzmyhzalabgfxl`) | 0,5 h |
 | 2.4 | Aplicar las 22 migraciones y comparar tipos, políticas y esquema real | 1 h |
 | 2.5 | Recrear usuarios con el mismo identificador | 1 h |
 | 2.6 | Cargar datos y comparar conteos | 1 h |
