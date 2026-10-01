@@ -9,7 +9,7 @@ Basado en la sección 11 del brief y en `docs/DIAGNOSTICO.md`.
 | Fase | Qué | Estimación |
 |---|---|---|
 | 1 | Diagnóstico | ✅ Terminada |
-| 2 | Migración a Supabase propio | 1–2 días · **en curso** (paso 0 hecho) |
+| 2 | Migración a Supabase propio | 1–2 días · **casi lista**: base, datos, fotos, funciones y demo hechos |
 | 3 | Seguridad urgente | 10–12 días |
 | 4 | Orden | 3–5 días |
 | 5 | Blindar la plata | 10–14 días |
@@ -64,11 +64,11 @@ Detalle completo en `docs/PLAN_MIGRACION.md`. Regla: **tal cual, sin corregir na
 | 2.1 | ✅ Congelar Lovable, marcar el punto de partida en git y comprobar que la app compila | 0,5 h |
 | 2.2 | Pedir la exportación a Lovable (tú, con el mensaje listo) · pedida | espera |
 | 2.3 | ✅ Crear el proyecto Supabase en São Paulo (`iznwvklzmyhzalabgfxl`) | 0,5 h |
-| 2.4 | Aplicar las 22 migraciones y comparar tipos, políticas y esquema real | 1 h |
-| 2.5 | Recrear usuarios con el mismo identificador | 1 h |
-| 2.6 | Cargar datos y comparar conteos | 1 h |
-| 2.7 | Copiar las fotos del menú y actualizar sus direcciones | 0,5 h |
-| 2.8 | Publicar las edge functions **excepto `create-platform-admin` y `create-jefe-ventas`** y cambiar el chat a Claude Haiku 4.5 | 1–2 h |
+| 2.4 | ✅ Aplicar las 22 migraciones y comparar tipos, políticas y esquema real | 1 h |
+| 2.5 | ✅ Recrear usuarios con el mismo identificador (con su contraseña) | 1 h |
+| 2.6 | ✅ Cargar datos y comparar conteos | 1 h |
+| 2.7 | ✅ Copiar las fotos del menú y actualizar sus direcciones | 0,5 h |
+| 2.8 | ✅ Publicar las edge functions **excepto `create-platform-admin` y `create-jefe-ventas`** y cambiar el chat a Claude Haiku 4.5 (falta la clave) | 1–2 h |
 | 2.9 | Configurar Auth | 0,5 h |
 | 2.10 | Apuntar la app a la base nueva y publicarla en Vercel, con el comando de instalación fijado en `bun install --frozen-lockfile` (así no hay dudas sobre qué archivo de versiones usa, aun antes del paso 4.8) | 1 h |
 | 2.11 | Comprobación pantalla por pantalla, contigo | 2–3 h |

@@ -36,3 +36,9 @@ migracion/lovable/export/
 
 # Respaldo privado de Lovable (datos personales): nunca subir
 /migracion-privada*/
+
+# Credenciales del local de demo y otros archivos privados: nunca subir
+/privado/
+
+# Estado local de la CLI de Supabase
+supabase/.temp/

@@ -4,6 +4,37 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-01 — Migración aplicada, datos cargados, funciones publicadas y local de demo
+El fundador inició sesión en la CLI de Supabase (`supabase login`) y pidió que lo hiciera todo Claude Code.
+
+**Estructura:**
+- `supabase link` al proyecto `iznwvklzmyhzalabgfxl`. Se corrigió solo el historial (`migration repair`): las 5 migraciones aplicadas con el conector quedaron con los nombres del repositorio. No se tocó ninguna tabla.
+- `supabase db push`: se aplicaron de la 6 a la 22.
+- **Hallazgo:** la `20260328030145` falla en una base nueva porque crea `backoffice_members_jefe_read`, que ya existe. En Lovable alguien la borró o renombró a mano entre la 20 y la 21 (el historial de Lovable guarda las mismas instrucciones que el repositorio). Se agregó `20260327024212_deriva_lovable_jefe_read.sql`, que registra ese cambio manual. Con eso las migraciones del repositorio reproducen la base real desde cero.
+- **Comprobado igual a Lovable:** tipos generados idénticos a `types.ts`; 124 de 124 reglas equivalentes (comparadas dentro de la base); 34 tablas con RLS, 6 funciones, 6 triggers, 8 índices, 67 relaciones, 6 restricciones de unicidad, las mismas 6 tablas con tiempo real y el mismo bucket. Los permisos de lectura y escritura de la app están.
+
+**Usuarios y datos:** cargados desde el respaldo con la CLI (archivo "seed" temporal; las contraseñas cifradas no pasaron por el chat). Se cargan primero los usuarios y después las identidades. Conteos iguales al respaldo: 5 usuarios con su contraseña de siempre (camino A), 5 identidades, 1 local, 2 mesas, 2 pedidos, 4 productos pedidos, 3 miembros, 3 personal, etc.
+
+**Fotos:** las 6 subidas a `menu-images` con la misma ruta (`supabase storage cp`). Responden en la dirección nueva. Las 3 direcciones de los datos se cambiaron al proyecto nuevo; ninguna apunta ya a Lovable.
+
+**Funciones:** 9 publicadas con `supabase functions deploy --use-api`, con `verify_jwt = false`. Responden igual que en Lovable (errores en español por datos faltantes). `create-platform-admin` y `create-jefe-ventas` no existen (404). `support-chat` responde "Error en el servicio de IA" hasta que se cargue `ANTHROPIC_API_KEY` (el fundador la cargará después).
+
+**App:** `.env` apunta al proyecto nuevo (clave pública clásica, igual que antes). El `.env` de Lovable quedó respaldado en `migracion-privada:/env_lovable.backup`, para volver atrás.
+
+**Local de demo "Demo Tablio"** (`/demo-tablio`): `scripts/demo/crear_demo.py` genera el SQL y las credenciales en `privado/` (fuera de git). Incluye 9 cuentas (dueño, administrador, 2 mozos, cocina, superadmin, jefa de ventas, vendedor y finanzas) con correos `@demo.tablio.test` (dominio reservado, nunca envía correos) y contraseñas al azar, una sucursal en prepago, 6 categorías, 24 productos, 8 grupos de modificadores, 10 mesas y lealtad. Todavía sin fotos. Cómo entrar: `docs/DEMO_ACCESS.md`.
+
+**Pruebas (Playwright) contra la base nueva: 32 de 32 que corren pasan** (2 se saltan porque necesitan el código de una mesa de Lovable por variable de entorno; con él, también pasan):
+- humo (5 × 2 tamaños);
+- local de Lovable carga con fotos del almacenamiento nuevo;
+- los 9 roles del demo entran y llegan a su panel;
+- recorrido completo: el comensal pide un Pisco Sour y paga → cocina lo acepta, lo marca listo y entregado. Verificado en la base: pedido #1 pagado $5.500 (pago `approved`, simulado) y con las tres horas registradas.
+
+**Error heredado encontrado por las pruebas:** el mozo tiene que entrar dos veces (DIAGNOSTICO N16). No se arregla ahora (migrar tal cual). Se resuelve con el login único (paso 4.1).
+
+**Pendiente de la fase 2:** URL del sitio y direcciones de retorno de Auth (cuando exista la dirección de Vercel), publicar en Vercel, clave de Claude, revisión pantalla por pantalla con el fundador, desconectar Lovable de GitHub y unir la rama con `main`.
+
+---
+
 ## 2026-10-01 — Migración en curso: estructura (1-5 aplicadas) y preparación del resto
 Autorizado por el fundador ("vamos con todo"): copiar la base tal cual, incluidas las reglas inseguras.
 
