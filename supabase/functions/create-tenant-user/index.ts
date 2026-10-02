@@ -1,105 +1,136 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, json, UUID_RE, EMAIL_RE } from "../_shared/http.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
+/**
+ * Crea un usuario (o reutiliza uno existente) y, si se indica un local, lo agrega como personal.
+ *
+ * Quién puede llamarla (fase 1.1, DIAGNOSTICO problema 5):
+ *  - con tenant_id: superadmin, o dueño/administrador activo de ESE local;
+ *  - sin tenant_id: solo superadmin (alta de dueños desde el panel de superadmin).
+ */
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseAdmin = createClient(
+    const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Verify caller is authenticated
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // --- Quién llama ---
+    const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
+    if (!token) return json({ error: "Tienes que iniciar sesión." }, 401);
+    const { data: caller, error: callerErr } = await admin.auth.getUser(token);
+    if (callerErr || !caller.user) return json({ error: "Tienes que iniciar sesión." }, 401);
+    const callerId = caller.user.id;
+
+    const body = await req.json().catch(() => ({}));
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const password = typeof body?.password === "string" ? body.password : "";
+    const tenantId = typeof body?.tenant_id === "string" && body.tenant_id ? body.tenant_id : null;
+    const branchId = typeof body?.branch_id === "string" && body.branch_id ? body.branch_id : null;
+
+    if (tenantId && !UUID_RE.test(tenantId)) return json({ error: "Local inválido." }, 400);
+    if (branchId && !UUID_RE.test(branchId)) return json({ error: "Sucursal inválida." }, 400);
+
+    // --- Autorización ---
+    const { data: platformAdmin } = await admin
+      .from("platform_admins")
+      .select("id")
+      .eq("user_id", callerId)
+      .maybeSingle();
+
+    let allowed = !!platformAdmin;
+    if (!allowed && tenantId) {
+      const { data: member } = await admin
+        .from("tenant_members")
+        .select("role")
+        .eq("user_id", callerId)
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .maybeSingle();
+      allowed = !!member && ["owner", "admin"].includes(member.role);
+    }
+    if (!allowed) return json({ error: "No tienes permiso para crear usuarios en este local." }, 403);
+
+    // --- Validación ---
+    if (!EMAIL_RE.test(email)) return json({ error: "El email no es válido." }, 400);
+    if (password.length < 6) return json({ error: "La contraseña debe tener al menos 6 caracteres." }, 400);
+    if (branchId && tenantId) {
+      const { data: branch } = await admin
+        .from("branches")
+        .select("id")
+        .eq("id", branchId)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      if (!branch) return json({ error: "La sucursal no pertenece a este local." }, 400);
     }
 
-    const { email, password, tenant_id, branch_id } = await req.json();
-
-    if (!email || !password || password.length < 6) {
-      return new Response(
-        JSON.stringify({ error: "Email y contraseña (mín 6 caracteres) requeridos" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Try to create user; if already exists, look up existing user
+    // --- Crear o reutilizar el usuario ---
     let userId: string;
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
 
-    if (error) {
-      if (error.message.includes("already been registered")) {
-        const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-        if (listError) {
-          return new Response(
-            JSON.stringify({ error: listError.message }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        const existingUser = listData.users.find((u) => u.email === email);
-        if (!existingUser) {
-          return new Response(
-            JSON.stringify({ error: "No se pudo encontrar el usuario existente" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        userId = existingUser.id;
-      } else {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (created?.user) {
+      userId = created.user.id;
     } else {
-      userId = data.user.id;
+      const existing = await buscarPorEmail(admin, email);
+      if (!existing) {
+        console.error("create-tenant-user createUser error:", createErr?.message);
+        return json({ error: "No se pudo crear el usuario. Intenta de nuevo." }, 400);
+      }
+      userId = existing;
     }
 
-    // Add to tenant_members if tenant_id provided (for staff users)
-    if (tenant_id) {
-      // Check if already a member
-      const { data: existing } = await supabaseAdmin
+    // --- Agregar al local ---
+    if (tenantId) {
+      const { data: already } = await admin
         .from("tenant_members")
         .select("id")
         .eq("user_id", userId)
-        .eq("tenant_id", tenant_id)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
 
-      if (!existing) {
-        await supabaseAdmin
-          .from("tenant_members")
-          .insert({
-            user_id: userId,
-            tenant_id,
-            branch_id: branch_id || null,
-            role: "staff",
-            is_active: true,
-          });
+      if (!already) {
+        const { error: memberErr } = await admin.from("tenant_members").insert({
+          user_id: userId,
+          tenant_id: tenantId,
+          branch_id: branchId,
+          role: "staff",
+          is_active: true,
+        });
+        if (memberErr) {
+          console.error("create-tenant-user member insert error:", memberErr.message);
+          return json({ error: "Se creó el usuario, pero no se pudo agregar al local." }, 500);
+        }
       }
     }
 
-    return new Response(
-      JSON.stringify({ user_id: userId }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ user_id: userId });
   } catch (e) {
-    return new Response(
-      JSON.stringify({ error: e.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("create-tenant-user error:", e);
+    return json({ error: "Ocurrió un error. Intenta de nuevo." }, 500);
   }
 });
+
+/** Busca un usuario por email recorriendo todas las páginas (antes fallaba con más de 50). */
+async function buscarPorEmail(
+  admin: ReturnType<typeof createClient>,
+  email: string,
+): Promise<string | null> {
+  const porPagina = 1000;
+  for (let page = 1; page <= 100; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: porPagina });
+    if (error) {
+      console.error("create-tenant-user listUsers error:", error.message);
+      return null;
+    }
+    const hit = data.users.find((u) => (u.email ?? "").toLowerCase() === email);
+    if (hit) return hit.id;
+    if (data.users.length < porPagina) return null;
+  }
+  return null;
+}

@@ -12,9 +12,6 @@ export default function MozoJoinPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [invitation, setInvitation] = useState<{
-    id: string;
-    tenant_id: string;
-    branch_id: string;
     role: string;
     tenantName: string;
   } | null>(null);
@@ -30,42 +27,25 @@ export default function MozoJoinPage() {
   useEffect(() => {
     async function load() {
       if (!token) return;
-      const { data } = await supabase
-        .from("staff_invitations")
-        .select("id, tenant_id, branch_id, role, expires_at, used_at")
-        .eq("token", token)
-        .maybeSingle();
+      // Consulta segura: solo devuelve el local, el rol y si la invitación sigue vigente.
+      const { data } = await supabase.rpc("ver_invitacion_mozo", { _token: token });
+      const inv = data?.[0];
 
-      if (!data) {
+      if (!inv || inv.estado === "no_existe" || inv.estado === "vencida") {
         setExpired(true);
         setLoading(false);
         return;
       }
 
-      if (data.used_at) {
+      if (inv.estado === "usada") {
         setUsed(true);
         setLoading(false);
         return;
       }
 
-      if (new Date(data.expires_at) < new Date()) {
-        setExpired(true);
-        setLoading(false);
-        return;
-      }
-
-      const { data: tenant } = await supabase
-        .from("tenants")
-        .select("name")
-        .eq("id", data.tenant_id)
-        .single();
-
       setInvitation({
-        id: data.id,
-        tenant_id: data.tenant_id,
-        branch_id: data.branch_id,
-        role: data.role,
-        tenantName: tenant?.name ?? "Restaurante",
+        role: inv.rol ?? "waiter",
+        tenantName: inv.local ?? "Restaurante",
       });
       setLoading(false);
     }

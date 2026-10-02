@@ -4,6 +4,31 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.1: contención inmediata ✅ (con dos pendientes)
+**Primero las pruebas (`tests/seguridad/f1-1-contencion.test.ts`, 13 ataques):** se escribieron antes de arreglar nada. Corrieron en rojo: 10 de 13 ataques funcionaban.
+
+**⚠️ Error mío al correrlas en rojo:** tres de los ataques escriben en la base, y como los huecos estaban abiertos, funcionaron. Eso confirmó en vivo los problemas 1 y 5 del diagnóstico: el dueño del demo quedó como dueño de "La parrillada", y alguien sin sesión creó la cuenta `x@demo.tablio.test` y la metió en ese local. Se borraron exactamente esas filas (`privado/limpieza_pruebas_2026-10-01.sql`); los conteos volvieron a 14 usuarios y 8 miembros. **Regla nueva:** las pruebas de ataque que escriben solo se corren con el arreglo ya aplicado.
+
+**Arreglos:**
+- Migración `20261002010000_contencion_inmediata.sql`:
+  - Se elimina el alta pública de miembros (`tenant_members_public_insert`). El superadmin y las funciones del servidor siguen pudiendo dar de alta.
+  - Se **borra la columna `staff_users.pin`** (había un PIN en texto plano legible por cualquiera; ningún código la usaba).
+  - Las invitaciones de mozo y de backoffice dejan de poder leerse y modificarse sin sesión.
+  - Nueva función `ver_invitacion_mozo(token)`: devuelve solo el local, el rol y el estado de esa invitación.
+  - Tabla `support_chat_uso` y función `registrar_uso_chat`, cerradas al navegador: límite de 60 mensajes por usuario y por día.
+- `create-tenant-user`: exige sesión. Con local: solo superadmin o dueño o administrador activo de ese local. Sin local: solo superadmin. Valida que la sucursal pertenezca al local. Busca usuarios existentes en todas las páginas (antes fallaba con más de 50). Mensajes en español.
+- `support-chat`: exige sesión y aplica el límite diario. La pantalla de soporte manda el token de la sesión en vez de la clave pública.
+- `MozoJoinPage` usa `ver_invitacion_mozo` en vez de leer la tabla.
+- Se borraron del repositorio `create-platform-admin` y `create-jefe-ventas` (nunca se publicaron en el proyecto nuevo).
+
+**Comprobado:** 13 de 13 pruebas de seguridad en verde; revisión de tipos, compilación y tope de estilo (124) en verde; **36 pruebas de navegador** en verde, incluida una nueva (`e2e/invitacion-mozo.spec.ts`: el link de invitación muestra el local y una invitación falsa se rechaza); la base quedó sin columna de PIN, sin las 5 reglas abiertas y sin filas de más. Las pruebas de seguridad se agregaron a la integración continua.
+
+**Pendientes de la 1.1:**
+- **Cerrar el registro público de cuentas** en Supabase Auth. La herramienta de Supabase solo permite empujar toda la configuración de Auth a la vez y podría pisar otros ajustes sin avisar. Hay que hacerlo desde el panel o actualizar la herramienta.
+- **Sacar `.env` del repositorio**: se hace en el corte (0.2), configurando las variables en Vercel, para no cambiar ahora la base de la producción de Lovable.
+
+---
+
 ## 2026-10-01 — Fase 0 en marcha: decisiones de producto, un solo gestor de dependencias e integración continua
 **Decisiones del fundador:**
 - No hay MVP: se construye el producto completo; las fases solo ordenan dependencias.

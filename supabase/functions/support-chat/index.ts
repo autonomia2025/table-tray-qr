@@ -1,4 +1,5 @@
 import Anthropic from "npm:@anthropic-ai/sdk@0.131.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +33,8 @@ Reglas:
 // el formato de streaming "OpenAI" (choices[0].delta.content y [DONE]), así que la
 // función traduce cada trozo de texto a ese formato y la pantalla no cambia.
 const MODEL = "claude-haiku-4-5";
+// Mensajes por usuario y por día (hora de Chile). Evita que alguien gaste la clave de IA.
+const LIMITE_DIARIO = 60;
 
 const jsonError = (message: string, status: number) =>
   new Response(JSON.stringify({ error: message }), {
@@ -45,6 +48,21 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Solo usuarios con sesión (fase 1.1, DIAGNOSTICO problema 9).
+    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
+    const { data: caller } = token ? await admin.auth.getUser(token) : { data: { user: null } };
+    if (!caller?.user) return jsonError("Tienes que iniciar sesión para usar el chat.", 401);
+
+    const { data: dentroDelLimite, error: limiteErr } = await admin.rpc("registrar_uso_chat", {
+      _user_id: caller.user.id,
+      _limite: LIMITE_DIARIO,
+    });
+    if (limiteErr) console.error("support-chat límite error:", limiteErr.message);
+    if (dentroDelLimite === false) {
+      return jsonError("Llegaste al límite de mensajes de hoy. Escríbenos al +56938959429.", 429);
+    }
+
     const { messages } = await req.json();
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY no está configurada");

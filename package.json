@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "lint:tope": "node scripts/ci/lint-tope.mjs"
+    "lint:tope": "node scripts/ci/lint-tope.mjs",
+    "test:seguridad": "vitest run -c vitest.seguridad.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

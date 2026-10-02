@@ -26,6 +26,10 @@ jobs:
         run: bun run build
       - name: Pruebas unitarias
         run: bun run test
+      # Ataques del diagnóstico contra la base de pruebas: deben fallar.
+      # Las que necesitan cuentas del demo (privado/) se saltan en CI.
+      - name: Pruebas de seguridad
+        run: bun run test:seguridad
 
   e2e:
     name: Pruebas en navegador (Playwright)

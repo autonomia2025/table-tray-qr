@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -1420,7 +1420,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
-          pin: string | null
           role: string
           tenant_id: string
         }
@@ -1431,7 +1430,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
-          pin?: string | null
           role: string
           tenant_id: string
         }
@@ -1442,7 +1440,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          pin?: string | null
           role?: string
           tenant_id?: string
         }
@@ -1462,6 +1459,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      support_chat_uso: {
+        Row: {
+          dia: string
+          mensajes: number
+          user_id: string
+        }
+        Insert: {
+          dia?: string
+          mensajes?: number
+          user_id: string
+        }
+        Update: {
+          dia?: string
+          mensajes?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       support_tickets: {
         Row: {
@@ -1865,6 +1880,18 @@ export type Database = {
       }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
+      registrar_uso_chat: {
+        Args: { _limite: number; _user_id: string }
+        Returns: boolean
+      }
+      ver_invitacion_mozo: {
+        Args: { _token: string }
+        Returns: {
+          estado: string
+          local: string
+          rol: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
