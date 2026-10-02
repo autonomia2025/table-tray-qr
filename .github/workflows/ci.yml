@@ -1,0 +1,49 @@
+# Integración continua de Tablio: cada cambio se revisa, compila y prueba solo.
+name: CI
+
+on:
+  push:
+    branches: [main, "fase-*"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    name: Tipos, estilo, compilación y pruebas unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Revisión de tipos
+        run: bun run typecheck
+      - name: Estilo (sin errores nuevos)
+        run: bun run lint:tope
+      - name: Compilación
+        run: bun run build
+      - name: Pruebas unitarias
+        run: bun run test
+
+  e2e:
+    name: Pruebas en navegador (Playwright)
+    runs-on: ubuntu-latest
+    needs: revisar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Instalar navegador
+        run: bunx playwright install --with-deps chromium
+      # Las pruebas que necesitan credenciales del demo (privado/) se saltan solas en CI.
+      - name: Pruebas de punta a punta
+        run: bun run test:e2e
+      - name: Guardar el informe si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: informe-playwright
+          path: playwright-report/
+          retention-days: 7

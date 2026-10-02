@@ -27,11 +27,13 @@ El fundador **no es desarrollador**. Todo se le explica en español simple, sin 
 ## Comandos
 
 ```bash
-bun install --frozen-lockfile   # instalar dependencias (usar bun: package-lock.json está desactualizado)
-npm run dev          # app local en http://localhost:8080
-npm run build        # compilar (debe pasar antes de decir "listo")
-npm run lint         # revisar estilo
-npm run test         # pruebas (hoy solo existe un ejemplo vacío)
+bun install --frozen-lockfile   # instalar dependencias (bun es el único gestor; solo existe bun.lock)
+bun run dev          # app local en http://localhost:8080
+bun run typecheck    # revisión de tipos
+bun run build        # compilar (debe pasar antes de decir "listo")
+bun run lint:tope    # estilo: falla si hay más errores que el tope heredado (scripts/ci/lint-tope.json)
+bun run test         # pruebas unitarias
+bun run test:e2e     # pruebas en navegador (Playwright); las del demo usan privado/DEMO_CREDENCIALES.md
 ```
 
 Supabase (después de la migración, con la CLI enlazada al proyecto propio):
@@ -57,6 +59,13 @@ supabase functions deploy <nombre>      # publicar una edge function
 | Esquema de la base | `supabase/migrations/*.sql` |
 | Funciones de servidor | `supabase/functions/*/index.ts` |
 | Proveedor de pagos (simulado, aislado) | `supabase/functions/_shared/provider.ts` |
+
+## Decisiones de producto del fundador (1 de octubre de 2026)
+
+- **No hay MVP:** se construye el producto completo. Las fases solo ordenan dependencias; ninguna funcionalidad queda "para después".
+- **Un solo QR hace todo.** Al pagar, el comensal elige: **"Pagar ahora"** (destacado; va pagado directo a cocina), **"Pagar al mozo"** (efectivo o POS; el mozo cobra, lo registra y recién ahí va a cocina) o, solo en locales con cuenta abierta, **"Agregar a mi cuenta"** (paga su propia cuenta al final, en la app o con el mozo).
+- **Nada con cámara.** "Llamar al mozo" y "pedir la cuenta" son botones, sin escanear.
+- **Siempre con pruebas completas.** Cada cambio pasa por la integración continua (`.github/workflows/ci.yml`).
 
 ## Reglas del producto (resumen de la sección 4 del brief)
 

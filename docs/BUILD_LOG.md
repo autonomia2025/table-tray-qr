@@ -4,6 +4,26 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-01 — Fase 0 en marcha: decisiones de producto, un solo gestor de dependencias e integración continua
+**Decisiones del fundador:**
+- No hay MVP: se construye el producto completo; las fases solo ordenan dependencias.
+- Se mantienen todas las formas de pagar, ordenadas en un solo flujo desde el QR: "Pagar ahora" (destacado), "Pagar al mozo" (efectivo o POS: el mozo cobra y registra, y recién ahí va a cocina) y "Agregar a mi cuenta" (solo en locales con cuenta abierta). Calza con el brief (secciones 4 y 5.1).
+- "Llamar al mozo" sin cámara. Se eliminan todos los escaneos con cámara.
+- Por qué existe hoy la cámara y "pedir la cuenta": Lovable construyó primero (marzo) un modelo de cuenta abierta con escaneo de cámara como prueba de presencia, y después (agosto) el checkout con pago previo, sin limpiar lo anterior. Conviven los dos.
+
+**Vercel:** conectado por el fundador. Proyecto `table-tray-qr`: la rama principal publica en `https://table-tray-qr.vercel.app` (**todavía con la base de Lovable**, porque `.env` de `main` apunta allá) y la rama `fase-2-migracion` publica vistas previas con la base nueva (protegidas con el login de Vercel). El cambio a la base nueva en producción ocurre al unir las ramas (0.2), después de desconectar Lovable de GitHub.
+
+**0.3 Un solo gestor de dependencias ✅:** se borraron `package-lock.json` y `bun.lockb`. Solo queda `bun.lock`; Vercel instala con bun (`vercel.json`).
+
+**0.4 Integración continua ✅ (pendiente de su primera corrida en GitHub):**
+- `.github/workflows/ci.yml`: en cada cambio de `main` o de las ramas `fase-*`, instala con bun, revisa tipos, aplica el tope de estilo, compila, corre las pruebas unitarias y después las de navegador (con Chromium). Si algo falla, guarda el informe de Playwright.
+- Comandos nuevos: `bun run typecheck` y `bun run lint:tope`. El tope de estilo queda en 124 errores y 29 advertencias (todo heredado de Lovable): nunca puede subir, y cuando baje se actualiza.
+- Local: compila, la prueba unitaria pasa y **34 pruebas de navegador pasan** (2 se saltan porque necesitan el código de una mesa de Lovable).
+
+**Vista previa local:** se detuvo sola al llegar al tiempo máximo de una tarea en segundo plano. Se levanta con `bun run dev`.
+
+---
+
 ## 2026-10-01 — Migración aplicada, datos cargados, funciones publicadas y local de demo
 El fundador inició sesión en la CLI de Supabase (`supabase login`) y pidió que lo hiciera todo Claude Code.
 

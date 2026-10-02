@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "lint:tope": "node scripts/ci/lint-tope.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
