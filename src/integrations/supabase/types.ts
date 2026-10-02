@@ -147,6 +147,7 @@ export type Database = {
       bill_requests: {
         Row: {
           attended_at: string | null
+          attended_by: string | null
           branch_id: string
           id: string
           requested_at: string | null
@@ -157,9 +158,11 @@ export type Database = {
           tip_amount: number | null
           tip_percentage: number | null
           total_amount: number
+          user_id: string | null
         }
         Insert: {
           attended_at?: string | null
+          attended_by?: string | null
           branch_id: string
           id?: string
           requested_at?: string | null
@@ -170,9 +173,11 @@ export type Database = {
           tip_amount?: number | null
           tip_percentage?: number | null
           total_amount: number
+          user_id?: string | null
         }
         Update: {
           attended_at?: string | null
+          attended_by?: string | null
           branch_id?: string
           id?: string
           requested_at?: string | null
@@ -183,6 +188,7 @@ export type Database = {
           tip_amount?: number | null
           tip_percentage?: number | null
           total_amount?: number
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2087,6 +2093,8 @@ export type Database = {
       }
       waiter_calls: {
         Row: {
+          attended_at: string | null
+          attended_by: string | null
           branch_id: string
           created_at: string | null
           id: string
@@ -2095,8 +2103,11 @@ export type Database = {
           status: string | null
           table_id: string
           tenant_id: string
+          user_id: string | null
         }
         Insert: {
+          attended_at?: string | null
+          attended_by?: string | null
           branch_id: string
           created_at?: string | null
           id?: string
@@ -2105,8 +2116,11 @@ export type Database = {
           status?: string | null
           table_id: string
           tenant_id: string
+          user_id?: string | null
         }
         Update: {
+          attended_at?: string | null
+          attended_by?: string | null
           branch_id?: string
           created_at?: string | null
           id?: string
@@ -2115,6 +2129,7 @@ export type Database = {
           status?: string | null
           table_id?: string
           tenant_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2152,11 +2167,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _comensal_en_mesa: {
+        Args: { _qr_token: string }
+        Returns: Record<string, unknown>
+      }
       _mesa_y_actor: {
         Args: { _table_id: string }
         Returns: Record<string, unknown>
       }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
+      atender_cuenta: { Args: { _id: string }; Returns: undefined }
+      atender_llamado: { Args: { _id: string }; Returns: undefined }
       calificar_mesa: {
         Args: { _estrellas: number; _qr_token: string }
         Returns: undefined
@@ -2170,6 +2191,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cancelar_llamado: { Args: { _id: string }; Returns: undefined }
       cerrar_mesa: {
         Args: { _motivo?: string; _table_id: string }
         Returns: Json
@@ -2185,11 +2207,19 @@ export type Database = {
       }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
+      llamar_mozo: {
+        Args: { _motivo?: string; _qr_token: string }
+        Returns: Json
+      }
       marcar_agotado: {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined
       }
       mi_perfil: { Args: never; Returns: Json }
+      pedir_cuenta: {
+        Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
+        Returns: Json
+      }
       rango_estado: { Args: { _estado: string }; Returns: number }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }

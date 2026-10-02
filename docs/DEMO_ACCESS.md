@@ -43,7 +43,9 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 1. En tu celular, abre el link de la mesa 3. Pide un Pisco Sour y unas papas XL, y paga con tarjeta.
 2. En el computador, con la cuenta de cocina, abre el KDS: el pedido llega solo. Acéptalo y márcalo listo.
 3. En el celular del comensal, el estado cambia en vivo.
-4. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
+4. En el celular del comensal, toca "Llamar al mozo" (sin escanear nada). Con la cuenta del mozo (Camila), la mesa aparece con 🔔: tómala y toca "Atender llamada"; el comensal lo ve al instante.
+5. Cuando se van, el mozo abre la mesa y toca "Cerrar mesa". El comensal ve "¿Cómo estuvo tu experiencia?" y califica.
+6. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
 ## Experiencia del comensal (invitado o cliente)
 

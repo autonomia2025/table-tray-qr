@@ -57,6 +57,18 @@ enable_anonymous_sign_ins = true
 enable_manual_linking = true
 minimum_password_length = 6
 
+# Límites por IP. En un bar todos los comensales del wifi comparten la misma IP:
+# con los valores por defecto (30 invitados por hora) el comensal 31 de la noche no podría entrar.
+[auth.rate_limit]
+# Invitados (comensales sin registrarse) por hora y por IP.
+anonymous_users = 1000
+# Inicios de sesión y registros cada 5 minutos por IP.
+sign_in_sign_ups = 300
+# Renovaciones de sesión cada 5 minutos por IP.
+token_refresh = 1000
+# Verificaciones de códigos y enlaces cada 5 minutos por IP.
+token_verifications = 300
+
 [auth.mfa]
 max_enrolled_factors = 10
 [auth.mfa.totp]

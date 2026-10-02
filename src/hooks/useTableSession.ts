@@ -19,24 +19,38 @@ export interface TableInfo {
  * Fase 1.3: el comensal siempre tiene identidad propia. Si no tiene sesión, entra como
  * invitado (anónimo) y queda registrado en la sesión de la mesa (unirse_a_mesa).
  */
-const mesasUnidas = new Set<string>();
+// Uniones en curso (para no repetir la misma llamada si varias pantallas la piden a la vez).
+// No se guarda el resultado: la mesa puede cerrarse y abrirse una sesión nueva, o el comensal
+// puede cambiar de cuenta; unirse_a_mesa es idempotente y barata.
+const uniones = new Map<string, Promise<boolean>>();
 
-async function entrarComoComensal(token: string) {
-  let { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error) {
-      console.error("No se pudo crear la sesión de invitado:", error.message);
-      return;
+/** Asegura la identidad del comensal (invitado si no tiene sesión) y lo registra en la mesa. */
+function entrarComoComensal(token: string): Promise<boolean> {
+  const previa = uniones.get(token);
+  if (previa) return previa;
+  const promesa = (async () => {
+    let { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) {
+        console.error("No se pudo crear la sesión de invitado:", error.message);
+        return false;
+      }
+      session = data.session;
     }
-    session = data.session;
-  }
-  const clave = `${session?.user.id}:${token}`;
-  if (!session || mesasUnidas.has(clave)) return;
-  const { error } = await supabase.rpc("unirse_a_mesa", { _qr_token: token });
-  if (error) console.error("unirse_a_mesa:", error.message);
-  else mesasUnidas.add(clave);
+    if (!session) return false;
+    const { error } = await supabase.rpc("unirse_a_mesa", { _qr_token: token });
+    if (error) {
+      console.error("unirse_a_mesa:", error.message);
+      return false;
+    }
+    return true;
+  })();
+  uniones.set(token, promesa);
+  promesa.finally(() => uniones.delete(token));
+  return promesa;
 }
+
 export function useTableSession() {
   const location = useLocation();
   const storeToken = useCartStore((s) => s.tableToken);
@@ -86,9 +100,17 @@ export function useTableSession() {
 /**
  * Para pantallas del comensal que no pasan por la carta (seguimiento, cuenta, pago):
  * asegura su identidad y lo registra en la mesa del código, para que pueda ver sus pedidos.
+ * Devuelve true cuando ya está registrado: recién ahí la base le muestra sus pedidos
+ * (null mientras se registra).
  */
-export function useComensalEnMesa(token: string | null | undefined) {
+export function useComensalEnMesa(token: string | null | undefined): boolean | null {
+  // null = registrándose; true = registrado; false = no se pudo (sin código o con error)
+  const [unido, setUnido] = useState<boolean | null>(token ? null : false);
   useEffect(() => {
-    if (token) entrarComoComensal(token);
+    let cancelado = false;
+    setUnido(token ? null : false);
+    if (token) entrarComoComensal(token).then((ok) => { if (!cancelado) setUnido(ok); });
+    return () => { cancelado = true; };
   }, [token]);
+  return unido;
 }

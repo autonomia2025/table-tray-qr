@@ -11,6 +11,7 @@ const mesa10 = texto.match(/^\| 10 \| \w+ \| `([^`]+)` \|$/m)?.[1];
 test.skip(!texto, "Falta privado/DEMO_CREDENCIALES.md");
 
 test("el comensal ve su pedido pasar de Recibido a En cocina, Listo y Entregado sin recargar", async ({ browser }) => {
+  test.setTimeout(90_000); // dos navegadores a la vez
   // Comensal: pide y paga, y queda en el seguimiento
   const comensalCtx = await browser.newContext();
   const comensal = await comensalCtx.newPage();

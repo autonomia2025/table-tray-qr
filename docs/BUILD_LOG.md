@@ -4,6 +4,53 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.6: acciones del comensal sin cámara ✅
+**Decisión del fundador:** nada con cámara. "Llamar al mozo" y "pedir la cuenta" ya no piden escanear la tarjeta de la mesa.
+
+**Base (migración `20261002070000_acciones_comensal.sql`):**
+- **Llamar al mozo** (`llamar_mozo`): lo reemplaza la validación del servidor (antes la hacía la cámara).
+  - Solo puede llamar quien está registrado en la sesión abierta de esa mesa.
+  - Si ya hay una llamada pendiente, no se duplica.
+  - Límite de 6 llamadas por persona cada 10 minutos, contra el abuso a distancia.
+  - El comensal puede cancelar su llamada; un extraño no (`cancelar_llamado`).
+- **Pedir la cuenta** (`pedir_cuenta`):
+  - **El total lo calcula la base**: lo que la mesa tiene sin pagar. Antes lo mandaba el navegador.
+  - La propina no puede superar la cuenta.
+  - Si ya hay una cuenta pedida, se actualiza en vez de duplicarse.
+  - Sin nada pendiente, avisa "Tu mesa no tiene nada pendiente de pago 🎉".
+- **El personal atiende** con `atender_llamado` y `atender_cuenta` (la cocina no). Queda quién y cuándo, y quién llamó.
+- **Reglas de acceso:** se eliminaron la inserción y la lectura públicas de llamadas y cuentas, y la escritura directa del personal. Leen el personal y el comensal de esa sesión.
+- **Límites de Supabase subidos** (`supabase/config.toml`, `[auth.rate_limit]`), verificados en la base real:
+  - invitados: 1.000 por hora por IP (antes 30);
+  - inicios de sesión: 300 cada 5 minutos (antes 30);
+  - renovaciones de sesión: 1.000;
+  - verificaciones: 300.
+
+  En un bar todos los comensales del wifi comparten la IP: con 30, el comensal 31 de la noche quedaba fuera. La herramienta 2.72 sí los maneja (se revisó la diferencia antes de aplicar: solo cambiaron esos 4 valores).
+
+**App:**
+- **Seguimiento:** "Llamar al mozo" pide el motivo y listo. Se quitó todo el escáner.
+  - **Al cerrarse la mesa, el comensal ve "¿Cómo estuvo tu experiencia?" y califica.** Antes solo pasaba si había pedido la cuenta, y en prepago nunca ocurría; además lo sacaba de la pantalla a los 8 segundos.
+- **Cuenta:** sin cámara. Muestra "Ya pagado" y "Por pagar", igual que la base. "Pedir la cuenta al mozo" es un botón. Sin código de mesa, invita a abrir la carta desde el QR.
+- **Mozo:** atender llamada y cuenta por el servidor.
+- **El comensal espera a quedar registrado en la mesa antes de buscar sus pedidos.** Antes, si entraba directo por el link del seguimiento, a veces veía "No encontramos tu pedido" por llegar antes que el registro.
+- Se quitaron las librerías de lectura de QR (`@zxing`): ya nada usa la cámara.
+
+**Pruebas:**
+- `tests/seguridad/f1-6-acciones-comensal.test.ts`: 5 pruebas.
+  - Nadie escribe llamadas ni cuentas directo.
+  - Solo quien está en la mesa llama, sin duplicados; el mozo atiende y la cocina no.
+  - Cancelar solo el propio, y el límite contra abusos.
+  - Pedir la cuenta: total de la base, propina con tope, sin duplicar, mesa esperando y atención por rol.
+- `e2e/mozo-mesa.spec.ts` (ahora **una visita completa con dos navegadores**):
+  - el comensal paga y llama al mozo sin cámara;
+  - el mozo ve 🔔, toma la mesa y atiende (el comensal lo ve al instante);
+  - el mozo cierra la mesa y el comensal califica.
+- En el computador local, las pruebas de navegador corren de a una: con 8 GB, Docker y dos navegadores se quedaban sin memoria y la base local se caía. En CI siguen en paralelo.
+- **Base desechable:** 65 de seguridad y 49 de navegador. **Base de pruebas:** 63 de seguridad (más 2 que solo corren con "Local Ajeno"). Estilo: 119 errores (bajaron 2), 26 advertencias.
+
+---
+
 ## 2026-10-02 — Fase 1.5: dominio mesas y sesiones ✅
 **Base (migración `20261002060000_dominio_mesas.sql`):**
 - **Se cerró la lectura pública de mesas.** Cualquiera podía listar todas las mesas de todos los locales **con su código QR** y entrar a cualquier mesa a distancia. Ahora:
@@ -40,7 +87,7 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
   - El código QR lo genera la base.
   - El dueño de otro local no ve ni toca nada.
 - `e2e/mozo-mesa.spec.ts`: un comensal paga, y **el mozo toma la mesa y la cierra desde su pantalla**.
-- **Base desechable:** 60 de seguridad y 49 de navegador. **Base de pruebas:** 55 de seguridad pasan; 3 chocaron con el límite de Supabase de invitados por hora por IP (el riesgo del wifi del bar) y se repitieron después. Estilo: 121 errores (bajó 1).
+- **Base desechable:** 60 de seguridad y 49 de navegador. **Base de pruebas:** 55 de seguridad pasaron; 3 chocaron con el límite de Supabase de invitados por hora por IP (el riesgo del wifi del bar). Pasaron después de subir los límites (fase 1.6). Estilo: 121 errores (bajó 1).
 
 ---
 

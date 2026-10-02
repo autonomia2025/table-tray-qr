@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { cambiarEstadoPedido } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
-import { cerrarMesa } from "@/lib/mesa";
+import { atenderCuenta, atenderLlamado, cerrarMesa } from "@/lib/mesa";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -227,16 +227,18 @@ export default function MozoNotificacionesPage() {
 
   const handleCallAttend = async (id: string) => {
     setActionLoading(id);
-    await supabase.from('waiter_calls').update({ status: 'attended' }).eq('id', id);
-    toast({ title: 'Llamada atendida' });
+    const r = await atenderLlamado(id);
+    if (r.ok === false) toast({ title: 'No se pudo atender', description: r.error, variant: 'destructive' });
+    else toast({ title: 'Llamada atendida' });
     fetchAll();
     setActionLoading(null);
   };
 
   const handleBillAttend = async (id: string, tableId: string) => {
     setActionLoading(id);
-    await supabase.from('bill_requests').update({ status: 'attending', attended_at: new Date().toISOString() }).eq('id', id);
-    toast({ title: 'Cuenta en camino' });
+    const r = await atenderCuenta(id);
+    if (r.ok === false) toast({ title: 'No se pudo atender', description: r.error, variant: 'destructive' });
+    else toast({ title: 'Cuenta en camino' });
     fetchAll();
     setActionLoading(null);
   };

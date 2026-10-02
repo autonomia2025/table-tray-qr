@@ -31,4 +31,5 @@ export E2E_SUPABASE_REF="127.0.0.1"
 echo "▶ Pruebas de seguridad"
 bun run test:seguridad
 echo "▶ Pruebas de navegador"
-bunx playwright test
+# En un computador con poca memoria (Docker + navegadores) se corren de a una; en CI, en paralelo.
+bunx playwright test --workers="${E2E_WORKERS:-$([ -n "${CI:-}" ] && echo 2 || echo 1)}"

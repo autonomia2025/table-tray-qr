@@ -68,3 +68,22 @@ export const calificarMesa = (qrToken: string, estrellas: number) =>
 
 /** La base pide motivo cuando un encargado cierra una mesa con pedidos sin pagar. */
 export const pideMotivo = (error: string) => /indica el motivo/i.test(error);
+
+/* ---------- Acciones del comensal sin cámara (fase 1.6) ---------- */
+
+/** Llama al mozo. Si ya hay una llamada pendiente en la mesa, devuelve esa. */
+export const llamarMozo = (qrToken: string, motivo: string) =>
+  llamar<{ id: string; status: string; nueva: boolean }>("llamar_mozo", { _qr_token: qrToken, _motivo: motivo });
+
+export const cancelarLlamado = (id: string) => llamar<null>("cancelar_llamado", { _id: id });
+
+/** Pide la cuenta: el total lo calcula la base (lo que la mesa tiene sin pagar). */
+export const pedirCuenta = (qrToken: string, propina: number, porcentaje: number) =>
+  llamar<{ id: string; total: number; propina: number; a_pagar: number }>("pedir_cuenta", {
+    _qr_token: qrToken,
+    _propina: propina,
+    _porcentaje: porcentaje,
+  });
+
+export const atenderLlamado = (id: string) => llamar<null>("atender_llamado", { _id: id });
+export const atenderCuenta = (id: string) => llamar<null>("atender_cuenta", { _id: id });

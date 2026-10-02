@@ -1,16 +1,15 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
-import { calificarMesa, verMesa } from "@/lib/mesa";
+import { calificarMesa, cancelarLlamado, llamarMozo, verMesa } from "@/lib/mesa";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Receipt, Bell, ChevronDown, ChevronUp, AlertTriangle, Camera, X } from "lucide-react";
+import { ShoppingBag, Receipt, Bell, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCartStore } from "@/store/cartStore";
-import { BrowserQRCodeReader } from "@zxing/browser";
 import {
   Dialog,
   DialogContent,
@@ -61,15 +60,6 @@ function formatTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
 }
 
-function extractTokenFromScan(raw: string): string {
-  try {
-    const url = new URL(raw);
-    return url.searchParams.get("t") || raw;
-  } catch {
-    return raw;
-  }
-}
-
 /* ---------- confetti ---------- */
 function spawnConfetti(primaryColor: string) {
   const container = document.createElement("div");
@@ -106,7 +96,7 @@ export default function TrackingPage() {
   const storeTableToken = useCartStore((s) => s.tableToken);
   const tableToken = tableTokenFromUrl || storeTableToken;
   // Identidad del comensal en su mesa: sin esto no puede ver sus pedidos (fase 1.4).
-  useComensalEnMesa(tableToken);
+  const unido = useComensalEnMesa(tableToken);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -123,10 +113,7 @@ export default function TrackingPage() {
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
 
-  // QR scanner state for waiter call
-  const [waiterScanOpen, setWaiterScanOpen] = useState(false);
-  const [waiterReason, setWaiterReason] = useState("");
-  const waiterVideoRef = useRef<HTMLVideoElement>(null);
+  const [visitaTerminada, setVisitaTerminada] = useState(false);
 
   // Tenant
   const { data: tenant } = useQuery({
@@ -169,7 +156,7 @@ export default function TrackingPage() {
 
   // Orders
   const { data: rawOrders, isLoading, isError } = useQuery({
-    queryKey: ["orders-tracking", session?.id],
+    queryKey: ["orders-tracking", session?.id, unido],
     queryFn: async () => {
       const { data } = await supabase
         .from("orders")
@@ -209,7 +196,7 @@ export default function TrackingPage() {
         items: itemsByOrder.get(o.id) || [],
       }));
     },
-    enabled: !!session?.id,
+    enabled: !!session?.id && unido !== null,
     staleTime: 5_000,
   });
 
@@ -261,7 +248,7 @@ export default function TrackingPage() {
           const updated = payload.new as { is_active: boolean };
           if (!updated.is_active) {
             toast({ title: "✅ ¡Gracias por tu visita!", description: "Esperamos verte pronto" });
-            setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 8000);
+            setVisitaTerminada(true);
           }
         }
       )
@@ -374,7 +361,7 @@ export default function TrackingPage() {
   // Cancel waiter call
   const cancelWaiterCall = async () => {
     if (!waiterCallId) return;
-    await supabase.from("waiter_calls").update({ status: "cancelled" }).eq("id", waiterCallId);
+    await cancelarLlamado(waiterCallId);
     setWaiterCallId(null);
     setWaiterCallStatus(null);
   };
@@ -385,97 +372,24 @@ export default function TrackingPage() {
     setRatingSubmitted(true);
     if (!tableToken) return;
     await calificarMesa(tableToken, stars);
+    if (visitaTerminada) setTimeout(() => navigate(`/${slug}/menu`, { replace: true }), 4000);
   };
 
-  // Waiter call — select reason then open scanner
-  const onReasonSelected = (reason: string) => {
-    setWaiterReason(reason);
+  // Llamar al mozo: sin cámara (fase 1.6). El servidor valida que el comensal esté en la mesa.
+  const onReasonSelected = async (reason: string) => {
+    if (!tableToken) return;
     setWaiterModalOpen(false);
-    setTimeout(() => setWaiterScanOpen(true), 200);
-  };
-
-  // Stop waiter camera
-  const stopWaiterCamera = useCallback(() => {
-    if (waiterVideoRef.current?.srcObject) {
-      const stream = waiterVideoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((t) => t.stop());
-      waiterVideoRef.current.srcObject = null;
+    setWaiterSending(true);
+    const r = await llamarMozo(tableToken, reason);
+    setWaiterSending(false);
+    if (r.ok === false) {
+      toast({ title: "No pudimos llamar al mozo", description: r.error, variant: "destructive" });
+      return;
     }
-  }, []);
-
-  // Start waiter QR scanner
-  useEffect(() => {
-    if (!waiterScanOpen) return;
-
-    let processed = false;
-    const startCamera = async () => {
-      try {
-        const reader = new BrowserQRCodeReader();
-        await reader.decodeFromConstraints(
-          { video: { facingMode: "environment" } },
-          waiterVideoRef.current!,
-          (result) => {
-            if (result && !processed) {
-              processed = true;
-              const token = extractTokenFromScan(result.getText());
-              stopWaiterCamera();
-              setWaiterScanOpen(false);
-              handleWaiterScanned(token);
-            }
-          },
-        );
-      } catch (err) {
-        console.error("Camera error:", err);
-        toast({ title: "Error al abrir la cámara", variant: "destructive" });
-        setWaiterScanOpen(false);
-      }
-    };
-
-    startCamera();
-    return () => {
-      processed = true;
-      stopWaiterCamera();
-    };
-  }, [waiterScanOpen]);
-
-  // Validate scanned token and send waiter call
-  const handleWaiterScanned = useCallback(
-    async (scannedToken: string) => {
-      if (!tableData || !session) return;
-      setWaiterSending(true);
-
-      // Validate token matches this table
-      const scannedTable = await verMesa(scannedToken);
-
-      if (!scannedTable || scannedTable.id !== tableData.id) {
-        toast({ title: "QR no válido para esta mesa", variant: "destructive" });
-        setWaiterSending(false);
-        return;
-      }
-
-      try {
-        const { data: insertedCall } = await supabase.from("waiter_calls").insert({
-          tenant_id: tableData.tenant_id,
-          table_id: tableData.id,
-          branch_id: tableData.branch_id,
-          session_id: session.id,
-          reason: waiterReason,
-          status: "pending",
-        }).select("id").single();
-
-        if (insertedCall) {
-          setWaiterCallId(insertedCall.id);
-          setWaiterCallStatus("pending");
-        }
-        toast({ title: "El mozo fue notificado 👍" });
-      } catch {
-        toast({ title: "Error al llamar al mozo", variant: "destructive" });
-      } finally {
-        setWaiterSending(false);
-      }
-    },
-    [tableData, session, toast, waiterReason]
-  );
+    setWaiterCallId(r.datos.id);
+    setWaiterCallStatus("pending");
+    toast({ title: "El mozo fue notificado 👍" });
+  };
 
   /* ---------- LOADING ---------- */
   if (isLoading || !tenant) {
@@ -496,7 +410,7 @@ export default function TrackingPage() {
   }
 
   /* ---------- ERROR ---------- */
-  const ordersLoading = !session?.id || isLoading;
+  const ordersLoading = !session?.id || unido === null || isLoading;
   if (isError || (!ordersLoading && session && orders.length === 0)) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
@@ -546,59 +460,6 @@ export default function TrackingPage() {
       animate={{ opacity: 1 }}
       className="min-h-screen bg-background pb-8"
     >
-      {/* Waiter QR scanner - fullscreen overlay */}
-      <video
-        ref={waiterVideoRef}
-        className={waiterScanOpen ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
-        autoPlay
-        playsInline
-        muted
-      />
-
-      <AnimatePresence>
-        {waiterScanOpen && (
-          <motion.div
-            key="waiter-scan"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50"
-          >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
-              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
-
-              <div className="relative h-[260px] w-[260px]">
-                <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
-                <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
-                <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
-                <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
-
-                <motion.div
-                  className="absolute left-2 right-2 h-0.5 rounded-full"
-                  style={{ backgroundColor: primaryColor }}
-                  animate={{ top: ["10%", "90%", "10%"] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </div>
-            </div>
-
-            <div className="absolute bottom-32 left-0 right-0 text-center">
-              <p className="text-white text-sm font-medium">Escanea la tarjeta QR de tu mesa 🛎</p>
-            </div>
-
-            <button
-              onClick={() => { stopWaiterCamera(); setWaiterScanOpen(false); }}
-              className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
-            >
-              <X className="h-4 w-4" /> Cancelar
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
         {tenant.logo_url ? (
@@ -780,7 +641,7 @@ export default function TrackingPage() {
           </div>
         )}
 
-        {billStatus === 'paid' && !ratingSubmitted && (
+        {(billStatus === 'paid' || visitaTerminada) && !ratingSubmitted && (
           <div className="mb-4 rounded-xl border border-border bg-card p-5 text-center">
             <p className="text-lg font-bold text-foreground mb-1">¡Gracias por tu visita! 🎉</p>
             <p className="text-sm text-muted-foreground mb-4">¿Cómo estuvo tu experiencia?</p>
@@ -851,6 +712,7 @@ export default function TrackingPage() {
 
             <button
               onClick={() => setWaiterModalOpen(true)}
+              disabled={waiterSending}
               className="flex w-full items-center justify-center gap-2 py-2.5 text-xs font-medium text-muted-foreground transition-colors active:text-foreground"
             >
               <Bell className="h-3.5 w-3.5" />
@@ -949,9 +811,6 @@ export default function TrackingPage() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            Después deberás escanear la tarjeta QR de tu mesa
-          </p>
         </DialogContent>
       </Dialog>
     </motion.div>

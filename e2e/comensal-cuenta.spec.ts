@@ -29,7 +29,7 @@ test("el invitado guarda su cuenta con su correo y queda como cliente", async ({
   await page.getByRole("button", { name: "Continuar con mi correo" }).click();
   await page.getByPlaceholder("tu@correo.com").fill(correo);
   await page.getByRole("button", { name: "Enviar código" }).click();
-  await expect(page.getByText("Revisa tu correo")).toBeVisible();
+  await expect(page.getByText("Revisa tu correo")).toBeVisible({ timeout: 20_000 });
 
   // Abre el enlace del correo, como lo haría el comensal desde su app de correo
   let enlace = "";

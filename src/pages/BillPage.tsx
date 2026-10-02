@@ -1,26 +1,14 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
-import { verMesa } from "@/lib/mesa";
+import { pedirCuenta, verMesa } from "@/lib/mesa";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
-import { BrowserQRCodeReader } from "@zxing/browser";
+import { ArrowLeft, AlertTriangle, Loader2, Receipt } from "lucide-react";
 import { formatCLP } from "@/lib/format";
-import { useToast } from "@/hooks/use-toast";
 import { useCartStore } from "@/store/cartStore";
 import { Input } from "@/components/ui/input";
-
-/* ---------- helpers ---------- */
-function extractTokenFromScan(raw: string): string {
-  try {
-    const url = new URL(raw);
-    return url.searchParams.get("t") || raw;
-  } catch {
-    return raw;
-  }
-}
 
 interface OrderWithItems {
   id: string;
@@ -28,6 +16,7 @@ interface OrderWithItems {
   status: string;
   total_amount: number;
   confirmed_at: string | null;
+  payment_status: string | null;
   items: {
     menu_item_name: string;
     quantity: number;
@@ -37,7 +26,7 @@ interface OrderWithItems {
   }[];
 }
 
-type PageState = "summary" | "scanning" | "processing" | "success" | "error";
+type PageState = "summary" | "processing" | "success" | "error";
 
 const TIP_OPTIONS = [
   { label: "Sin propina", pct: 0 },
@@ -55,27 +44,16 @@ export default function BillPage() {
   const storeTableToken = useCartStore((s) => s.tableToken);
   const tableToken = tableTokenFromUrl || storeTableToken || "";
   // Identidad del comensal en su mesa: sin esto no puede ver sus pedidos (fase 1.4).
-  useComensalEnMesa(tableToken);
-  const { toast } = useToast();
+  const unido = useComensalEnMesa(tableToken);
 
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
-  const [cameraError, setCameraError] = useState("");
   const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
   const [customTip, setCustomTip] = useState("");
-  const selectedTipIdxRef = useRef<number | null>(null);
-  const customTipRef = useRef<string>("");
   const [showBackBtn, setShowBackBtn] = useState(false);
   const [finalTotal, setFinalTotal] = useState(0);
   const [finalTip, setFinalTip] = useState(0);
   const [sessionTimeout, setSessionTimeout] = useState(false);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
-  const scanProcessedRef = useRef(false);
-
-  useEffect(() => { selectedTipIdxRef.current = selectedTipIdx; }, [selectedTipIdx]);
-  useEffect(() => { customTipRef.current = customTip; }, [customTip]);
 
   /* ---- queries ---- */
   const { data: tenant } = useQuery({
@@ -115,11 +93,11 @@ export default function BillPage() {
   });
 
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["orders-bill", session?.id],
+    queryKey: ["orders-bill", session?.id, unido],
     queryFn: async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, order_number, status, total_amount, confirmed_at")
+        .select("id, order_number, status, total_amount, confirmed_at, payment_status")
         .eq("session_id", session!.id)
         .neq("status", "cancelled")
         .order("confirmed_at", { ascending: true });
@@ -136,11 +114,15 @@ export default function BillPage() {
       }
       return ordersWithItems;
     },
-    enabled: !!session?.id,
+    enabled: !!session?.id && unido !== null,
     staleTime: 5000,
   });
 
-  const subtotal = orders.reduce((s, o) => s + o.total_amount, 0);
+  // Lo mismo que calcula la base al pedir la cuenta: lo que la mesa tiene sin pagar.
+  const yaPagado = orders
+    .filter((o) => o.payment_status === "paid" || o.payment_status === "refunded")
+    .reduce((s, o) => s + o.total_amount, 0);
+  const subtotal = orders.reduce((s, o) => s + o.total_amount, 0) - yaPagado;
 
   /* ---- tip logic ---- */
   const tipAmount = (() => {
@@ -152,121 +134,20 @@ export default function BillPage() {
   const tipPercentage = selectedTipIdx !== null && !customTip ? TIP_OPTIONS[selectedTipIdx].pct : 0;
   const total = subtotal + tipAmount;
 
-  /* ---- camera ---- */
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (videoRef.current?.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((t) => t.stop());
-      videoRef.current.srcObject = null;
+  /* ---- pedir la cuenta: sin cámara, el total lo calcula la base (fase 1.6) ---- */
+  const solicitarCuenta = async () => {
+    if (!tableToken) return;
+    setPageState("processing");
+    const r = await pedirCuenta(tableToken, tipAmount, tipPercentage);
+    if (r.ok === false) {
+      setErrorMsg(r.error);
+      setPageState("error");
+      return;
     }
-  }, []);
-
-  const startScanning = useCallback(async () => {
-    setCameraError("");
-    scanProcessedRef.current = false;
-    setPageState("scanning");
-    try {
-      const reader = new BrowserQRCodeReader();
-      codeReaderRef.current = reader;
-      await reader.decodeFromConstraints(
-        { video: { facingMode: "environment" } },
-        videoRef.current!,
-        (result) => {
-          if (result && !scanProcessedRef.current) {
-            scanProcessedRef.current = true;
-            const token = extractTokenFromScan(result.getText());
-            stopCamera();
-            handleScannedToken(token);
-          }
-        },
-      );
-    } catch (err: any) {
-      if (err.name === "NotAllowedError" || err.message?.includes("Permission")) {
-        setCameraError("camera_denied");
-      } else {
-        setCameraError("camera_error");
-      }
-      setPageState("summary");
-    }
-  }, [stopCamera]);
-
-  const cancelScanning = useCallback(() => {
-    stopCamera();
-    setPageState("summary");
-  }, [stopCamera]);
-
-  /* ---- bill creation ---- */
-  const handleScannedToken = useCallback(
-    async (scannedToken: string) => {
-      setPageState("processing");
-      try {
-        const scannedTable = await verMesa(scannedToken);
-
-        if (!scannedTable) throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
-        if (tenant?.id && scannedTable.tenant_id !== tenant.id) throw new Error("QR incorrecto.");
-
-        // Find active session from the scanned table (don't rely on pre-loaded session)
-        let activeSessionId = session?.id;
-        if (!activeSessionId) activeSessionId = scannedTable.sesion?.id;
-
-        if (!activeSessionId) throw new Error("No se encontró una sesión activa en esta mesa.");
-
-        // Always fetch real order totals from DB to avoid stale/empty state
-        const { data: sessionOrders } = await supabase
-          .from("orders")
-          .select("total_amount")
-          .eq("session_id", activeSessionId)
-          .neq("status", "cancelled");
-
-        const realSubtotal = (sessionOrders ?? []).reduce((s, o) => s + o.total_amount, 0);
-        const effectiveSubtotal = realSubtotal > 0 ? realSubtotal : subtotal;
-
-        // Recalculate tip based on real subtotal
-        const currentTipIdx = selectedTipIdxRef.current;
-        const currentCustomTip = customTipRef.current;
-        const effectiveTip = (() => {
-          if (currentCustomTip) return parseInt(currentCustomTip, 10) || 0;
-          if (currentTipIdx !== null) return Math.round(effectiveSubtotal * (TIP_OPTIONS[currentTipIdx].pct / 100));
-          return 0;
-        })();
-        const effectiveTipPercentage = currentTipIdx !== null && !currentCustomTip
-          ? TIP_OPTIONS[currentTipIdx].pct
-          : 0;
-        const effectiveTotal = effectiveSubtotal + effectiveTip;
-
-        const { error: billError } = await supabase.from("bill_requests").insert({
-          tenant_id: scannedTable.tenant_id,
-          session_id: activeSessionId,
-          table_id: scannedTable.id,
-          branch_id: scannedTable.branch_id,
-          total_amount: effectiveSubtotal,
-          tip_amount: effectiveTip,
-          tip_percentage: effectiveTipPercentage,
-          status: "pending",
-          requested_at: new Date().toISOString(),
-        });
-
-        if (billError) {
-          console.error("Bill insert error:", billError);
-          throw new Error("Error al enviar la solicitud: " + billError.message);
-        }
-
-        // La mesa queda "esperando la cuenta" por la base (fase 1.5).
-
-        setFinalTotal(effectiveTotal);
-        setFinalTip(effectiveTip);
-        setPageState("success");
-      } catch (err: any) {
-        setErrorMsg(err.message || "Error desconocido");
-        setPageState("error");
-      }
-    },
-    [tenant?.id, session?.id, subtotal, total],
-  );
+    setFinalTotal(r.datos.a_pagar);
+    setFinalTip(r.datos.propina);
+    setPageState("success");
+  };
 
   // Session timeout guard
   useEffect(() => {
@@ -292,7 +173,7 @@ export default function BillPage() {
 
   /* ========== RENDER ========== */
 
-  if (isLoading) {
+  if (isLoading || (tableToken && unido === null)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -300,7 +181,7 @@ export default function BillPage() {
     );
   }
 
-  // If no session loaded from token, show scan-first flow instead of blocking
+  // Sin código de mesa no hay cuenta que pedir: se entra desde el QR de la mesa.
   if (!session && !isLoading && sessionTimeout && !tableToken) {
     return (
       <div className="min-h-screen bg-background">
@@ -316,71 +197,24 @@ export default function BillPage() {
         </header>
         <div className="flex flex-col items-center justify-center px-6 pt-16 text-center">
           <p className="text-5xl mb-4">📱</p>
-          <p className="text-base font-bold text-foreground">Escanea el QR de tu mesa</p>
-          <p className="mt-1 text-sm text-muted-foreground mb-6">Para pedir la cuenta, escanea la tarjeta QR de tu mesa.</p>
+          <p className="text-base font-bold text-foreground">Abre la cuenta desde tu mesa</p>
+          <p className="mt-1 text-sm text-muted-foreground mb-6">Escanea con la cámara de tu celular el QR de tu mesa y vuelve a esta pantalla.</p>
           <button
-            onClick={startScanning}
+            onClick={() => navigate(`/${slug}/menu`)}
             className="flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg"
             style={{ backgroundColor: primaryColor }}
           >
-            <Camera className="h-5 w-5" />
-            Escanear QR
+            Ir a la carta
           </button>
         </div>
-        <video
-          ref={videoRef}
-          className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
-          autoPlay
-          playsInline
-          muted
-        />
-        {pageState === "scanning" && (
-          <div className="fixed inset-0 z-[51]">
-            <div className="absolute top-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-5 py-2">
-              <p className="text-white text-sm font-medium">Apunta al QR de tu mesa</p>
-            </div>
-            <button onClick={cancelScanning} className="absolute top-6 right-4 rounded-full bg-black/50 p-2">
-              <X className="h-5 w-5 text-white" />
-            </button>
-          </div>
-        )}
-        <AnimatePresence>
-          {pageState === "processing" && (
-            <motion.div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/90" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-            </motion.div>
-          )}
-          {pageState === "success" && (
-            <motion.div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <p className="text-6xl mb-4">✅</p>
-              <p className="text-xl font-bold text-foreground">¡Cuenta solicitada!</p>
-              <p className="text-sm text-muted-foreground mt-2">El mozo llegará pronto con la máquina de pago.</p>
-            </motion.div>
-          )}
-          {pageState === "error" && (
-            <motion.div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-              <p className="text-base font-bold text-foreground">{errorMsg}</p>
-              <button onClick={() => setPageState("summary")} className="mt-4 text-sm text-primary underline">Reintentar</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <video
-        ref={videoRef}
-        className={pageState === "scanning" ? "fixed inset-0 z-50 h-full w-full object-cover" : "hidden"}
-        autoPlay
-        playsInline
-        muted
-      />
-
       {/* Header */}
-      {pageState !== "scanning" && pageState !== "processing" && pageState !== "success" && (
+      {pageState !== "processing" && pageState !== "success" && (
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background px-4">
           <button
             onClick={() => navigate(`/${slug}/tracking${qs}`)}
@@ -424,8 +258,14 @@ export default function BillPage() {
               ))}
 
               <hr className="my-2 border-border" />
+              {yaPagado > 0 && (
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-muted-foreground">Ya pagado</span>
+                  <span className="text-sm text-muted-foreground">−{formatCLP(yaPagado)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-card-foreground">Subtotal</span>
+                <span className="text-sm font-bold text-card-foreground">Por pagar</span>
                 <span className="text-sm font-bold text-card-foreground">{formatCLP(subtotal)}</span>
               </div>
             </div>
@@ -502,95 +342,29 @@ export default function BillPage() {
 
             <hr className="my-5 border-border" />
 
-            {/* Scan section */}
+            {/* Acciones: pagar desde el celular o pedir la cuenta al mozo (sin cámara) */}
             <div className="text-center">
-              <h2 className="text-lg font-bold text-foreground mb-1">Escanea para confirmar 🪪</h2>
-              <p className="text-sm text-muted-foreground mb-5">Apunta al QR de la tarjeta de tu mesa</p>
-
-              <div className="flex justify-center mb-5">
-                <motion.div
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative h-32 w-32"
-                >
-                  <div className="absolute top-0 left-0 h-7 w-7 border-t-[3px] border-l-[3px] rounded-tl-md" style={{ borderColor: primaryColor }} />
-                  <div className="absolute top-0 right-0 h-7 w-7 border-t-[3px] border-r-[3px] rounded-tr-md" style={{ borderColor: primaryColor }} />
-                  <div className="absolute bottom-0 left-0 h-7 w-7 border-b-[3px] border-l-[3px] rounded-bl-md" style={{ borderColor: primaryColor }} />
-                  <div className="absolute bottom-0 right-0 h-7 w-7 border-b-[3px] border-r-[3px] rounded-br-md" style={{ borderColor: primaryColor }} />
-                  <div className="flex h-full w-full items-center justify-center text-4xl opacity-30">📱</div>
-                </motion.div>
-              </div>
-
-              {cameraError && (
-                <div className="mx-auto mb-4 max-w-[300px] rounded-xl bg-yellow-50 border border-yellow-200 p-3">
-                  <p className="text-xs text-yellow-800 font-medium">
-                    {cameraError === "camera_denied"
-                      ? "Necesitamos acceso a la cámara. Habilita el permiso en la configuración de tu navegador."
-                      : "Error al acceder a la cámara. Intenta de nuevo."}
-                  </p>
-                </div>
-              )}
-
               <button
                 onClick={() => navigate(`/${slug}/pay${qs}`)}
-                className="mx-auto mb-3 flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.97]"
+                className="mx-auto mb-3 flex w-full max-w-[340px] items-center justify-center gap-2 rounded-2xl px-8 py-4 text-base font-semibold text-white shadow-lg transition-transform active:scale-[0.97]"
                 style={{ backgroundColor: primaryColor, minHeight: "3.5rem" }}
               >
                 💳 Pagar desde el celular →
               </button>
 
+              {subtotal === 0 && orders.length > 0 && (
+                <p className="mb-3 text-sm font-semibold text-[#1A6B45]">Tu mesa no tiene nada pendiente de pago 🎉</p>
+              )}
               <button
-                onClick={startScanning}
-                className="mx-auto flex items-center justify-center gap-2 rounded-2xl border-2 px-8 py-4 text-base font-semibold transition-transform active:scale-[0.97]"
+                onClick={solicitarCuenta}
+                disabled={subtotal === 0}
+                className="mx-auto flex w-full max-w-[340px] disabled:opacity-40 items-center justify-center gap-2 rounded-2xl border-2 px-8 py-4 text-base font-semibold transition-transform active:scale-[0.97]"
                 style={{ borderColor: primaryColor, color: primaryColor, minHeight: "3.5rem" }}
               >
-                <Camera className="h-5 w-5" />
+                <Receipt className="h-5 w-5" />
                 Pedir la cuenta al mozo →
               </button>
-
             </div>
-          </motion.div>
-        )}
-
-        {/* SCANNING */}
-        {pageState === "scanning" && (
-          <motion.div
-            key="scanning"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50"
-          >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="absolute top-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/60" style={{ height: "calc(50% - 130px)" }} />
-              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", left: 0, width: "calc(50% - 130px)" }} />
-              <div className="absolute bg-black/60" style={{ top: "calc(50% - 130px)", bottom: "calc(50% - 130px)", right: 0, width: "calc(50% - 130px)" }} />
-
-              <div className="relative h-[260px] w-[260px]">
-                <div className="absolute top-0 left-0 h-10 w-10 border-t-[3px] border-l-[3px] rounded-tl" style={{ borderColor: primaryColor }} />
-                <div className="absolute top-0 right-0 h-10 w-10 border-t-[3px] border-r-[3px] rounded-tr" style={{ borderColor: primaryColor }} />
-                <div className="absolute bottom-0 left-0 h-10 w-10 border-b-[3px] border-l-[3px] rounded-bl" style={{ borderColor: primaryColor }} />
-                <div className="absolute bottom-0 right-0 h-10 w-10 border-b-[3px] border-r-[3px] rounded-br" style={{ borderColor: primaryColor }} />
-                <motion.div
-                  className="absolute left-2 right-2 h-0.5 rounded-full"
-                  style={{ backgroundColor: primaryColor }}
-                  animate={{ top: ["10%", "90%", "10%"] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                />
-              </div>
-            </div>
-
-            <div className="absolute bottom-32 left-0 right-0 text-center">
-              <p className="text-white text-sm font-medium">Apunta al QR de la tarjeta de mesa</p>
-            </div>
-
-            <button
-              onClick={cancelScanning}
-              className="absolute bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-white/20 backdrop-blur-sm px-6 py-3 text-sm font-semibold text-white"
-            >
-              <X className="h-4 w-4" /> Cancelar
-            </button>
           </motion.div>
         )}
 
@@ -669,18 +443,18 @@ export default function BillPage() {
             <button
               onClick={() => {
                 setErrorMsg("");
-                startScanning();
+                setPageState("summary");
               }}
               className="mt-6 flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold text-white"
               style={{ backgroundColor: primaryColor }}
             >
-              <Camera className="h-4 w-4" /> Intentar de nuevo
+              Volver a la cuenta
             </button>
             <button
               onClick={() => navigate(`/${slug}/tracking${qs}`)}
               className="mt-3 text-sm text-muted-foreground underline"
             >
-              Volver al tracking
+              Ver mi pedido
             </button>
           </motion.div>
         )}

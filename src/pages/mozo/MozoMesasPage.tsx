@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { cambiarEstadoPedido } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
-import { cerrarMesa, tomarMesa, transferirMesa } from "@/lib/mesa";
+import { atenderLlamado, cerrarMesa, tomarMesa, transferirMesa } from "@/lib/mesa";
 import { formatCLP } from '@/lib/format';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -228,13 +228,16 @@ export default function MozoMesasPage() {
 
   const handleAttendCall = async (tableId: string) => {
     setActionLoading(tableId);
-    await supabase
+    const { data: pendientes } = await supabase
       .from('waiter_calls')
-      .update({ status: 'attended' })
+      .select('id')
       .eq('table_id', tableId)
       .eq('status', 'pending');
+    const resultados = await Promise.all((pendientes ?? []).map((l) => atenderLlamado(l.id)));
     fetchTables();
-    toast({ title: 'Llamada atendida' });
+    const fallo = resultados.find((r) => r.ok === false);
+    if (fallo && fallo.ok === false) toast({ title: 'No se pudo atender', description: fallo.error, variant: 'destructive' });
+    else toast({ title: 'Llamada atendida' });
     setActionLoading(null);
   };
 
