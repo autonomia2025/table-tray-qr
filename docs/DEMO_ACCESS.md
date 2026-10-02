@@ -44,6 +44,16 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 3. En el celular del comensal, el estado cambia en vivo.
 4. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
+## Dejar el demo limpio
+
+Antes de una demo de venta o de una ronda de pruebas:
+
+```bash
+bun run demo:reiniciar
+```
+
+Borra pedidos, pagos, sesiones, llamados, lealtad e invitaciones del demo, y deja las mesas libres y la carta disponible. No toca la carta, el equipo ni otros locales. Solo funciona con la cuenta superadmin del demo.
+
 ## Pruebas automáticas
 
 ```bash

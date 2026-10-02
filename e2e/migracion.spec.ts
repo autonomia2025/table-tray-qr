@@ -7,6 +7,9 @@ const slug = process.env.E2E_SLUG ?? "la-parrillada";
 const token = process.env.E2E_QR_TOKEN;
 const proyecto = process.env.E2E_SUPABASE_REF ?? "iznwvklzmyhzalabgfxl";
 
+// "La parrillada" solo existe en la base de pruebas (vino de Lovable); en una base desechable se salta.
+test.skip(process.env.E2E_BASE_DATOS === "local", "El local migrado de Lovable no existe en la base desechable");
+
 test("la portada del local carga desde la base nueva", async ({ page }) => {
   await page.goto(`/${slug}`);
   await expect(page.getByText(/la parrillada/i).first()).toBeVisible();

@@ -1884,6 +1884,7 @@ export type Database = {
         Args: { _limite: number; _user_id: string }
         Returns: boolean
       }
+      reiniciar_demo: { Args: never; Returns: Json }
       ver_invitacion_mozo: {
         Args: { _token: string }
         Returns: {

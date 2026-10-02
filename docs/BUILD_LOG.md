@@ -4,6 +4,28 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 0.2 terminada y fase 0.5: base desechable para pruebas
+**Corte (0.2) ✅:**
+- `fase-2-migracion` se unió a `main` sin conflictos (nadie había escrito en `main`).
+- **`https://table-tray-qr.vercel.app` usa el Supabase propio**: comprobado en el código publicado, y con 36 de 36 pruebas de navegador contra ese link, incluido un pedido con pago simulado.
+- Al aplicar la unión, git borró el `.env` del computador (la rama lo sacaba del repositorio). Se recuperó desde el historial; ahora está fuera de git.
+
+**Docker (0.5):** se instaló **Colima** (`brew install colima docker`) en vez de Docker Desktop: cumple lo mismo y no necesita contraseña ni ventanas. Corre con 4 CPU, 6 GB y 40 GB de disco (`colima start`).
+
+**Supabase local:** `supabase start` reconstruye la base **desde cero con las 24 migraciones del repositorio, sin errores**. Eso confirma que el arreglo de la regla cambiada a mano en Lovable funciona.
+
+**Pruebas contra una base desechable:**
+- `scripts/pruebas-base-local.sh` (`bun run test:local`): reconstruye la base local, carga el demo y un segundo local mínimo ("Local Ajeno", para probar aislamiento) con contraseñas nuevas, y corre las pruebas de seguridad y de navegador contra esa base.
+- `crear_demo.py` acepta `--salida` y `--local-ajeno`.
+- Las pruebas leen la base y las credenciales desde variables de entorno (`VITE_SUPABASE_*`, `DEMO_CREDENCIALES`, `E2E_PORT`, `E2E_BASE_DATOS`). Las del local migrado de Lovable se saltan en la base desechable.
+- Resultado local: **16 de 16 de seguridad y 34 de navegador** en verde.
+
+**Integración continua:** el trabajo "base desechable" levanta Supabase local en GitHub y corre ahí todas las pruebas, incluidas las que usan cuentas del demo. **La integración continua ya no escribe en la base de pruebas real.**
+
+**Reinicio del demo:** migración `20261002020000_reiniciar_demo.sql`, con la función `reiniciar_demo()` (solo superadmin; solo toca el demo; deja registro en `audit_logs`) y el comando `bun run demo:reiniciar`. Tiene 3 pruebas de seguridad. Se usó en la base de pruebas: borró los 8 pedidos que habían dejado las pruebas.
+
+---
+
 ## 2026-10-02 — Fase 0.2: corte con Lovable
 **Decisiones del fundador:** Lovable desconectado de GitHub; instalar Docker; aprobadas las políticas de pago tardío (respetar el precio congelado si el monto coincide y está dentro de un margen; si no, reembolso automático) y de producto agotado (respetar el pedido y avisar a cocina). El cierre del registro público lo hará él más adelante. El login del mozo sigue pendiente: se avanza con email y contraseña, y el PIN se puede agregar después sin rehacer nada.
 

@@ -3,8 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Lee .env (URL y clave pública de la base de pruebas).
 const env = Object.fromEntries(
-  fs
-    .readFileSync(".env", "utf-8")
+  (fs.existsSync(".env") ? fs.readFileSync(".env", "utf-8") : "")
     .split("\n")
     .filter((l) => l.includes("="))
     .map((l) => {
@@ -27,7 +26,7 @@ export const anonimo = (): SupabaseClient =>
   createClient(URL_BASE, CLAVE_PUBLICA, { auth: { persistSession: false, autoRefreshToken: false } });
 
 // Credenciales del demo (privado/, fuera de git). Sin ellas, las pruebas que las usan se saltan.
-const archivo = "privado/DEMO_CREDENCIALES.md";
+const archivo = process.env.DEMO_CREDENCIALES ?? "privado/DEMO_CREDENCIALES.md";
 const texto = fs.existsSync(archivo) ? fs.readFileSync(archivo, "utf-8") : "";
 export const hayCredenciales = texto.length > 0;
 const cuentas = Object.fromEntries(

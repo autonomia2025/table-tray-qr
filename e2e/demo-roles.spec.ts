@@ -4,7 +4,7 @@ import fs from "node:fs";
 // Entra con cada cuenta del local de demo y revisa que llegue a su panel.
 // Las contraseñas están en privado/DEMO_CREDENCIALES.md (fuera de git).
 // Sin ese archivo, estas pruebas se saltan.
-const archivo = "privado/DEMO_CREDENCIALES.md";
+const archivo = process.env.DEMO_CREDENCIALES ?? "privado/DEMO_CREDENCIALES.md";
 const texto = fs.existsSync(archivo) ? fs.readFileSync(archivo, "utf-8") : "";
 const cuentas = Object.fromEntries(
   [...texto.matchAll(/^\| (\w+) \| `([^`]+)` \| `([^`]+)` \|$/gm)].map((m) => [m[1], { correo: m[2], clave: m[3] }]),

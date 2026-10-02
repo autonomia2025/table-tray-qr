@@ -45,3 +45,6 @@ supabase/.temp/
 .vercel
 .env*
 !.env.example
+
+# Base desechable de pruebas
+.pruebas-local/

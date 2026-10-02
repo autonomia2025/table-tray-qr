@@ -4,7 +4,7 @@ import fs from "node:fs";
 // Recorrido completo en el local de demo, contra la base real:
 // el comensal pide y paga desde la mesa → el pedido llega a cocina → cocina lo acepta,
 // lo marca listo y entregado. Crea un pedido y un pago simulado en "Demo Tablio".
-const archivo = "privado/DEMO_CREDENCIALES.md";
+const archivo = process.env.DEMO_CREDENCIALES ?? "privado/DEMO_CREDENCIALES.md";
 const texto = fs.existsSync(archivo) ? fs.readFileSync(archivo, "utf-8") : "";
 const cuenta = (rol: string) => {
   const m = texto.match(new RegExp(`^\\| ${rol} \\| \`([^\`]+)\` \\| \`([^\`]+)\` \\|$`, "m"));

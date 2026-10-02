@@ -4,10 +4,10 @@ import fs from "node:fs";
 
 // La pantalla de registro del mozo muestra la invitación usando la consulta segura
 // (ya no puede leer la tabla de invitaciones). Crea y borra una invitación en el demo.
-const archivo = "privado/DEMO_CREDENCIALES.md";
+const archivo = process.env.DEMO_CREDENCIALES ?? "privado/DEMO_CREDENCIALES.md";
 const texto = fs.existsSync(archivo) ? fs.readFileSync(archivo, "utf-8") : "";
-const env = Object.fromEntries(
-  fs.readFileSync(".env", "utf-8").split("\n").filter((l) => l.includes("=")).map((l) => {
+const env: Record<string, string> = Object.fromEntries(
+  (fs.existsSync(".env") ? fs.readFileSync(".env", "utf-8") : "").split("\n").filter((l) => l.includes("=")).map((l) => {
     const [k, ...v] = l.split("=");
     return [k.trim(), v.join("=").trim().replace(/^"|"$/g, "")];
   }),
@@ -17,7 +17,11 @@ const dueno = texto.match(/^\| owner \| `([^`]+)` \| `([^`]+)` \|$/m);
 test.skip(!dueno, "Falta privado/DEMO_CREDENCIALES.md");
 
 test("el link de invitación muestra el local y una invitación falsa se rechaza", async ({ page }) => {
-  const sb = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } });
+  const sb = createClient(
+    process.env.VITE_SUPABASE_URL ?? env.VITE_SUPABASE_URL,
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    { auth: { persistSession: false } },
+  );
   await sb.auth.signInWithPassword({ email: dueno![1], password: dueno![2] });
   const { data: inv } = await sb
     .from("staff_invitations")

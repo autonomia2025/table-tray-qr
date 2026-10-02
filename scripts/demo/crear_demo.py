@@ -1,13 +1,17 @@
 """Genera el SQL del local de demo "Demo Tablio" con todos los roles.
 
-Uso: python3 scripts/demo/crear_demo.py
-Escribe en privado/ (fuera de git):
+Uso: python3 scripts/demo/crear_demo.py [--salida DIR] [--local-ajeno]
+  --salida DIR    carpeta de salida (por defecto privado/)
+  --local-ajeno   agrega "Local Ajeno": un segundo local mínimo con su dueño, para
+                  probar que un local no puede ver ni tocar los datos de otro.
+Escribe en la carpeta de salida (fuera de git):
   - demo_seed.sql          -> se carga con la CLI de Supabase
   - DEMO_CREDENCIALES.md   -> correos y contraseñas de cada rol
 
 Los identificadores son fijos (uuid5), así el reinicio del demo sabe qué borrar.
 Los correos usan el dominio reservado .test: nunca se envía un correo a nadie.
 """
+import argparse
 import json
 import secrets
 import string
@@ -122,8 +126,42 @@ MODIFICADORES = {
 }
 
 
+def local_ajeno(sql: list[str], claves: dict) -> None:
+    """Segundo local mínimo para pruebas de aislamiento entre locales."""
+    t, r, b, m, c = (uid(f"ajeno-{x}") for x in ("tenant", "restaurant", "branch", "menu", "cat"))
+    u = uid("user-dueno_ajeno")
+    correo = f"dueno-ajeno@{DOMINIO}"
+    claves["dueno_ajeno"] = clave()
+    sql.append(
+        "INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, "
+        "raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, "
+        "email_change_token_new, email_change, email_change_token_current, phone_change, phone_change_token, reauthentication_token) VALUES ("
+        f"'00000000-0000-0000-0000-000000000000', '{u}', 'authenticated', 'authenticated', {q(correo)}, "
+        f"extensions.crypt({q(claves['dueno_ajeno'])}, extensions.gen_salt('bf')), now(), "
+        f"{q({'provider': 'email', 'providers': ['email']})}, {q({'name': 'Dueño Ajeno', 'demo': True})}, now(), now(), '', '', '', '', '', '', '', '');"
+    )
+    sql.append(
+        "INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, created_at, updated_at) VALUES ("
+        f"'{uid('identity-dueno_ajeno')}', '{u}', '{u}', {q({'sub': u, 'email': correo, 'email_verified': True})}, 'email', now(), now());"
+    )
+    sql.append(f"INSERT INTO public.tenants (id, name, slug, email, plan_status, is_active) VALUES ('{t}', 'Local Ajeno', 'local-ajeno', 'ajeno@{DOMINIO}', 'active', true);")
+    sql.append(ins("public.restaurants", {"id": r, "tenant_id": t, "name": "Local Ajeno"}))
+    sql.append(ins("public.branches", {"id": b, "tenant_id": t, "restaurant_id": r, "name": "Única", "payment_mode": "prepaid"}))
+    sql.append(ins("public.menus", {"id": m, "tenant_id": t, "branch_id": b, "name": "Carta", "is_active": True}))
+    sql.append(ins("public.categories", {"id": c, "tenant_id": t, "menu_id": m, "name": "Bebidas", "emoji": "🥤", "sort_order": 0, "is_visible": True}))
+    sql.append(ins("public.menu_items", {"id": uid("ajeno-item"), "tenant_id": t, "category_id": c, "name": "Agua", "price": 1500, "status": "available"}))
+    sql.append(ins("public.tables", {"id": uid("ajeno-mesa"), "tenant_id": t, "branch_id": b, "number": 1, "name": "Mesa 1", "qr_token": secrets.token_hex(16), "status": "free"}))
+    sql.append(ins("public.tenant_members", {"id": uid("tm-dueno_ajeno"), "user_id": u, "tenant_id": t, "branch_id": b, "role": "owner", "is_active": True}))
+    CUENTAS.append(("dueno_ajeno", correo, "Dueño Ajeno", "ajeno", "owner_ajeno"))
+
+
 def main() -> None:
-    PRIVADO.mkdir(exist_ok=True)
+    args = argparse.ArgumentParser()
+    args.add_argument("--salida", default=str(PRIVADO))
+    args.add_argument("--local-ajeno", action="store_true")
+    cfg = args.parse_args()
+    salida = Path(cfg.salida)
+    salida.mkdir(parents=True, exist_ok=True)
     claves = {k: clave() for k, *_ in CUENTAS}
     sql = [
         "-- Local de demo 'Demo Tablio'. Generado por scripts/demo/crear_demo.py. NO subir a git.",
@@ -213,19 +251,21 @@ def main() -> None:
         "id": uid("loyalty"), "tenant_id": TENANT, "branch_id": None, "is_active": True, "type": "stamps",
         "goal_visits": 5, "points_per_thousand": 1, "points_goal": 100, "reward_description": "Un schop gratis",
     }))
+    if cfg.local_ajeno:
+        local_ajeno(sql, claves)
     sql.append("COMMIT;")
-    (PRIVADO / "demo_seed.sql").write_text("\n".join(sql) + "\n", encoding="utf-8")
+    (salida / "demo_seed.sql").write_text("\n".join(sql) + "\n", encoding="utf-8")
 
     filas = "\n".join(f"| {rol} | `{correo}` | `{claves[k]}` |" for k, correo, _, _, rol in CUENTAS)
     mesas_md = "\n".join(f"| {n} | {z} | `/demo-tablio/menu?t={t}` |" for n, z, t in mesas)
-    (PRIVADO / "DEMO_CREDENCIALES.md").write_text(
+    (salida / "DEMO_CREDENCIALES.md").write_text(
         "# Local de demo — credenciales (PRIVADO, no subir a git)\n\n"
         "Local: **Demo Tablio** · `/demo-tablio`\n\n"
         "| Rol | Correo | Contraseña |\n|---|---|---|\n" + filas + "\n\n"
         "## Mesas\n\n| Mesa | Zona | Link de la carta |\n|---|---|---|\n" + mesas_md + "\n",
         encoding="utf-8",
     )
-    print(f"{len(sql)} líneas SQL → privado/demo_seed.sql · credenciales → privado/DEMO_CREDENCIALES.md")
+    print(f"{len(sql)} líneas SQL → {salida}/demo_seed.sql · credenciales → {salida}/DEMO_CREDENCIALES.md")
 
 
 if __name__ == "__main__":

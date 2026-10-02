@@ -34,7 +34,9 @@ bun run build        # compilar (debe pasar antes de decir "listo")
 bun run lint:tope    # estilo: falla si hay más errores que el tope heredado (scripts/ci/lint-tope.json)
 bun run test         # pruebas unitarias
 bun run test:e2e     # pruebas en navegador (Playwright); las del demo usan privado/DEMO_CREDENCIALES.md
-bun run test:seguridad   # ataques del diagnóstico contra la base de pruebas: deben fallar (tests/seguridad/)
+bun run test:seguridad   # ataques del diagnóstico contra la base que diga .env: deben fallar (tests/seguridad/)
+bun run test:local       # TODO contra una base desechable: Supabase local (colima + `supabase start`), migraciones desde cero, demo nuevo
+bun run demo:reiniciar   # deja limpio el local de demo en la base que diga .env (solo superadmin)
 ```
 
 Supabase (después de la migración, con la CLI enlazada al proyecto propio):
