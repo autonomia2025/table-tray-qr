@@ -22,73 +22,12 @@ function playNotifSound() {
 }
 
 export default function MozoLayout() {
-  const { isLoggedIn, staffName, branchId, staffId, logout, login } = useWaiters();
+  const { isLoggedIn, staffName, branchId, staffId, logout, cargando } = useWaiters();
   const navigate = useNavigate();
   const location = useLocation();
   const [notifCount, setNotifCount] = useState(0);
   const prevNotifCountRef = useRef(0);
   const audioUnlockedRef = useRef(false);
-  const [autoLogging, setAutoLogging] = useState(false);
-
-  // Auto-login from Supabase session if WaitersContext is empty
-  useEffect(() => {
-    if (isLoggedIn || autoLogging) return;
-    setAutoLogging(true);
-
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          navigate('/mozo/login', { replace: true });
-          return;
-        }
-
-        // Find staff record
-        const { data: staff } = await supabase
-          .from('staff_users')
-          .select('id, name, role, branch_id, tenant_id')
-          .eq('auth_user_id', session.user.id)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (!staff || !staff.branch_id) {
-          // Try tenant_members as fallback
-          const { data: tm } = await supabase
-            .from('tenant_members')
-            .select('id, tenant_id, branch_id, role')
-            .eq('user_id', session.user.id)
-            .eq('role', 'waiter')
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (!tm || !tm.branch_id) {
-            navigate('/mozo/login', { replace: true });
-            return;
-          }
-
-          login({
-            staffId: tm.id,
-            staffName: session.user.email?.split('@')[0] ?? 'Mozo',
-            role: 'waiter',
-            branchId: tm.branch_id,
-            tenantId: tm.tenant_id,
-          });
-        } else {
-          login({
-            staffId: staff.id,
-            staffName: staff.name,
-            role: staff.role,
-            branchId: staff.branch_id,
-            tenantId: staff.tenant_id,
-          });
-        }
-      } catch {
-        navigate('/mozo/login', { replace: true });
-      } finally {
-        setAutoLogging(false);
-      }
-    })();
-  }, [isLoggedIn, autoLogging, login, navigate]);
 
   // Unlock AudioContext on first user interaction
   useEffect(() => {
@@ -143,8 +82,8 @@ export default function MozoLayout() {
     prevNotifCountRef.current = notifCount;
   }, [notifCount]);
 
-  // Show loading while auto-logging
-  if (autoLogging) {
+  // Mientras se lee la sesión
+  if (cargando) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -152,7 +91,7 @@ export default function MozoLayout() {
     );
   }
 
-  if (!isLoggedIn) return <Navigate to="/mozo/login" replace />;
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
 
   const tabs = [
     { path: '/mozo/mesas', icon: LayoutGrid, label: 'Mesas' },
@@ -160,9 +99,9 @@ export default function MozoLayout() {
     { path: '/mozo/perfil', icon: User, label: 'Perfil' },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate('/mozo/login', { replace: true });
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   return (

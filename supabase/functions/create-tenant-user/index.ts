@@ -7,7 +7,16 @@ import { corsHeaders, json, UUID_RE, EMAIL_RE } from "../_shared/http.ts";
  * Quién puede llamarla (fase 1.1, DIAGNOSTICO problema 5):
  *  - con tenant_id: superadmin, o dueño/administrador activo de ESE local;
  *  - sin tenant_id: solo superadmin (alta de dueños desde el panel de superadmin).
+ *
+ * Qué rol puede asignar cada uno (fase 1.2):
+ *  - superadmin: cualquiera;  dueño: admin, manager, cashier, waiter, kitchen;
+ *  - administrador: manager, cashier, waiter, kitchen.
  */
+const ROLES = ["owner", "admin", "manager", "cashier", "waiter", "kitchen"] as const;
+const ASIGNABLES: Record<string, string[]> = {
+  owner: ["admin", "manager", "cashier", "waiter", "kitchen"],
+  admin: ["manager", "cashier", "waiter", "kitchen"],
+};
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,6 +38,8 @@ Deno.serve(async (req) => {
     const password = typeof body?.password === "string" ? body.password : "";
     const tenantId = typeof body?.tenant_id === "string" && body.tenant_id ? body.tenant_id : null;
     const branchId = typeof body?.branch_id === "string" && body.branch_id ? body.branch_id : null;
+    const rol = typeof body?.role === "string" && body.role ? body.role : "waiter";
+    if (!(ROLES as readonly string[]).includes(rol)) return json({ error: "Rol inválido." }, 400);
 
     if (tenantId && !UUID_RE.test(tenantId)) return json({ error: "Local inválido." }, 400);
     if (branchId && !UUID_RE.test(branchId)) return json({ error: "Sucursal inválida." }, 400);
@@ -50,6 +61,9 @@ Deno.serve(async (req) => {
         .eq("is_active", true)
         .maybeSingle();
       allowed = !!member && ["owner", "admin"].includes(member.role);
+      if (allowed && !ASIGNABLES[member!.role].includes(rol)) {
+        return json({ error: "No puedes asignar ese rol." }, 403);
+      }
     }
     if (!allowed) return json({ error: "No tienes permiso para crear usuarios en este local." }, 403);
 
@@ -99,7 +113,7 @@ Deno.serve(async (req) => {
           user_id: userId,
           tenant_id: tenantId,
           branch_id: branchId,
-          role: "staff",
+          role: rol,
           is_active: true,
         });
         if (memberErr) {

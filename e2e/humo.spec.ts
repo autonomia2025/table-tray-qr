@@ -28,5 +28,11 @@ test("el KDS sin sesión pide iniciar sesión", async ({ page }) => {
 
 test("el panel del dueño sin sesión manda al login", async ({ page }) => {
   await page.goto("/admin/local-que-no-existe/mesas");
-  await expect(page).toHaveURL(/\/admin\/login/);
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test("el login viejo del mozo lleva al login único", async ({ page }) => {
+  await page.goto("/mozo/login");
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator('input[type="email"]')).toBeVisible();
 });

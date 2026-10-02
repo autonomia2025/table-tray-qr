@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSesion } from '@/contexts/SesionContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SellerProfile {
@@ -30,6 +31,8 @@ const SellerContext = createContext<SellerContextType>({
 export const useSeller = () => useContext(SellerContext);
 
 export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Si es superadmin lo dice la sesión única (mi_perfil).
+  const { recargar: recargarPerfil } = useSesion();
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
@@ -48,7 +51,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
 
         // Check platform admin
-        const { data: pa } = await supabase.from('platform_admins').select('id').eq('user_id', session.user.id).maybeSingle();
+        const pa = (await recargarPerfil())?.es_superadmin ?? false;
         setIsPlatformAdmin(!!pa);
 
         // If impersonating, load that member's profile
@@ -89,7 +92,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       check();
     });
     return () => subscription.unsubscribe();
-  }, [impersonatingId]);
+  }, [impersonatingId, recargarPerfil]);
 
   return (
     <SellerContext.Provider value={{ seller, isLoading, isAuthenticated: !!seller || isPlatformAdmin, isPlatformAdmin, impersonatingId }}>

@@ -172,7 +172,7 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | N13 | El archivo `.env` está subido al repositorio. Solo trae la clave pública (no es grave), pero conviene sacarlo | 🟡 Bajo | `.env` |
 | N14 | La política `backoffice_members_jefe_update` consulta la misma tabla que protege. Puede dar el error de "recursión infinita" al editar | 🟡 Bajo | `20260327024211_...sql:12-19` |
 | N15 | El comensal ve `err.message` en la pantalla de pago (rompe la regla 10) | 🟡 Bajo | `PayPage.tsx:200-201` |
-| N16 | **El mozo tiene que entrar dos veces.** Al entrar por el login principal, `MozoLayout` muestra la redirección a `/mozo/login` en el primer dibujo de la pantalla, antes de que alcance a revisar la sesión. Detectado por Playwright al migrar | 🟡 Medio | `src/pages/mozo/MozoLayout.tsx:146-154` (el estado `autoLogging` parte en `false`) |
+| N16 | ✅ **Resuelto en la fase 1.2.** **El mozo tenía que entrar dos veces.** Al entrar por el login principal, `MozoLayout` muestra la redirección a `/mozo/login` en el primer dibujo de la pantalla, antes de que alcance a revisar la sesión. Detectado por Playwright al migrar | 🟡 Medio | `src/pages/mozo/MozoLayout.tsx:146-154` (el estado `autoLogging` parte en `false`) |
 
 ---
 

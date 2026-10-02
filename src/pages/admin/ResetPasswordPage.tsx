@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
 
     // Redirect to login after 3 seconds
     setTimeout(() => {
-      navigate("/admin/login", { replace: true });
+      navigate("/login", { replace: true });
     }, 3000);
   };
 
@@ -119,7 +119,7 @@ export default function ResetPasswordPage() {
           {!validSession ? (
             <div className="text-center py-4">
               <p className="text-destructive text-sm">{error}</p>
-              <Button className="mt-4" onClick={() => navigate("/admin/login")}>
+              <Button className="mt-4" onClick={() => navigate("/login")}>
                 Volver al login
               </Button>
             </div>

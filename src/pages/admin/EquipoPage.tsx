@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { NOMBRE_ROL } from "@/lib/roles";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -19,10 +20,12 @@ interface StaffRow {
   auth_user_id: string | null;
 }
 
+// Roles que el dueño o administrador puede asignar al personal (src/lib/roles.ts).
 const ROLE_LABELS: Record<string, string> = {
-  waiter: "Mozo",
-  cashier: "Cajero",
-  host: "Host",
+  waiter: NOMBRE_ROL.waiter,
+  kitchen: NOMBRE_ROL.kitchen,
+  cashier: NOMBRE_ROL.cashier,
+  manager: NOMBRE_ROL.manager,
 };
 
 export default function EquipoPage() {
@@ -98,7 +101,7 @@ export default function EquipoPage() {
 
       // Create auth user via edge function
       const { data: userData, error: fnError } = await supabase.functions.invoke("create-tenant-user", {
-        body: { email: email.trim(), password, tenant_id: tenantId, branch_id: branchId },
+        body: { email: email.trim(), password, tenant_id: tenantId, branch_id: branchId, role },
       });
 
       if (fnError || userData?.error) {
@@ -257,9 +260,9 @@ export default function EquipoPage() {
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="waiter">Mozo</SelectItem>
-                  <SelectItem value="cashier">Cajero</SelectItem>
-                  <SelectItem value="host">Host</SelectItem>
+                  {Object.entries(ROLE_LABELS).map(([valor, nombre]) => (
+                    <SelectItem key={valor} value={valor}>{nombre}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

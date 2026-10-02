@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSesion } from '@/contexts/SesionContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface JefeVentasProfile {
@@ -33,6 +34,8 @@ const JefeVentasContext = createContext<JefeVentasContextType>({
 export const useJefeVentas = () => useContext(JefeVentasContext);
 
 export const JefeVentasProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Si es superadmin lo dice la sesión única (mi_perfil).
+  const { recargar: recargarPerfil } = useSesion();
   const [profile, setProfile] = useState<JefeVentasProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
@@ -56,7 +59,7 @@ export const JefeVentasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         if (!session) { setProfile(null); setIsLoading(false); return; }
 
         // Check platform admin
-        const { data: pa } = await supabase.from('platform_admins').select('id').eq('user_id', session.user.id).maybeSingle();
+        const pa = (await recargarPerfil())?.es_superadmin ?? false;
         setIsPlatformAdmin(!!pa);
 
         // Check backoffice member with jefe_ventas role
@@ -89,7 +92,7 @@ export const JefeVentasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     check();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => check());
     return () => subscription.unsubscribe();
-  }, []);
+  }, [recargarPerfil]);
 
   const effectiveUserId = impersonatingId || profile?.id || null;
 

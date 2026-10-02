@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { SesionProvider } from "./contexts/SesionContext";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import RestaurantSplash from "./pages/RestaurantSplash";
@@ -32,7 +33,6 @@ import CajaPage from "./pages/admin/CajaPage";
 import LealtadPage from "./pages/admin/LealtadPage";
 
 import { WaitersProvider } from "./contexts/WaitersContext";
-import MozoLoginPage from "./pages/mozo/MozoLoginPage";
 import MozoLayout from "./pages/mozo/MozoLayout";
 import MozoMesasPage from "./pages/mozo/MozoMesasPage";
 import MozoNotificacionesPage from "./pages/mozo/MozoNotificacionesPage";
@@ -78,6 +78,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+      <SesionProvider>
         <Routes>
           <Route path="/" element={<UnifiedLoginPage />} />
           {/* Unified login */}
@@ -115,7 +116,8 @@ const App = () => (
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
-          <Route path="/mozo/login" element={<WaitersProvider><MozoLoginPage /></WaitersProvider>} />
+          {/* Un solo login para todos los roles (fase 1.2) */}
+          <Route path="/mozo/login" element={<Navigate to="/login" replace />} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>
             <Route index element={<Navigate to="/mozo/mesas" replace />} />
             <Route path="mesas" element={<MozoMesasPage />} />
@@ -166,6 +168,7 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+      </SesionProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

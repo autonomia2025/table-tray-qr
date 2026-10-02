@@ -2,29 +2,30 @@ import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
+import { NOMBRE_ROL, puedeVer, type SeccionLocal } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLayout() {
-  const { tenantName, branchName, branchId, primaryColor, isLoading, isImpersonating, logout, slug } = useAdmin();
+  const { tenantName, branchName, branchId, primaryColor, isLoading, isImpersonating, logout, slug, role } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const { slug: urlSlug } = useParams<{ slug: string }>();
   const effectiveSlug = urlSlug ?? slug;
 
   const NAV_ITEMS = [
-    { path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid, external: false },
-    { path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList, external: false },
-    { path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen, external: false },
-    { path: `/admin/${effectiveSlug}/caja`, label: "Caja", icon: Wallet, external: false },
-    { path: `/admin/${effectiveSlug}/lealtad`, label: "Lealtad", icon: Gift, external: false },
-    { path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3, external: false },
+    { seccion: "mesas", path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid, external: false },
+    { seccion: "pedidos", path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList, external: false },
+    { seccion: "menu", path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen, external: false },
+    { seccion: "caja", path: `/admin/${effectiveSlug}/caja`, label: "Caja", icon: Wallet, external: false },
+    { seccion: "lealtad", path: `/admin/${effectiveSlug}/lealtad`, label: "Lealtad", icon: Gift, external: false },
+    { seccion: "reportes", path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3, external: false },
 
-    { path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users, external: false },
-    { path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode, external: false },
-    { path: `/kds?branch=${branchId}`, label: "KDS Cocina", icon: ChefHat, external: true },
-    { path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings, external: false },
-    { path: `/admin/${effectiveSlug}/soporte`, label: "Soporte", icon: Headset, external: false },
-  ];
+    { seccion: "equipo", path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users, external: false },
+    { seccion: "qr", path: `/admin/${effectiveSlug}/qr`, label: "QR", icon: QrCode, external: false },
+    { seccion: "kds", path: `/kds?branch=${branchId}`, label: "KDS Cocina", icon: ChefHat, external: true },
+    { seccion: "sucursal", path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings, external: false },
+    { seccion: "soporte", path: `/admin/${effectiveSlug}/soporte`, label: "Soporte", icon: Headset, external: false },
+  ].filter((item) => role && puedeVer(role, item.seccion as SeccionLocal));
 
   if (isLoading) {
     return (
@@ -41,6 +42,7 @@ export default function AdminLayout() {
         <div className="p-4 border-b border-border">
           <h1 className="font-extrabold text-lg text-foreground truncate">tablio<span className="text-primary">.</span></h1>
           <p className="text-xs text-muted-foreground truncate">{tenantName} · {branchName}</p>
+          {role && role !== "superadmin" && <p className="text-[11px] font-semibold text-primary">{NOMBRE_ROL[role]}</p>}
         </div>
         <nav className="flex-1 p-2 space-y-1">
           {NAV_ITEMS.map((item) => {

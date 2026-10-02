@@ -115,7 +115,7 @@ export default function MozoJoinPage() {
             <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />
             <p className="text-lg font-semibold text-foreground">¡Registro exitoso!</p>
             <p className="text-sm text-muted-foreground">Ya puedes ingresar con tu email y contraseña.</p>
-            <Button onClick={() => navigate("/mozo/login")} className="w-full">
+            <Button onClick={() => navigate("/login")} className="w-full">
               Ir al login de mozo
             </Button>
           </CardContent>

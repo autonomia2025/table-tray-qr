@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams, useNavigate } from "react-router-dom";
+import { useSesion } from "@/contexts/SesionContext";
+import type { RolLocal } from "@/lib/roles";
 
+/**
+ * Panel del local (/admin/:slug). Se apoya en la sesión única (mi_perfil):
+ *  - un miembro activo del local entra con su rol;
+ *  - un superadmin entra a cualquier local como soporte (isImpersonating).
+ * Antes, la suplantación dependía de un dato del navegador y saltaba la verificación (DIAGNOSTICO N3).
+ */
 interface AdminContextType {
   tenantId: string;
   branchId: string;
@@ -9,7 +17,7 @@ interface AdminContextType {
   branchName: string;
   primaryColor: string;
   slug: string;
-  role: string;
+  role: RolLocal | "superadmin" | "";
   userId: string;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -19,130 +27,85 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | null>(null);
 
+type Datos = Omit<AdminContextType, "logout" | "isLoading" | "isAuthenticated" | "isImpersonating">;
+
+const VACIO: Datos = {
+  tenantId: "", branchId: "", tenantName: "", branchName: "", primaryColor: "#E8531D", slug: "", role: "", userId: "",
+};
+
 export function AdminProvider({ children }: { children: React.ReactNode }) {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { cargando, perfil, salir } = useSesion();
 
-  const [state, setState] = useState<Omit<AdminContextType, "logout" | "isLoading" | "isAuthenticated" | "isImpersonating">>({
-    tenantId: "",
-    branchId: "",
-    tenantName: "",
-    branchName: "",
-    primaryColor: "#E8531D",
-    slug: slug ?? "",
-    role: "",
-    userId: "",
-  });
+  const [datos, setDatos] = useState<Datos>(VACIO);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // Check for SuperAdmin impersonation
-  const impersonatingTenantId = sessionStorage.getItem("superadmin_impersonating");
-  const impersonatingSlug = sessionStorage.getItem("superadmin_impersonating_slug");
-  const isImpersonating = !!impersonatingTenantId;
-
-  const loadTenantData = useCallback(async (tenantId: string, userId: string, role: string) => {
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("id, name, primary_color, slug")
-      .eq("id", tenantId)
-      .single();
-
-    if (!tenant) return false;
-
-    // Get first branch
-    const { data: branch } = await supabase
-      .from("branches")
-      .select("id, name")
-      .eq("tenant_id", tenantId)
-      .limit(1)
-      .maybeSingle();
-
-    setState({
-      tenantId: tenant.id,
-      branchId: branch?.id ?? "",
-      tenantName: tenant.name,
-      branchName: branch?.name ?? "",
-      primaryColor: tenant.primary_color ?? "#E8531D",
-      slug: tenant.slug,
-      role,
-      userId,
-    });
-    return true;
-  }, []);
-
-  const loadFromAuth = useCallback(async () => {
-    // If impersonating, skip auth check
-    if (impersonatingTenantId) {
-      await loadTenantData(impersonatingTenantId, "superadmin", "owner");
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setIsAuthenticated(false);
-      setIsLoading(false);
-      return;
-    }
-
-    const userId = session.user.id;
-
-    // Find tenant by slug
-    if (!slug) {
-      setIsLoading(false);
-      return;
-    }
-
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("id")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .single();
-
-    if (!tenant) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Check membership
-    const { data: member } = await supabase
-      .from("tenant_members")
-      .select("id, tenant_id, branch_id, role")
-      .eq("user_id", userId)
-      .eq("tenant_id", tenant.id)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-
-    if (!member) {
-      setIsAuthenticated(false);
-      setIsLoading(false);
-      return;
-    }
-
-    await loadTenantData(tenant.id, userId, member.role);
-    setIsAuthenticated(true);
-    setIsLoading(false);
-  }, [slug, impersonatingTenantId, loadTenantData]);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
-    loadFromAuth();
+    if (cargando) return;
+    let cancelado = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        setState(prev => ({ ...prev, tenantId: "", branchId: "", userId: "", role: "" }));
-        setIsAuthenticated(false);
+    (async () => {
+      setIsLoading(true);
+      if (!perfil || !slug) {
+        setDatos(VACIO);
+        setIsLoading(false);
+        return;
       }
-      if (event === "SIGNED_IN") {
-        loadFromAuth();
-      }
-    });
 
-    return () => subscription.unsubscribe();
-  }, [loadFromAuth]);
+      const local = perfil.locales.find((l) => l.slug === slug);
+      let tenantId = local?.tenant_id ?? "";
+      let tenantName = local?.nombre ?? "";
+      let color = local?.color ?? "#E8531D";
+      let branchId = local?.branch_id ?? "";
+      let role: Datos["role"] = local?.rol ?? "";
+      const soporte = !local && perfil.es_superadmin;
+
+      if (soporte) {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("id, name, primary_color")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (!tenant) {
+          if (!cancelado) { setDatos(VACIO); setIsLoading(false); }
+          return;
+        }
+        tenantId = tenant.id;
+        tenantName = tenant.name;
+        color = tenant.primary_color ?? "#E8531D";
+        role = "superadmin";
+        const { data: b } = await supabase.from("branches").select("id").eq("tenant_id", tenant.id).order("created_at").limit(1).maybeSingle();
+        branchId = b?.id ?? "";
+      }
+
+      if (!tenantId) {
+        if (!cancelado) { setDatos(VACIO); setIsLoading(false); }
+        return;
+      }
+
+      const { data: branch } = branchId
+        ? await supabase.from("branches").select("name").eq("id", branchId).maybeSingle()
+        : { data: null };
+
+      if (cancelado) return;
+      setDatos({
+        tenantId,
+        branchId,
+        tenantName,
+        branchName: branch?.name ?? "",
+        primaryColor: color,
+        slug,
+        role,
+        userId: perfil.user_id,
+      });
+      setIsImpersonating(soporte);
+      setIsLoading(false);
+    })();
+
+    return () => { cancelado = true; };
+  }, [cargando, perfil, slug]);
 
   const logout = async () => {
     if (isImpersonating) {
@@ -151,12 +114,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       navigate("/superadmin/tenants");
       return;
     }
-    await supabase.auth.signOut();
-    navigate(`/admin/login`);
+    await salir();
+    navigate("/login");
   };
 
   return (
-    <AdminContext.Provider value={{ ...state, isLoading, isAuthenticated, isImpersonating, logout }}>
+    <AdminContext.Provider value={{ ...datos, isLoading: isLoading || cargando, isAuthenticated: !!datos.tenantId, isImpersonating, logout }}>
       {children}
     </AdminContext.Provider>
   );

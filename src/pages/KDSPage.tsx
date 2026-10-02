@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useSesion } from "@/contexts/SesionContext";
+import { ROLES_KDS } from "@/lib/roles";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2 } from "lucide-react";
@@ -360,63 +362,16 @@ function KDSColumn({
 }
 
 /* ===================== AUTH HOOK ===================== */
+// Quién puede abrir la cocina: dueño, administrador, encargado y cocina (src/lib/roles.ts).
+// Sale de la sesión única (mi_perfil), no de consultas sueltas.
 function useKDSAuth() {
-  const [authState, setAuthState] = useState<{
-    loading: boolean;
-    authenticated: boolean;
-    tenantId: string | null;
-  }>({ loading: true, authenticated: false, tenantId: null });
-
-  useEffect(() => {
-    async function check() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setAuthState({ loading: false, authenticated: false, tenantId: null });
-        return;
-      }
-
-      const userId = session.user.id;
-
-      const { data: member } = await supabase
-        .from("tenant_members")
-        .select("tenant_id")
-        .eq("user_id", userId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (member) {
-        setAuthState({ loading: false, authenticated: true, tenantId: member.tenant_id });
-        return;
-      }
-
-      const { data: staff } = await supabase
-        .from("staff_users")
-        .select("tenant_id")
-        .eq("auth_user_id", userId)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (staff) {
-        setAuthState({ loading: false, authenticated: true, tenantId: staff.tenant_id });
-        return;
-      }
-
-      setAuthState({ loading: false, authenticated: false, tenantId: null });
-    }
-
-    check();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") check();
-      if (event === "SIGNED_OUT") setAuthState({ loading: false, authenticated: false, tenantId: null });
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  return authState;
+  const { cargando, perfil } = useSesion();
+  const local = perfil?.locales.find((l) => ROLES_KDS.includes(l.rol));
+  return {
+    loading: cargando,
+    authenticated: !!local || !!perfil?.es_superadmin,
+    tenantId: local?.tenant_id ?? null,
+  };
 }
 
 /* ===================== ACCESS DENIED ===================== */
@@ -430,7 +385,7 @@ function KDSAccessDenied() {
         <p className="text-sm text-gray-400">Necesitas iniciar sesión para acceder al KDS</p>
       </div>
       <Button
-        onClick={() => navigate("/admin/login")}
+        onClick={() => navigate("/login")}
         className="gap-2"
       >
         <LogIn className="h-4 w-4" />

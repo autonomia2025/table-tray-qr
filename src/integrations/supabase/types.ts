@@ -1880,11 +1880,16 @@ export type Database = {
       }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
+      mi_perfil: { Args: never; Returns: Json }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }
         Returns: boolean
       }
       reiniciar_demo: { Args: never; Returns: Json }
+      tiene_rol: {
+        Args: { _roles: string[]; _tenant_id: string }
+        Returns: boolean
+      }
       ver_invitacion_mozo: {
         Args: { _token: string }
         Returns: {

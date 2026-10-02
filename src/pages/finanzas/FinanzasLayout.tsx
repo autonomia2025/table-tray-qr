@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { DollarSign, Users, TrendingDown, PieChart, LogOut } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { useSesion } from '@/contexts/SesionContext';
 import { useState, useEffect } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -15,45 +15,16 @@ const NAV_ITEMS = [
 export default function FinanzasLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [authorized, setAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Acceso: superadmin, finanzas o jefe de ventas, según la sesión única (mi_perfil).
+  const { cargando: isLoading, perfil, salir } = useSesion();
+  const authorized = !!perfil && (perfil.es_superadmin || ["finanzas", "jefe_ventas"].includes(perfil.backoffice?.rol ?? ""));
 
   useEffect(() => {
-    const check = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setIsLoading(false);
-          navigate('/login', { replace: true });
-          return;
-        }
-        // Allow platform admins or backoffice members with role 'finanzas' or 'jefe_ventas'
-        const [adminRes, memberRes] = await Promise.all([
-          supabase.from('platform_admins').select('id').eq('user_id', session.user.id).maybeSingle(),
-          supabase.from('backoffice_members').select('id, role').eq('user_id', session.user.id).eq('is_active', true).maybeSingle(),
-        ]);
-        const isAdmin = !!adminRes.data;
-        const member = memberRes.data as any;
-        const allowedRoles = ['finanzas', 'jefe_ventas', 'superadmin'];
-        const auth = isAdmin || (member && allowedRoles.includes(member.role));
-        setAuthorized(auth);
-        if (!auth) {
-          navigate('/login', { replace: true });
-        }
-        setIsLoading(false);
-      } catch (err) {
-        console.error('FinanzasLayout: auth check error', err);
-        setIsLoading(false);
-        navigate('/login', { replace: true });
-      }
-    };
-    check();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => check());
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (!isLoading && !authorized) navigate('/login', { replace: true });
+  }, [isLoading, authorized, navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await salir();
     navigate('/login');
   };
 

@@ -37,9 +37,8 @@ test("cocina recibe el pedido y lo avanza hasta entregado", async ({ page }) => 
   await page.locator('input[type="email"]').fill(c.correo);
   await page.locator('input[type="password"]').fill(c.clave);
   await page.locator('button[type="submit"]').click();
-  await expect(page).toHaveURL(/\/admin\/demo-tablio/, { timeout: 15_000 });
-
-  await page.goto(`/kds?branch=${SUCURSAL_DEMO}`);
+  // Cocina entra directo a su pantalla (fase 1.2)
+  await expect(page).toHaveURL(new RegExp(`/kds\\?branch=${SUCURSAL_DEMO}`), { timeout: 15_000 });
   const tarjeta = page.locator("div").filter({ hasText: `#${numeroPedido}` }).filter({ hasText: "Pisco Sour" }).last();
   await expect(tarjeta).toBeVisible({ timeout: 15_000 });
   await tarjeta.getByRole("button", { name: "ACEPTAR" }).click();

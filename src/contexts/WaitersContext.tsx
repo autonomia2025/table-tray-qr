@@ -1,60 +1,49 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useMemo } from "react";
+import { useSesion } from "@/contexts/SesionContext";
+import type { RolLocal } from "@/lib/roles";
 
-interface StaffData {
+/**
+ * Datos del mozo conectado. Salen de la sesión única (mi_perfil), no del navegador:
+ * antes se guardaban en sessionStorage y cualquiera podía inventarlos (DIAGNOSTICO N2),
+ * y además el panel mandaba al mozo a un segundo login (N16).
+ */
+interface WaitersContextType {
   staffId: string;
   staffName: string;
-  role: string;
+  role: RolLocal | "";
   branchId: string;
   tenantId: string;
-}
-
-interface WaitersContextType extends StaffData {
+  cargando: boolean;
   isLoggedIn: boolean;
-  login: (staff: StaffData) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
-const defaultValue: WaitersContextType = {
-  staffId: '',
-  staffName: '',
-  role: '',
-  branchId: '',
-  tenantId: '',
-  isLoggedIn: false,
-  login: () => {},
-  logout: () => {},
+const ROLES_PANEL_MOZO: RolLocal[] = ["waiter", "manager", "admin", "owner"];
+
+const WaitersContext = createContext<WaitersContextType | null>(null);
+
+export const useWaiters = () => {
+  const ctx = useContext(WaitersContext);
+  if (!ctx) throw new Error("useWaiters debe usarse dentro de WaitersProvider");
+  return ctx;
 };
 
-const WaitersContext = createContext<WaitersContextType>(defaultValue);
-
-export const useWaiters = () => useContext(WaitersContext);
-
 export const WaitersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [staff, setStaff] = useState<StaffData | null>(() => {
-    const saved = sessionStorage.getItem('mozo_staff');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const { cargando, perfil, salir } = useSesion();
 
-  const login = useCallback((data: StaffData) => {
-    setStaff(data);
-    sessionStorage.setItem('mozo_staff', JSON.stringify(data));
-  }, []);
-
-  const logout = useCallback(() => {
-    setStaff(null);
-    sessionStorage.removeItem('mozo_staff');
-  }, []);
-
-  const value: WaitersContextType = {
-    staffId: staff?.staffId ?? '',
-    staffName: staff?.staffName ?? '',
-    role: staff?.role ?? '',
-    branchId: staff?.branchId ?? '',
-    tenantId: staff?.tenantId ?? '',
-    isLoggedIn: !!staff,
-    login,
-    logout,
-  };
+  const value = useMemo<WaitersContextType>(() => {
+    const local = perfil?.locales.find((l) => ROLES_PANEL_MOZO.includes(l.rol));
+    return {
+      staffId: local?.staff_id ?? "",
+      staffName: local?.staff_nombre ?? perfil?.email?.split("@")[0] ?? "",
+      role: local?.rol ?? "",
+      branchId: local?.branch_id ?? "",
+      tenantId: local?.tenant_id ?? "",
+      cargando,
+      isLoggedIn: !!local?.branch_id,
+      logout: salir,
+    };
+  }, [cargando, perfil, salir]);
 
   return <WaitersContext.Provider value={value}>{children}</WaitersContext.Provider>;
 };

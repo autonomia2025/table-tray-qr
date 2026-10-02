@@ -4,6 +4,38 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.2: un solo modelo de roles y una sola puerta de entrada ✅
+**Decisión del fundador:** el mozo entra con email y contraseña (el PIN se puede agregar después sin rehacer nada).
+
+**Base (migración `20261002030000_modelo_roles.sql`):**
+- `tenant_members` es la fuente de verdad del rol. Lista cerrada: `owner`, `admin`, `manager`, `cashier`, `waiter`, `kitchen` (restricción en la base). `staff_users` queda como perfil (nombre, mesas asignadas) y usa la misma lista. Las invitaciones solo pueden ser para encargado, cajero, mozo o cocina.
+- Se normalizaron los roles existentes: `staff` (lo creaba `create-tenant-user` sin rol real) pasa al rol del perfil de personal, y `host` pasa a mozo.
+- `is_tenant_member()` ya no cuenta miembros desactivados.
+- `get_tenant_id()` deja de elegir un local al azar (N11): toma la membresía activa más antigua.
+- Nueva `tiene_rol(local, roles)`: base de las reglas de acceso por rol de las próximas subfases.
+- Nueva **`mi_perfil()`**: devuelve en una sola consulta quién es el usuario, si es superadmin, su rol de backoffice y sus locales (con rol, sucursal y perfil de personal). Es la **única** forma en que la app resuelve el rol.
+
+**Funciones:** `create-tenant-user` recibe el rol y valida quién puede asignar cuál (superadmin: cualquiera; dueño: hasta administrador; administrador: hasta encargado). La membresía se crea con el rol real, ya no con "staff".
+
+**App:**
+- `SesionContext` (nuevo, en la raíz de la app): sesión única desde `mi_perfil()`.
+- `src/lib/roles.ts` (nuevo): nombres de los roles, secciones del panel por rol y a dónde llega cada uno al entrar.
+- Login único: `UnifiedLoginPage` usa la sesión. **Cocina entra directo a su pantalla**; el **cajero**, a Caja; el mozo, a su panel. `/mozo/login` redirige a `/login`. Se borraron `MozoLoginPage` y `AdminLoginPage`. Todos los enlaces y cierres de sesión llevan a `/login`.
+- **Panel del mozo:** su identidad sale de la sesión, no de `sessionStorage` (cierra N2), y **entra una sola vez** (cierra N16). Si recarga la página, sigue conectado.
+- **Panel del local:** `AdminContext` usa la sesión. Ahora el acceso de soporte exige ser superadmin según la base: antes bastaba un dato en el navegador para ver el panel (cierra la parte visible de N3; el registro de la suplantación llega en la 1.8). `AdminGuard` deja abrir solo las secciones del rol, y el menú se filtra igual. El encargado no ve Equipo ni Sucursal; el cajero solo ve Caja, Pedidos y Mesas; mozo y cocina van a sus pantallas.
+- KDS, superadmin, finanzas, jefe de ventas y vendedor deciden el acceso con la misma sesión.
+- Equipo: roles reales (mozo, cocina, cajero, encargado; se quitó "host"), y el rol se envía al crear la cuenta.
+- Superadmin → Configuración: el alta de accesos usa `create-tenant-user` en vez del registro público (`signUp`), que además cambiaba la sesión del superadmin.
+
+**Demo:** nueva cuenta **cajero** (`cajero@demo.tablio.test`). `crear_demo.py --solo-cuenta` agrega una cuenta a un demo ya cargado.
+
+**Pruebas:**
+- `tests/seguridad/f1-2-roles.test.ts`: 14 pruebas. `mi_perfil` (anónimo no puede; cada rol aparece bien), `tiene_rol`, rechazo de roles inventados, invitaciones no pueden ser para dueño, y quién puede asignar qué rol.
+- En navegador: cada rol llega a su panel, incluidos cocina directo al KDS y el cajero a Caja; el cajero no puede abrir Equipo; el mozo entra una vez y sobrevive a recargar; el login viejo del mozo redirige al único.
+- **Base desechable:** 30 de seguridad y 42 de navegador. **Base de pruebas:** 30 de seguridad y 44 de navegador. Revisión de tipos y compilación en verde. Estilo: 123 errores (bajó 1) y 30 advertencias; queda como nuevo tope.
+
+---
+
 ## 2026-10-02 — Fase 0.2 terminada y fase 0.5: base desechable para pruebas
 **Corte (0.2) ✅:**
 - `fase-2-migracion` se unió a `main` sin conflictos (nadie había escrito en `main`).

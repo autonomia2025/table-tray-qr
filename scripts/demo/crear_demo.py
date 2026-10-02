@@ -1,9 +1,11 @@
 """Genera el SQL del local de demo "Demo Tablio" con todos los roles.
 
-Uso: python3 scripts/demo/crear_demo.py [--salida DIR] [--local-ajeno]
+Uso: python3 scripts/demo/crear_demo.py [--salida DIR] [--local-ajeno] [--solo-cuenta CLAVE]
   --salida DIR    carpeta de salida (por defecto privado/)
   --local-ajeno   agrega "Local Ajeno": un segundo local mínimo con su dueño, para
                   probar que un local no puede ver ni tocar los datos de otro.
+  --solo-cuenta   genera solo esa cuenta del demo (por ejemplo "cajero") para sumarla a un
+                  demo ya cargado; escribe cuenta_<clave>.sql y agrega la fila a las credenciales.
 Escribe en la carpeta de salida (fuera de git):
   - demo_seed.sql          -> se carga con la CLI de Supabase
   - DEMO_CREDENCIALES.md   -> correos y contraseñas de cada rol
@@ -62,6 +64,7 @@ CUENTAS = [
     ("mozo1", f"mozo1@{DOMINIO}", "Camila (mozo)", "staff", "waiter"),
     ("mozo2", f"mozo2@{DOMINIO}", "Diego (mozo)", "staff", "waiter"),
     ("cocina", f"cocina@{DOMINIO}", "Cocina y barra", "staff", "kitchen"),
+    ("cajero", f"cajero@{DOMINIO}", "Caja Demo", "staff", "cashier"),
     ("superadmin", f"superadmin@{DOMINIO}", "Superadmin Demo", "plataforma", "superadmin"),
     ("jefe", f"jefe@{DOMINIO}", "Jefa de ventas Demo", "backoffice", "jefe_ventas"),
     ("vendedor", f"vendedor@{DOMINIO}", "Vendedor Demo", "backoffice", "vendedor"),
@@ -155,14 +158,52 @@ def local_ajeno(sql: list[str], claves: dict) -> None:
     CUENTAS.append(("dueno_ajeno", correo, "Dueño Ajeno", "ajeno", "owner_ajeno"))
 
 
+def sql_cuenta(k: str, correo: str, nombre: str, tipo: str, rol: str, clave_txt: str) -> list[str]:
+    """Usuario, identidad y membresía/perfil de UNA cuenta del demo (local o personal)."""
+    u = uid(f"user-{k}")
+    sql = [
+        "INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, "
+        "raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, "
+        "email_change_token_new, email_change, email_change_token_current, phone_change, phone_change_token, reauthentication_token) VALUES ("
+        f"'00000000-0000-0000-0000-000000000000', '{u}', 'authenticated', 'authenticated', {q(correo)}, "
+        f"extensions.crypt({q(clave_txt)}, extensions.gen_salt('bf')), now(), "
+        f"{q({'provider': 'email', 'providers': ['email']})}, {q({'name': nombre, 'demo': True})}, now(), now(), '', '', '', '', '', '', '', '');",
+        "INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, created_at, updated_at) VALUES ("
+        f"'{uid(f'identity-{k}')}', '{u}', '{u}', {q({'sub': u, 'email': correo, 'email_verified': True})}, 'email', now(), now());",
+    ]
+    if tipo in ("local", "staff"):
+        sql.append(ins("public.tenant_members", {"id": uid(f"tm-{k}"), "user_id": u, "tenant_id": TENANT, "branch_id": BRANCH, "role": rol, "is_active": True}))
+    if tipo == "staff":
+        sql.append(ins("public.staff_users", {"id": uid(f"staff-{k}"), "tenant_id": TENANT, "branch_id": BRANCH, "auth_user_id": u, "name": nombre, "role": rol, "is_active": True}))
+    return sql
+
+
+def solo_cuenta(k: str, clave_txt: str, salida: Path) -> None:
+    fila = next(c for c in CUENTAS if c[0] == k)
+    _, correo, nombre, tipo, rol = fila
+    sql = ["BEGIN;", *sql_cuenta(k, correo, nombre, tipo, rol, clave_txt), "COMMIT;"]
+    (salida / f"cuenta_{k}.sql").write_text("\n".join(sql) + "\n", encoding="utf-8")
+    creds = salida / "DEMO_CREDENCIALES.md"
+    texto = creds.read_text(encoding="utf-8")
+    nueva = f"| {rol} | `{correo}` | `{clave_txt}` |"
+    marca = "\n\n## Mesas"
+    texto = texto.replace(marca, "\n" + nueva + marca, 1) if marca in texto else texto + "\n" + nueva + "\n"
+    creds.write_text(texto, encoding="utf-8")
+    print(f"cuenta {k} → {salida}/cuenta_{k}.sql (credencial agregada a {creds})")
+
+
 def main() -> None:
     args = argparse.ArgumentParser()
     args.add_argument("--salida", default=str(PRIVADO))
     args.add_argument("--local-ajeno", action="store_true")
+    args.add_argument("--solo-cuenta")
     cfg = args.parse_args()
     salida = Path(cfg.salida)
     salida.mkdir(parents=True, exist_ok=True)
     claves = {k: clave() for k, *_ in CUENTAS}
+    if cfg.solo_cuenta:
+        solo_cuenta(cfg.solo_cuenta, claves[cfg.solo_cuenta], salida)
+        return
     sql = [
         "-- Local de demo 'Demo Tablio'. Generado por scripts/demo/crear_demo.py. NO subir a git.",
         "BEGIN;",

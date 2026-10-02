@@ -25,9 +25,10 @@ Este archivo explica cómo entrar. **Las contraseñas no están aquí**: viven e
 |---|---|---|
 | Dueño | `dueno@demo.tablio.test` | `/admin/demo-tablio/mesas` |
 | Administrador | `admin@demo.tablio.test` | `/admin/demo-tablio/mesas` |
-| Mozo 1 (Camila) | `mozo1@demo.tablio.test` | `/mozo/mesas` (hoy pide la clave dos veces, ver DIAGNOSTICO N16) |
+| Mozo 1 (Camila) | `mozo1@demo.tablio.test` | `/mozo/mesas` |
 | Mozo 2 (Diego) | `mozo2@demo.tablio.test` | `/mozo/mesas` |
-| Cocina y barra | `cocina@demo.tablio.test` | Panel del dueño. El KDS se abre en `/kds?branch=aebe7faa-0e29-5aa9-83c2-1e1b336f1554` |
+| Cocina y barra | `cocina@demo.tablio.test` | Directo a la pantalla de cocina: `/kds?branch=aebe7faa-0e29-5aa9-83c2-1e1b336f1554` |
+| Cajero | `cajero@demo.tablio.test` | `/admin/demo-tablio/caja` (solo ve Caja, Pedidos y Mesas) |
 | Superadmin | `superadmin@demo.tablio.test` | `/superadmin` |
 | Jefa de ventas | `jefe@demo.tablio.test` | `/jefe-ventas/dashboard` |
 | Vendedor | `vendedor@demo.tablio.test` | `/vendedor/mi-dia` |

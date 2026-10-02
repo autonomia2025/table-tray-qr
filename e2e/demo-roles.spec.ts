@@ -15,7 +15,8 @@ const destinos: Array<[rol: string, ruta: RegExp]> = [
   ["owner", /\/admin\/demo-tablio\/mesas/],
   ["admin", /\/admin\/demo-tablio\/mesas/],
   ["waiter", /\/mozo\/mesas/],
-  ["kitchen", /\/admin\/demo-tablio\/mesas/], // hoy la app manda a cocina al panel del dueño (se ordena en la fase 4)
+  ["kitchen", /\/kds\?branch=aebe7faa-0e29-5aa9-83c2-1e1b336f1554/],
+  ["cashier", /\/admin\/demo-tablio\/caja/],
   ["superadmin", /\/superadmin/],
   ["jefe_ventas", /\/jefe-ventas\/dashboard/],
   ["vendedor", /\/vendedor\/mi-dia/],
@@ -33,17 +34,33 @@ test.describe("local de demo", () => {
       await page.locator('input[type="email"]').fill(c.correo);
       await page.locator('input[type="password"]').fill(c.clave);
       await page.locator('button[type="submit"]').click();
-      if (rol === "waiter") {
-        // Error heredado de Lovable (DIAGNOSTICO N16): el panel del mozo manda al segundo
-        // login antes de revisar la sesión, y el mozo tiene que entrar dos veces.
-        await expect(page).toHaveURL(/\/mozo\/login/, { timeout: 15_000 });
-        await page.locator('input[type="email"]').fill(c.correo);
-        await page.locator('input[type="password"]').fill(c.clave);
-        await page.locator('button[type="submit"]').click();
-      }
       await expect(page).toHaveURL(ruta, { timeout: 15_000 });
     });
   }
+
+  test("el cajero solo ve Caja, Pedidos y Mesas, y no puede abrir Equipo", async ({ page }) => {
+    const c = cuentas["cashier"];
+    await page.goto("/login");
+    await page.locator('input[type="email"]').fill(c.correo);
+    await page.locator('input[type="password"]').fill(c.clave);
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/admin\/demo-tablio\/caja/, { timeout: 15_000 });
+    await page.goto("/admin/demo-tablio/equipo");
+    await expect(page).toHaveURL(/\/admin\/demo-tablio\/caja/);
+  });
+
+  test("el mozo entra una sola vez y su sesión sobrevive a recargar la página", async ({ page }) => {
+    const c = cuentas["waiter"];
+    await page.goto("/login");
+    await page.locator('input[type="email"]').fill(c.correo);
+    await page.locator('input[type="password"]').fill(c.clave);
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/\/mozo\/mesas/, { timeout: 15_000 });
+    await page.reload();
+    await expect(page).toHaveURL(/\/mozo\/mesas/);
+    await page.goto("/admin/demo-tablio/mesas");
+    await expect(page).toHaveURL(/\/mozo\/mesas/);
+  });
 
   test("la carta del demo se ve desde la mesa 1", async ({ page }) => {
     await page.goto(mesa1!);

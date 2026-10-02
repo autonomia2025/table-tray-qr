@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState } from 'react';
+import { useSesion } from '@/contexts/SesionContext';
 
 interface SuperAdminContextType {
   isPlatformAdmin: boolean;
@@ -18,8 +18,9 @@ const SuperAdminContext = createContext<SuperAdminContextType>({
 export const useSuperAdmin = () => useContext(SuperAdminContext);
 
 export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Quién es superadmin lo dice la sesión única (mi_perfil), no una consulta propia.
+  const { cargando: isLoading, perfil } = useSesion();
+  const isPlatformAdmin = !!perfil?.es_superadmin;
   const [impersonating, setImpersonatingState] = useState<string | null>(
     () => sessionStorage.getItem('superadmin_impersonating')
   );
@@ -33,29 +34,6 @@ export const SuperAdminProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
-  useEffect(() => {
-    const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setIsPlatformAdmin(false);
-        setIsLoading(false);
-        return;
-      }
-      const { data } = await supabase
-        .from('platform_admins')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-      setIsPlatformAdmin(!!data);
-      setIsLoading(false);
-    };
-    check();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      check();
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   return (
     <SuperAdminContext.Provider value={{ isPlatformAdmin, isLoading, impersonating, setImpersonating }}>

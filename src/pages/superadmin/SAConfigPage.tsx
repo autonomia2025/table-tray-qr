@@ -193,16 +193,14 @@ function AdminAccessSection() {
   const handleCreate = async () => {
     if (!email || !password || !selectedTenant || !selectedBranch) return;
     setCreating(true); setSqlOutput('');
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error || !data.user) { toast({ title: 'Error', description: error?.message, variant: 'destructive' }); setCreating(false); return; }
-    const { error: memberErr } = await supabase.from('tenant_members').insert({ user_id: data.user.id, tenant_id: selectedTenant, branch_id: selectedBranch, role, is_active: true });
-    if (memberErr) {
-      setSqlOutput(`INSERT INTO public.tenant_members (user_id, tenant_id, branch_id, role) SELECT '${data.user.id}', '${selectedTenant}', '${selectedBranch}', '${role}';`);
-      toast({ title: 'Usuario creado, membership manual', variant: 'destructive' });
-    } else {
-      const tenant = tenants.find(t => t.id === selectedTenant);
-      toast({ title: 'Acceso creado', description: `${email} → /admin/${tenant?.slug}` });
-    }
+    // Alta por el servidor (create-tenant-user): no usa el registro público ni cambia la sesión del superadmin.
+    const { data, error } = await supabase.functions.invoke('create-tenant-user', {
+      body: { email, password, tenant_id: selectedTenant, branch_id: selectedBranch, role },
+    });
+    const memberErr = error || data?.error ? (data?.error ?? 'No se pudo crear el usuario') : null;
+    if (memberErr) { toast({ title: 'Error', description: String(memberErr), variant: 'destructive' }); setCreating(false); return; }
+    const tenant = tenants.find(t => t.id === selectedTenant);
+    toast({ title: 'Acceso creado', description: `${email} → /admin/${tenant?.slug}` });
     setCreating(false);
   };
 
