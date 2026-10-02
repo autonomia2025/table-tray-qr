@@ -51,7 +51,7 @@ jobs:
         run: bunx playwright install --with-deps chromium
       # Supabase local con TODAS las migraciones del repositorio, desde cero.
       - name: Levantar Supabase local
-        run: supabase start -x studio,imgproxy,logflare,vector,mailpit,supavisor
+        run: supabase start -x studio,imgproxy,logflare,vector,supavisor
       # Demo y "Local Ajeno" con contraseñas nuevas; pruebas de seguridad y de navegador.
       # Nada de esto toca la base de pruebas real.
       - name: Pruebas contra la base desechable

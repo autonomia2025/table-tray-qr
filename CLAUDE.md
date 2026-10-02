@@ -10,7 +10,7 @@ Si algo de aquí contradice `docs/vision/TABLIO_BRIEF_v3.md`, **gana el brief**.
 3. **`docs/DIAGNOSTICO.md`**: problemas conocidos del código actual, con archivo y línea.
 4. **`ESTADO_LOVABLE.md`**: la auditoría que hizo Lovable. Es útil, pero tiene errores corregidos en el diagnóstico.
 
-**Fase actual:** fase 0 terminada; fase 1.1 (contención) y 1.2 (roles y login único) hechas. Siguiente: 1.3 (identidad del comensal). Se trabaja sobre `main`. Antes: 2 (migración), casi lista. La base nueva (`iznwvklzmyhzalabgfxl`) ya tiene estructura, datos, fotos, funciones y el local de demo, y `.env` apunta a ella. Falta: Vercel, Auth (URL del sitio), la clave de Claude, la revisión con el fundador y unir la rama `fase-2-migracion` con `main`. Credenciales del demo en `privado/` (fuera de git); cómo entrar en `docs/DEMO_ACCESS.md`.
+**Fase actual:** fase 0 terminada; fase 1.1 (contención) y 1.2 (roles y login único) hechas. 1.3 (identidad del comensal: invitado o cliente) hecha. Siguiente: 1.4 (dominio pedidos). Se trabaja sobre `main`. Antes: 2 (migración), casi lista. La base nueva (`iznwvklzmyhzalabgfxl`) ya tiene estructura, datos, fotos, funciones y el local de demo, y `.env` apunta a ella. Falta: Vercel, Auth (URL del sitio), la clave de Claude, la revisión con el fundador y unir la rama `fase-2-migracion` con `main`. Credenciales del demo en `privado/` (fuera de git); cómo entrar en `docs/DEMO_ACCESS.md`.
 
 **Decisiones tomadas:** Supabase propio (organización "Tablio", São Paulo, plan gratis) · hosting en Vercel · chat de soporte con Claude Haiku 4.5 · `create-platform-admin` y `create-jefe-ventas` no se publican en el proyecto nuevo (única excepción a "migrar tal cual") · los estados se quedan en inglés en la base, con una capa de traducción en pantalla · el dominio definitivo se decide antes de imprimir QR reales (último momento: inicio de la fase 5).
 
@@ -68,6 +68,8 @@ supabase functions deploy <nombre>      # publicar una edge function
 - **No hay MVP:** se construye el producto completo. Las fases solo ordenan dependencias; ninguna funcionalidad queda "para después".
 - **Un solo QR hace todo.** Al pagar, el comensal elige: **"Pagar ahora"** (destacado; va pagado directo a cocina), **"Pagar al mozo"** (efectivo o POS; el mozo cobra, lo registra y recién ahí va a cocina) o, solo en locales con cuenta abierta, **"Agregar a mi cuenta"** (paga su propia cuenta al final, en la app o con el mozo).
 - **Nada con cámara.** "Llamar al mozo" y "pedir la cuenta" son botones, sin escanear.
+- **El comensal paga sin registrarse (invitado) y puede guardar su cuenta** (correo con código o enlace, Google o Apple) para juntar sellos. Su identidad de invitado se convierte en su cuenta: no pierde nada. Los sellos solo se suman con cuenta verificada.
+- **Auth se maneja desde `supabase/config.toml`.** Antes de empujar, revisar siempre la diferencia: `printf 'n\n' | supabase config push`.
 - **Siempre con pruebas completas.** Cada cambio pasa por la integración continua (`.github/workflows/ci.yml`).
 
 ## Reglas del producto (resumen de la sección 4 del brief)

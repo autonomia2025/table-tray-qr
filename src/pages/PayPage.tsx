@@ -3,28 +3,14 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, CreditCard, ShieldCheck, AlertTriangle, Gift, Apple } from "lucide-react";
+import BloqueSellos from "@/components/comensal/BloqueSellos";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { detectWallets, requestWalletPayment, type WalletKind } from "@/lib/walletPayment";
 import { useToast } from "@/hooks/use-toast";
 
 const TIP_OPTIONS = [0, 5, 10, 15];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
-
-interface LoyaltyStatus {
-  program: {
-    type: string;
-    goal_visits: number;
-    points_goal: number;
-    points_per_thousand: number;
-    reward_description: string;
-  } | null;
-  customer: { id: string; visits: number; points: number } | null;
-  rewards: { id: string; description: string }[];
-}
 
 interface PaidResult {
   amount: number;
@@ -51,8 +37,6 @@ export default function PayPage() {
   const { toast } = useToast();
 
   const [tipIdx, setTipIdx] = useState(1);
-  const [email, setEmail] = useState(() => localStorage.getItem("tablio_guest_email") || "");
-  const [consent, setConsent] = useState(!!localStorage.getItem("tablio_guest_email"));
   const [redeemRewardId, setRedeemRewardId] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -137,23 +121,6 @@ export default function PayPage() {
   const total = subtotal + tipAmount;
 
   /* ---------- lealtad ---------- */
-  const validEmail = EMAIL_RE.test(email);
-  const { data: loyalty } = useQuery<LoyaltyStatus | null>({
-    queryKey: ["pay-loyalty", tenant?.id, table?.branch_id, email.toLowerCase()],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("loyalty-status", {
-        body: { tenant_id: tenant!.id, branch_id: table?.branch_id, email: email.trim().toLowerCase() },
-      });
-      if (error) return null;
-      return data as LoyaltyStatus;
-    },
-    enabled: !!tenant?.id && validEmail && consent,
-    staleTime: 30_000,
-  });
-
-  useEffect(() => {
-    if (validEmail && consent) localStorage.setItem("tablio_guest_email", email.trim().toLowerCase());
-  }, [validEmail, consent, email]);
 
   /* ---------- pago ---------- */
   const handlePay = async (method: "card" | WalletKind) => {
@@ -175,7 +142,6 @@ export default function PayPage() {
           table_token: tableToken,
           method,
           tip_amount: tipAmount,
-          email: validEmail && consent ? email.trim().toLowerCase() : null,
           idempotency_key: `${idemRef.current}-${subtotal}-${tipAmount}`,
           redeem_reward_id: redeemRewardId,
         },
@@ -382,85 +348,15 @@ export default function PayPage() {
               })}
             </div>
 
-            {/* Email / lealtad */}
-            <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Gift className="h-4 w-4" style={{ color: primaryColor }} />
-                <span className="text-sm font-bold text-card-foreground">Suma a tu tarjeta de lealtad</span>
-              </div>
-              <Input
-                type="email"
-                inputMode="email"
-                placeholder="tu@email.com"
-                value={email}
-                maxLength={255}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
-              />
-              <label className="mt-2 flex items-start gap-2">
-                <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
-                <span className="text-[11px] text-muted-foreground">
-                  Acepto que {tenant?.name ?? "el local"} guarde mi email para reconocerme y sumar mis visitas. Solo lo
-                  usa este local.
-                </span>
-              </label>
-
-              {loyalty?.program && loyalty.customer && (
-                <div className="mt-3 rounded-xl bg-muted/60 p-3">
-                  {loyalty.program.type === "stamps" ? (
-                    <>
-                      <p className="text-xs font-semibold text-foreground">
-                        {loyalty.customer.visits % loyalty.program.goal_visits} de {loyalty.program.goal_visits} visitas
-                      </p>
-                      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-border">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            backgroundColor: primaryColor,
-                            width: `${((loyalty.customer.visits % loyalty.program.goal_visits) / loyalty.program.goal_visits) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-xs font-semibold text-foreground">
-                        {loyalty.customer.points} de {loyalty.program.points_goal} puntos
-                      </p>
-                      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-border">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            backgroundColor: primaryColor,
-                            width: `${Math.min(100, (loyalty.customer.points / loyalty.program.points_goal) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </>
-                  )}
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
-                    Recompensa: {loyalty.program.reward_description}
-                  </p>
-                </div>
-              )}
-
-              {loyalty?.rewards?.length ? (
-                <div className="mt-3 space-y-2">
-                  {loyalty.rewards.map((r) => (
-                    <label
-                      key={r.id}
-                      className="flex items-center gap-2 rounded-xl border border-border p-2.5"
-                    >
-                      <Checkbox
-                        checked={redeemRewardId === r.id}
-                        onCheckedChange={(v) => setRedeemRewardId(v === true ? r.id : null)}
-                      />
-                      <span className="text-xs text-card-foreground">Canjear ahora: {r.description}</span>
-                    </label>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            {/* Sellos de fidelización: solo con cuenta verificada (fase 1.3) */}
+            <BloqueSellos
+              tenantId={tenant?.id}
+              branchId={table?.branch_id}
+              nombreLocal={tenant?.name ?? "el local"}
+              color={primaryColor}
+              premioElegido={redeemRewardId}
+              onElegirPremio={setRedeemRewardId}
+            />
 
             {/* Total */}
             <div className="rounded-2xl border border-border bg-card p-4 mb-4">

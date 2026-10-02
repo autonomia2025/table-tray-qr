@@ -13,28 +13,16 @@ import {
   Plus,
   CheckCircle2,
 } from "lucide-react";
+import BloqueSellos from "@/components/comensal/BloqueSellos";
+import CuentaComensal from "@/components/comensal/CuentaComensal";
+import { useSesion } from "@/contexts/SesionContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
 import { useTableSession } from "@/hooks/useTableSession";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { detectWallets, requestWalletPayment, type WalletKind } from "@/lib/walletPayment";
 
 const TIP_OPTIONS = [0, 5, 10, 15];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
-
-interface LoyaltyStatus {
-  program: {
-    type: string;
-    goal_visits: number;
-    points_goal: number;
-    points_per_thousand: number;
-    reward_description: string;
-  } | null;
-  customer: { id: string; visits: number; points: number } | null;
-  rewards: { id: string; description: string }[];
-}
 
 interface PaidResult {
   amount: number;
@@ -64,8 +52,8 @@ export default function CheckoutPage() {
 
   const [orderNotes, setOrderNotes] = useState("");
   const [tipIdx, setTipIdx] = useState(1);
-  const [email, setEmail] = useState(() => localStorage.getItem("tablio_guest_email") || "");
-  const [consent, setConsent] = useState(!!localStorage.getItem("tablio_guest_email"));
+  const { perfil } = useSesion();
+  const [cuentaAbierta, setCuentaAbierta] = useState(false);
   const [redeemRewardId, setRedeemRewardId] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -133,27 +121,6 @@ export default function CheckoutPage() {
   });
 
   /* ---------- lealtad ---------- */
-  const validEmail = EMAIL_RE.test(email);
-  const { data: loyalty } = useQuery<LoyaltyStatus | null>({
-    queryKey: ["checkout-loyalty", tenant?.id, table?.branch_id, email.toLowerCase()],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("loyalty-status", {
-        body: {
-          tenant_id: tenant!.id,
-          branch_id: table?.branch_id,
-          email: email.trim().toLowerCase(),
-        },
-      });
-      if (error) return null;
-      return data as LoyaltyStatus;
-    },
-    enabled: !!tenant?.id && validEmail && consent,
-    staleTime: 30_000,
-  });
-
-  useEffect(() => {
-    if (validEmail && consent) localStorage.setItem("tablio_guest_email", email.trim().toLowerCase());
-  }, [validEmail, consent, email]);
 
   /* ---------- pago ---------- */
   const handlePay = async (method: "card" | WalletKind) => {
@@ -180,7 +147,6 @@ export default function CheckoutPage() {
           method,
           tip_amount: tipAmount,
           order_notes: orderNotes.trim() || null,
-          email: validEmail && consent ? email.trim().toLowerCase() : null,
           idempotency_key: `${idemRef.current}-${subtotal}-${tipAmount}`,
           redeem_reward_id: redeemRewardId,
           cart_items: items.map((i) => ({
@@ -299,6 +265,27 @@ export default function CheckoutPage() {
               )}
             </div>
           )}
+
+          {!paid.loyalty && perfil?.es_anonimo && (
+            <button
+              onClick={() => setCuentaAbierta(true)}
+              className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${primaryColor}18` }}>
+                <Gift className="h-5 w-5" style={{ color: primaryColor }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-card-foreground">Guarda tus sellos</p>
+                <p className="text-[11px] text-muted-foreground">Crea tu cuenta en 10 segundos y suma premios desde tu próxima visita.</p>
+              </div>
+            </button>
+          )}
+          <CuentaComensal
+            abierto={cuentaAbierta}
+            onCambiar={setCuentaAbierta}
+            nombreLocal={tenant?.name ?? "el local"}
+            color={primaryColor}
+          />
 
           <button
             onClick={() => navigate(`/${slug}/menu${qs}`)}
@@ -450,79 +437,15 @@ export default function CheckoutPage() {
               })}
             </div>
 
-            {/* Lealtad */}
-            <div className="mb-4 rounded-2xl border border-border bg-card p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <Gift className="h-4 w-4" style={{ color: primaryColor }} />
-                <span className="text-sm font-bold text-card-foreground">Suma a tu tarjeta de lealtad</span>
-              </div>
-              <Input
-                type="email"
-                inputMode="email"
-                placeholder="tu@email.com"
-                value={email}
-                maxLength={255}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
-              />
-              <label className="mt-2 flex items-start gap-2">
-                <Checkbox checked={consent} onCheckedChange={(v) => setConsent(v === true)} className="mt-0.5" />
-                <span className="text-[11px] text-muted-foreground">
-                  Acepto que {tenant?.name ?? "el local"} guarde mi email para reconocerme y sumar mis visitas. Solo lo
-                  usa este local.
-                </span>
-              </label>
-
-              {loyalty?.program && loyalty.customer && (
-                <div className="mt-3 rounded-xl bg-muted/60 p-3">
-                  {loyalty.program.type === "stamps" ? (
-                    <>
-                      <p className="text-xs font-semibold text-foreground">
-                        {loyalty.customer.visits % loyalty.program.goal_visits} de {loyalty.program.goal_visits} visitas
-                      </p>
-                      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-border">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            backgroundColor: primaryColor,
-                            width: `${((loyalty.customer.visits % loyalty.program.goal_visits) / loyalty.program.goal_visits) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-xs font-semibold text-foreground">
-                      {loyalty.customer.points} de {loyalty.program.points_goal} puntos para{" "}
-                      {loyalty.program.reward_description}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {loyalty?.rewards?.length ? (
-                <div className="mt-3 space-y-2">
-                  {loyalty.rewards.map((r) => {
-                    const active = redeemRewardId === r.id;
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => setRedeemRewardId(active ? null : r.id)}
-                        className="flex w-full items-center justify-between rounded-xl border-2 px-3 py-2.5 text-left"
-                        style={{
-                          borderColor: active ? primaryColor : "hsl(var(--border))",
-                          backgroundColor: active ? `${primaryColor}12` : "transparent",
-                        }}
-                      >
-                        <span className="text-xs font-semibold text-foreground">{r.description}</span>
-                        <span className="text-[11px] text-muted-foreground">
-                          {active ? "Se canjea ahora" : "Canjear"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </div>
+            {/* Sellos de fidelización: solo con cuenta verificada (fase 1.3) */}
+            <BloqueSellos
+              tenantId={tenant?.id}
+              branchId={table?.branch_id}
+              nombreLocal={tenant?.name ?? "el local"}
+              color={primaryColor}
+              premioElegido={redeemRewardId}
+              onElegirPremio={setRedeemRewardId}
+            />
 
             {errorMsg && (
               <div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3">

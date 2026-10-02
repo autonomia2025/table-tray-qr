@@ -54,3 +54,17 @@ export async function llamarFuncion(nombre: string, cuerpo: unknown, token?: str
   });
   return { status: r.status, cuerpo: await r.text() };
 }
+
+/** Un comensal invitado nuevo (sesión anónima). */
+export async function invitado(): Promise<SupabaseClient> {
+  const cliente = anonimo();
+  const { error } = await cliente.auth.signInAnonymously();
+  if (error) throw new Error(`No se pudo crear el invitado: ${error.message}`);
+  return cliente;
+}
+
+/** Código QR de una mesa del demo (de las credenciales del demo). */
+export function qrMesa(numero: number): string | null {
+  const m = texto.match(new RegExp(`^\\| ${numero} \\| \\w+ \\| \`[^\`]*\\?t=([0-9a-f]+)\` \\|$`, "m"));
+  return m?.[1] ?? null;
+}

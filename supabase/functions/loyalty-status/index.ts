@@ -1,9 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, EMAIL_RE, UUID_RE } from "../_shared/http.ts";
+import { corsHeaders, json, UUID_RE } from "../_shared/http.ts";
 
 /**
- * Consulta pública del progreso de lealtad de un comensal en un local.
- * Solo devuelve datos del email exacto entregado y del tenant indicado.
+ * Progreso de lealtad del cliente conectado en un local.
+ * Solo para clientes registrados con correo verificado, y solo sus propios sellos:
+ * antes cualquiera podía consultar los premios de cualquier correo (DIAGNOSTICO N4).
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -14,13 +15,19 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
+    const { data: quien } = token ? await admin.auth.getUser(token) : { data: { user: null } };
+    const cliente = quien?.user;
+    if (!cliente || cliente.is_anonymous || !cliente.email || !cliente.email_confirmed_at) {
+      return json({ error: "Guarda tu cuenta para ver tus sellos." }, 401);
+    }
+    const email = cliente.email.toLowerCase();
+
     const body = await req.json().catch(() => ({}));
     const tenantId = typeof body?.tenant_id === "string" ? body.tenant_id : "";
     const branchId = typeof body?.branch_id === "string" ? body.branch_id : "";
-    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
 
     if (!UUID_RE.test(tenantId)) return json({ error: "Local inválido" }, 400);
-    if (!EMAIL_RE.test(email)) return json({ error: "Email inválido" }, 400);
 
     const { data: programs } = await admin
       .from("loyalty_programs")
@@ -39,7 +46,7 @@ Deno.serve(async (req) => {
       .from("loyalty_customers")
       .select("id, email, visits, points, total_spent, last_visit_at")
       .eq("tenant_id", tenantId)
-      .ilike("email", email)
+      .eq("email", email)
       .maybeSingle();
 
     let rewards: unknown[] = [];

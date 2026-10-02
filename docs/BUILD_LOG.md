@@ -4,6 +4,53 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.3: identidad del comensal (invitado o cliente) ✅
+**Decisión del fundador:** el comensal paga sin registrarse; quien quiera, guarda su cuenta para juntar sellos. Registro con **correo, Google o Apple**. La pantalla tiene que ser excelente.
+
+**Auth manejado desde el repositorio:** `supabase config push` respondiendo "no" muestra la diferencia entre la configuración real y `config.toml` **sin aplicar nada**. Así se copió exactamente la configuración real de Auth y se cambió solo lo decidido:
+- **URL del sitio** `https://table-tray-qr.vercel.app` y direcciones de retorno (Vercel, vistas previas, local). Era un pendiente desde la fase 0.
+- **Comensales anónimos** activados y **unión de cuentas** activada (para pasar de invitado a cliente con Google o Apple).
+- Códigos de **6 dígitos** (antes 8).
+- Verificado: después de aplicar, no queda ninguna diferencia. Un invitado puede entrar en la base real.
+- **Plantillas de correo en español con código** (`supabase/templates/`): listas, pero **Supabase no permite cambiarlas en el plan gratis con el correo incluido**. Quedan comentadas en `config.toml` hasta tener un servicio de correo. Mientras tanto, el correo trae un enlace en vez de un código.
+
+**Base (migración `20261002040000_identidad_comensal.sql`):**
+- **Una sola sesión abierta por mesa** (índice único): dos comensales que escanean a la vez comparten la misma.
+- Tabla **`comensales_mesa`**: quién está en cada sesión de mesa, con alias opcional. El comensal ve solo su fila; el personal del local ve a los comensales de su local; nadie escribe directo.
+- **`unirse_a_mesa(qr, alias)`**: valida el código de la mesa, abre o reutiliza la sesión y registra al comensal. Solo con sesión (invitado o cliente).
+- **`orders.user_id`**: quién hizo cada pedido (base para "mis pedidos" y para que cada uno pague lo suyo).
+- **`loyalty_customers.user_id`**: sellos ligados a la cuenta.
+- `mi_perfil()` ahora dice si la sesión es de un invitado (`es_anonimo`).
+
+**Funciones:**
+- `process-payment`: anota quién pagó (`orders.user_id`). Suma sellos **solo a clientes registrados con correo verificado, usando el correo de su cuenta**; ignora el correo que mande el navegador. La búsqueda del cliente es exacta (antes `ilike`). Si dos comensales abren la sesión de una mesa al mismo tiempo, usa la que quedó. **Cierra N4.**
+- `loyalty-status`: solo el cliente registrado ve **sus** sellos (antes cualquiera veía los de cualquier correo).
+
+**App del comensal:**
+- Al abrir la carta con el QR, si no hay sesión se crea una de invitado y el comensal entra a la mesa (`useTableSession`).
+- **Hoja "Guarda tus sellos"** (`CuentaComensal`), con el color del local:
+  - Google, Apple o correo. El invitado se convierte en cliente sin perder nada.
+  - Si el correo ya tiene cuenta, entra a ella con un código.
+  - Si confirma tocando el enlace del correo en otra pestaña, al volver se actualiza solo y ve "¡Listo!".
+  - Incluye el texto de consentimiento y el derecho a borrar datos (Ley 21.719).
+  - El cliente registrado ve su cuenta y puede cerrar sesión (vuelve a ser invitado).
+- **Carta:** botón "Sellos" para el invitado o la inicial del correo para el cliente.
+- **Pago (checkout y cuenta):** el campo de correo escrito a mano se reemplazó por el bloque de sellos (`BloqueSellos`). El cliente ve sus sellos como casillas y sus premios para canjear; el invitado ve la invitación a guardar su cuenta. Después de pagar, el invitado ve "Guarda tus sellos".
+- Se quitó el correo guardado en el navegador (`tablio_guest_email`).
+
+**Pruebas:**
+- `tests/seguridad/f1-3-comensal.test.ts`: 10 pruebas. Entrar a la mesa (sin sesión no; código falso no; dos invitados comparten sesión con identidades propias; volver a entrar no duplica); cada comensal ve solo lo suyo; el personal ve a los comensales; nadie escribe directo; el invitado figura como anónimo; sellos solo con cuenta verificada (sin sesión 401, invitado 401, un invitado que manda el correo de otra persona no suma sellos y el pedido queda a su nombre).
+- `e2e/comensal-cuenta.spec.ts`: el invitado ve "Sellos" y la invitación en el pago. **En la base desechable, el invitado guarda su cuenta con su correo real tocando el enlace** (con el buzón de prueba Mailpit, que ahora también levanta la integración continua) y queda como cliente.
+- **Base desechable:** 40 de seguridad y 48 de navegador. **Base de pruebas:** 40 de seguridad y 46 de navegador. Revisión de tipos, compilación y estilo (sin errores nuevos) en verde.
+
+**Pendientes para que el registro funcione con comensales reales (fundador):**
+1. **Servicio de correo (SMTP, por ejemplo Resend):** el correo incluido en Supabase solo llega a direcciones del equipo. Con el servicio se activan además las plantillas con código. Es un servicio externo nuevo y necesita su aprobación.
+2. **Google:** credenciales OAuth en Google Cloud.
+3. **Apple:** cuenta de desarrollador de Apple (pago anual) y credenciales.
+4. A futuro: limpiar periódicamente los invitados viejos sin actividad, y evaluar un captcha contra abuso.
+
+---
+
 ## 2026-10-02 — Fase 1.2: un solo modelo de roles y una sola puerta de entrada ✅
 **Decisión del fundador:** el mozo entra con email y contraseña (el PIN se puede agregar después sin rehacer nada).
 

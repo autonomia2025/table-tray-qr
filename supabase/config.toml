@@ -31,3 +31,58 @@ verify_jwt = false
 
 [functions.support-chat]
 verify_jwt = false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Auth. Copia la configuración real del proyecto (leída con `supabase config push`
+# respondiendo "no") y cambia solo lo decidido. Antes de empujar cambios, revisar
+# siempre la diferencia: printf 'n\n' | supabase config push
+# ─────────────────────────────────────────────────────────────────────────────
+[auth]
+enabled = true
+site_url = "https://table-tray-qr.vercel.app"
+additional_redirect_urls = [
+  "https://table-tray-qr.vercel.app/**",
+  "https://*-felipes-projects-61bc49be.vercel.app/**",
+  "http://localhost:8080/**",
+  "http://localhost:8090/**",
+  "http://127.0.0.1:3000",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+# Fase 1.3: el comensal entra como invitado (anónimo) y puede convertirse en cliente.
+enable_anonymous_sign_ins = true
+# Permite unir Google/Apple a la cuenta de un invitado sin perder lo que hizo.
+enable_manual_linking = true
+minimum_password_length = 6
+
+[auth.mfa]
+max_enrolled_factors = 10
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m0s"
+# Código de 6 dígitos (antes 8): más fácil de escribir en la mesa.
+otp_length = 6
+otp_expiry = 3600
+
+# Plantillas en español con código (supabase/templates/). Supabase no permite cambiar plantillas
+# en el plan gratis con el correo incluido: se activan al configurar un servicio de correo (SMTP).
+# [auth.email.template.magic_link]
+# subject = "Tu código para entrar a Tablio"
+# content_path = "./supabase/templates/codigo-ingreso.html"
+
+# [auth.email.template.email_change]
+# subject = "Guarda tus sellos en Tablio"
+# content_path = "./supabase/templates/codigo-guardar-cuenta.html"
+
+# [auth.email.template.confirmation]
+# subject = "Confirma tu correo en Tablio"
+# content_path = "./supabase/templates/codigo-confirmar.html"

@@ -14,7 +14,28 @@ export interface TableInfo {
 /**
  * Un QR por mesa: al abrir /:slug/menu?t=token se resuelve la mesa,
  * se guarda en el dispositivo y no hace falta volver a escanear.
+ *
+ * Fase 1.3: el comensal siempre tiene identidad propia. Si no tiene sesión, entra como
+ * invitado (anónimo) y queda registrado en la sesión de la mesa (unirse_a_mesa).
  */
+const mesasUnidas = new Set<string>();
+
+async function entrarComoComensal(token: string) {
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      console.error("No se pudo crear la sesión de invitado:", error.message);
+      return;
+    }
+    session = data.session;
+  }
+  const clave = `${session?.user.id}:${token}`;
+  if (!session || mesasUnidas.has(clave)) return;
+  const { error } = await supabase.rpc("unirse_a_mesa", { _qr_token: token });
+  if (error) console.error("unirse_a_mesa:", error.message);
+  else mesasUnidas.add(clave);
+}
 export function useTableSession() {
   const location = useLocation();
   const storeToken = useCartStore((s) => s.tableToken);
@@ -55,6 +76,7 @@ export function useTableSession() {
       setTableNumber(data.number);
       setTableContext(data.tenant_id, data.branch_id);
       setStatus("ready");
+      entrarComoComensal(token);
     })();
     return () => {
       cancelled = true;

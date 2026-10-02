@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, json, UUID_RE, EMAIL_RE } from "../_shared/http.ts";
+import { corsHeaders, json, UUID_RE } from "../_shared/http.ts";
 import { charge, PROVIDER_NAME, type PaymentMethod } from "../_shared/provider.ts";
 
 const METHODS: PaymentMethod[] = ["apple_pay", "google_pay", "card", "cash"];
@@ -24,13 +24,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Quién paga (fase 1.3): invitado o cliente, según su sesión. Sin sesión, nadie.
+    const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
+    const { data: quien } = token ? await admin.auth.getUser(token) : { data: { user: null } };
+    const comensal = quien?.user ?? null;
+    // Los sellos solo se suman a clientes registrados, con el correo verificado de su cuenta.
+    // Antes se aceptaba cualquier correo escrito a mano (DIAGNOSTICO N4).
+    const correoVerificado =
+      comensal && !comensal.is_anonymous && comensal.email && comensal.email_confirmed_at
+        ? comensal.email.toLowerCase()
+        : "";
+
     const body = await req.json().catch(() => ({}));
 
     const tableToken = typeof body?.table_token === "string" ? body.table_token.trim() : "";
     const orderId = typeof body?.order_id === "string" ? body.order_id : null;
     const method: PaymentMethod = METHODS.includes(body?.method) ? body.method : "card";
     const tipRaw = Number.isFinite(body?.tip_amount) ? Math.round(body.tip_amount) : 0;
-    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    const email = correoVerificado;
     const idempotencyKey =
       typeof body?.idempotency_key === "string" && body.idempotency_key.length <= 100
         ? body.idempotency_key
@@ -43,7 +54,6 @@ Deno.serve(async (req) => {
 
     if (!tableToken || tableToken.length > 200) return json({ error: "Mesa inválida" }, 400);
     if (orderId && !UUID_RE.test(orderId)) return json({ error: "Pedido inválido" }, 400);
-    if (email && !EMAIL_RE.test(email)) return json({ error: "Email inválido" }, 400);
     if (tipRaw < 0 || tipRaw > 5_000_000) return json({ error: "Propina inválida" }, 400);
 
     /* ---------- idempotencia ---------- */
@@ -73,7 +83,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!session && isCartCheckout) {
-      const { data: created, error: sErr } = await admin
+      const { data: created } = await admin
         .from("table_sessions")
         .insert({
           tenant_id: table.tenant_id,
@@ -84,9 +94,15 @@ Deno.serve(async (req) => {
           total_amount: 0,
         })
         .select("id, paid_amount, total_amount")
-        .single();
-      if (sErr || !created) return json({ error: "No se pudo abrir la sesión de mesa" }, 500);
-      session = created;
+        .maybeSingle();
+      // Si otro comensal la abrió en el mismo instante (una sola sesión activa por mesa), se usa esa.
+      session = created ?? (await admin
+        .from("table_sessions")
+        .select("id, paid_amount, total_amount")
+        .eq("table_id", table.id)
+        .eq("is_active", true)
+        .maybeSingle()).data;
+      if (!session) return json({ error: "No se pudo abrir la sesión de mesa" }, 500);
     }
 
     if (!session) return json({ error: "No hay una sesión activa en esta mesa" }, 404);
@@ -225,6 +241,7 @@ Deno.serve(async (req) => {
           notes: orderNotes || null,
           confirmed_at: new Date().toISOString(),
           payment_status: "paid",
+          user_id: comensal?.id ?? null,
         })
         .select("id, order_number")
         .single();
@@ -326,11 +343,12 @@ Deno.serve(async (req) => {
         null;
 
       if (program) {
+        // Coincidencia exacta (antes ilike: un "%" en el correo coincidía con otros clientes).
         const { data: existingCustomer } = await admin
           .from("loyalty_customers")
           .select("*")
           .eq("tenant_id", table.tenant_id)
-          .ilike("email", email)
+          .eq("email", email)
           .maybeSingle();
 
         const earnedPoints = Math.floor(amount / 1000) * (program.points_per_thousand || 1);
@@ -344,6 +362,7 @@ Deno.serve(async (req) => {
               points: (customer.points || 0) + earnedPoints,
               total_spent: (customer.total_spent || 0) + amount,
               last_visit_at: new Date().toISOString(),
+              user_id: comensal!.id,
             })
             .eq("id", customer.id)
             .select("*")
@@ -359,6 +378,7 @@ Deno.serve(async (req) => {
               points: earnedPoints,
               total_spent: amount,
               last_visit_at: new Date().toISOString(),
+              user_id: comensal!.id,
             })
             .select("*")
             .single();

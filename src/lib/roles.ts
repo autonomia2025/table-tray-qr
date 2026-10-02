@@ -21,6 +21,8 @@ export interface LocalDelPerfil {
 export interface Perfil {
   user_id: string;
   email: string | null;
+  /** Comensal invitado (sin registrarse). */
+  es_anonimo: boolean;
   es_superadmin: boolean;
   backoffice: { id: string; rol: RolBackoffice; nombre: string } | null;
   locales: LocalDelPerfil[];

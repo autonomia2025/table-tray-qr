@@ -332,6 +332,68 @@ export type Database = {
           },
         ]
       }
+      comensales_mesa: {
+        Row: {
+          alias: string | null
+          branch_id: string
+          created_at: string
+          id: string
+          session_id: string
+          table_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          alias?: string | null
+          branch_id: string
+          created_at?: string
+          id?: string
+          session_id: string
+          table_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          alias?: string | null
+          branch_id?: string
+          created_at?: string
+          id?: string
+          session_id?: string
+          table_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comensales_mesa_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comensales_mesa_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comensales_mesa_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comensales_mesa_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -492,6 +554,7 @@ export type Database = {
           tenant_id: string
           total_spent: number
           updated_at: string
+          user_id: string | null
           visits: number
         }
         Insert: {
@@ -504,6 +567,7 @@ export type Database = {
           tenant_id: string
           total_spent?: number
           updated_at?: string
+          user_id?: string | null
           visits?: number
         }
         Update: {
@@ -516,6 +580,7 @@ export type Database = {
           tenant_id?: string
           total_spent?: number
           updated_at?: string
+          user_id?: string | null
           visits?: number
         }
         Relationships: [
@@ -942,6 +1007,7 @@ export type Database = {
           table_id: string
           tenant_id: string
           total_amount: number
+          user_id: string | null
         }
         Insert: {
           branch_id: string
@@ -961,6 +1027,7 @@ export type Database = {
           table_id: string
           tenant_id: string
           total_amount: number
+          user_id?: string | null
         }
         Update: {
           branch_id?: string
@@ -980,6 +1047,7 @@ export type Database = {
           table_id?: string
           tenant_id?: string
           total_amount?: number
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1889,6 +1957,10 @@ export type Database = {
       tiene_rol: {
         Args: { _roles: string[]; _tenant_id: string }
         Returns: boolean
+      }
+      unirse_a_mesa: {
+        Args: { _alias?: string; _qr_token: string }
+        Returns: Json
       }
       ver_invitacion_mozo: {
         Args: { _token: string }

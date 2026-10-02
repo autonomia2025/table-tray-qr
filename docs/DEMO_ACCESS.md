@@ -45,6 +45,13 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 3. En el celular del comensal, el estado cambia en vivo.
 4. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
+## Experiencia del comensal (invitado o cliente)
+
+- Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.
+- Arriba a la derecha aparece **"Sellos"**: ahí guarda su cuenta con su correo, Google o Apple. Al pagar, si es invitado, ve la invitación "Guarda tus sellos".
+- **Hoy, en la base real:** el registro con correo manda un **enlace** (no un código), y el correo incluido en Supabase **solo llega a direcciones del equipo**. Para comensales reales hace falta un servicio de correo (pendiente). Google y Apple muestran "muy pronto" hasta configurar sus credenciales.
+- Ya registrado, el cliente ve su inicial arriba a la derecha y su progreso de sellos al pagar.
+
 ## Dejar el demo limpio
 
 Antes de una demo de venta o de una ronda de pruebas:
