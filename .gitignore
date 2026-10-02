@@ -42,3 +42,6 @@ migracion/lovable/export/
 
 # Estado local de la CLI de Supabase
 supabase/.temp/
+.vercel
+.env*
+!.env.example

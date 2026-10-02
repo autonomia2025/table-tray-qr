@@ -4,6 +4,19 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 0.2: corte con Lovable
+**Decisiones del fundador:** Lovable desconectado de GitHub; instalar Docker; aprobadas las políticas de pago tardío (respetar el precio congelado si el monto coincide y está dentro de un margen; si no, reembolso automático) y de producto agotado (respetar el pedido y avisar a cocina). El cierre del registro público lo hará él más adelante. El login del mozo sigue pendiente: se avanza con email y contraseña, y el PIN se puede agregar después sin rehacer nada.
+
+**Vercel:**
+- Proyecto enlazado localmente (`.vercel/`, fuera de git).
+- Variables `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (marcada como pública: es la clave anónima que usa el navegador) y `VITE_SUPABASE_PROJECT_ID` cargadas en producción, vista previa y desarrollo, apuntando al proyecto propio.
+
+**`.env` fuera del repositorio (pendiente de la 1.1, N13):** se quita del control de versiones y queda solo en el computador. Se agrega `.env.example` sin valores. La integración continua lo genera con los valores públicos de la base de pruebas.
+
+**Unión de ramas:** `fase-2-migracion` → `main`. Desde aquí `https://table-tray-qr.vercel.app` usa el Supabase propio. La app de Lovable (`tabliochile.lovable.app`) queda congelada con la base vieja como respaldo por 30 días.
+
+---
+
 ## 2026-10-02 — Fase 1.1: contención inmediata ✅ (con dos pendientes)
 **Primero las pruebas (`tests/seguridad/f1-1-contencion.test.ts`, 13 ataques):** se escribieron antes de arreglar nada. Corrieron en rojo: 10 de 13 ataques funcionaban.
 
