@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
+import { cambiarEstadoPedido } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -244,34 +245,30 @@ export default function MozoNotificacionesPage() {
     const now = new Date().toISOString();
     await supabase.from('bill_requests').update({ status: 'paid', attended_at: now }).eq('id', billId);
     await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', tableId).eq('is_active', true);
-    await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', tableId).in('status', ['confirmed', 'in_kitchen', 'ready']);
+    // Entrega por el servidor lo que ya está listo; lo que sigue en cocina queda en la cocina.
+    const { data: listos } = await supabase.from('orders').select('id').eq('table_id', tableId).eq('status', 'ready');
+    for (const o of listos ?? []) await cambiarEstadoPedido(o.id, 'delivered');
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', tableId);
     toast({ title: 'Mesa cerrada y cuenta completada ✓' });
     fetchAll();
     setActionLoading(null);
   };
 
+  // El mozo solo entrega lo que cocina marcó listo (brief 5.2). Los estados de cocina son de la cocina.
   const handleOrderAction = async (order: OrderNotif) => {
+    if (order.status !== 'ready') return;
     setActionLoading(order.id);
-    const now = new Date().toISOString();
-    if (order.status === 'confirmed') {
-      await supabase.from('orders').update({ status: 'in_kitchen', kitchen_accepted_at: now }).eq('id', order.id);
-      toast({ title: `Pedido #${order.orderNumber} enviado a cocina` });
-    } else if (order.status === 'in_kitchen') {
-      await supabase.from('orders').update({ status: 'ready', ready_at: now }).eq('id', order.id);
-      toast({ title: `Pedido #${order.orderNumber} listo` });
-    } else if (order.status === 'ready') {
-      await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('id', order.id);
-      toast({ title: `Pedido #${order.orderNumber} entregado` });
-    }
+    const r = await cambiarEstadoPedido(order.id, 'delivered');
+    if (r.ok === false) toast({ title: 'No se pudo marcar entregado', description: r.error, variant: 'destructive' });
+    else toast({ title: `Pedido #${order.orderNumber} entregado` });
     fetchAll();
     setActionLoading(null);
   };
 
   const getOrderActionLabel = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'Enviar a cocina';
-      case 'in_kitchen': return 'Marcar listo';
+      case 'confirmed': return 'Esperando cocina';
+      case 'in_kitchen': return 'En preparación';
       case 'ready': return 'Marcar entregado';
       default: return '';
     }
@@ -436,7 +433,7 @@ export default function MozoNotificacionesPage() {
                           <Button
                             size="sm"
                             className={`h-8 ${getOrderActionStyle(order.status)}`}
-                            disabled={actionLoading === order.id}
+                            disabled={actionLoading === order.id || order.status !== 'ready'}
                             onClick={() => handleOrderAction(order)}
                           >
                             {actionLoading === order.id ? (

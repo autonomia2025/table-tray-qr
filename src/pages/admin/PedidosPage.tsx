@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useAdmin } from "@/contexts/AdminContext";
+import { cambiarEstadoPedido, type EstadoPedido } from "@/lib/pedidos";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCLP } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +83,13 @@ function ElapsedBadge({ confirmedAt }: { confirmedAt: string | null }) {
     </span>
   );
 }
+
+const ESTADO_TEXTO: Record<EstadoPedido, string> = {
+  in_kitchen: "en cocina",
+  ready: "listo",
+  delivered: "entregado",
+  cancelled: "cancelado",
+};
 
 export default function PedidosPage() {
   const { branchId, tenantId } = useAdmin();
@@ -204,18 +212,14 @@ export default function PedidosPage() {
   }, [orders, tableMap]);
 
   const advanceStatus = async (order: OrderRow) => {
+    const next: Record<string, EstadoPedido> = { confirmed: "in_kitchen", in_kitchen: "ready", ready: "delivered" };
+    const estado = next[order.status ?? ""];
+    if (!estado) return;
     setActionLoading(true);
-    const next: Record<string, { status: string; field?: string }> = {
-      confirmed: { status: "in_kitchen", field: "kitchen_accepted_at" },
-      in_kitchen: { status: "ready", field: "ready_at" },
-      ready: { status: "delivered", field: "delivered_at" },
-    };
-    const n = next[order.status ?? ""];
-    if (!n) return;
-    const update: any = { status: n.status };
-    if (n.field) update[n.field] = new Date().toISOString();
-    await supabase.from("orders").update(update).eq("id", order.id);
-    toast({ title: `Pedido #${order.order_number} → ${n.status}` });
+    // El servidor valida el rol y la regla de prepago, y deja registro (fase 1.4).
+    const r = await cambiarEstadoPedido(order.id, estado);
+    if (r.ok === false) toast({ title: "No se pudo actualizar", description: r.error, variant: "destructive" });
+    else toast({ title: `Pedido #${order.order_number} → ${ESTADO_TEXTO[estado]}` });
     setActionLoading(false);
     setSelectedOrder(null);
   };
@@ -223,20 +227,20 @@ export default function PedidosPage() {
   const confirmCancel = async () => {
     if (!cancelOrder || !cancelReason.trim()) return;
     setActionLoading(true);
-    await supabase.from("orders").update({ status: "cancelled", cancelled_reason: cancelReason.trim() }).eq("id", cancelOrder.id);
-    toast({ title: `Pedido #${cancelOrder.order_number} cancelado` });
+    const r = await cambiarEstadoPedido(cancelOrder.id, "cancelled", { motivo: cancelReason.trim() });
+    if (r.ok === false) toast({ title: "No se pudo cancelar", description: r.error, variant: "destructive" });
+    else toast({ title: `Pedido #${cancelOrder.order_number} cancelado` });
     setCancelOrder(null);
     setCancelReason("");
     setActionLoading(false);
   };
 
   const handleCancelOrder = async (orderId: string, orderNumber: number) => {
-    if (!confirm(`¿Cancelar pedido #${String(orderNumber).padStart(3, '0')}?`)) return;
-    await supabase
-      .from('orders')
-      .update({ status: 'cancelled', cancelled_reason: 'admin_cancelled' })
-      .eq('id', orderId);
-    toast({ title: `Pedido #${String(orderNumber).padStart(3, '0')} cancelado` });
+    const motivo = window.prompt(`¿Por qué cancelas el pedido #${String(orderNumber).padStart(3, '0')}?`);
+    if (!motivo?.trim()) return;
+    const r = await cambiarEstadoPedido(orderId, "cancelled", { motivo: motivo.trim() });
+    if (r.ok === false) toast({ title: "No se pudo cancelar", description: r.error, variant: "destructive" });
+    else toast({ title: `Pedido #${String(orderNumber).padStart(3, '0')} cancelado` });
   };
 
   const openDetail = (order: OrderRow) => {

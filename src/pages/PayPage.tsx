@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, CreditCard, ShieldCheck, AlertTriangle, Gift, Apple } from "lucide-react";
 import BloqueSellos from "@/components/comensal/BloqueSellos";
+import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
@@ -34,6 +35,8 @@ export default function PayPage() {
   const [searchParams] = useSearchParams();
   const storeToken = useCartStore((s) => s.tableToken);
   const tableToken = searchParams.get("t") || storeToken || "";
+  // Identidad del comensal en su mesa: sin esto no puede ver sus pedidos (fase 1.4).
+  useComensalEnMesa(tableToken);
   const { toast } = useToast();
 
   const [tipIdx, setTipIdx] = useState(1);

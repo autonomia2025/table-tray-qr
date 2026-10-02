@@ -33,13 +33,23 @@ const cuentas = Object.fromEntries(
   [...texto.matchAll(/^\| (\w+) \| `([^`]+)` \| `([^`]+)` \|$/gm)].map((m) => [m[1], { correo: m[2], clave: m[3] }]),
 );
 
-export async function conSesion(rol: string): Promise<{ cliente: SupabaseClient; token: string }> {
-  const c = cuentas[rol];
-  if (!c) throw new Error(`No hay credenciales para ${rol}`);
-  const cliente = anonimo();
-  const { data, error } = await cliente.auth.signInWithPassword({ email: c.correo, password: c.clave });
-  if (error || !data.session) throw new Error(`No se pudo entrar como ${rol}: ${error?.message}`);
-  return { cliente, token: data.session.access_token };
+// Una sesión por rol y por corrida: Supabase limita los inicios de sesión por IP,
+// y la batería crece con cada fase.
+const sesiones = new Map<string, Promise<{ cliente: SupabaseClient; token: string }>>();
+
+export function conSesion(rol: string): Promise<{ cliente: SupabaseClient; token: string }> {
+  if (!sesiones.has(rol)) {
+    sesiones.set(rol, (async () => {
+      const c = cuentas[rol];
+      if (!c) throw new Error(`No hay credenciales para ${rol}`);
+      const cliente = anonimo();
+      const { data, error } = await cliente.auth.signInWithPassword({ email: c.correo, password: c.clave });
+      if (error || !data.session) throw new Error(`No se pudo entrar como ${rol}: ${error?.message}`);
+      return { cliente, token: data.session.access_token };
+    })());
+    sesiones.get(rol)!.catch(() => sesiones.delete(rol));
+  }
+  return sesiones.get(rol)!;
 }
 
 export async function llamarFuncion(nombre: string, cuerpo: unknown, token?: string) {

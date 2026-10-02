@@ -72,7 +72,7 @@ Fecha: 1 de octubre de 2026 · Fase 1 del plan · Solo lectura: no se modificó 
 - **Agravante:** `tenants_staff_update` (`20260307214709_...sql:326`) deja que cualquier miembro cambie **su propio plan y estado de pago** (`plan_status`, `plan_id`, `is_active`). Eso afecta lo que Tablio factura.
 - **Agravante:** `is_tenant_member()` no revisa `is_active` (`20260308182620_...sql:13-24`), así que un miembro desactivado sigue viendo pagos y reembolsos.
 
-### 3.2 Cualquiera, sin sesión, puede modificar cualquier pedido, incluso marcarlo como pagado — ✅ CONFIRMADO
+### 3.2 Cualquiera, sin sesión, puede modificar cualquier pedido, incluso marcarlo como pagado — ✅ CONFIRMADO · 🔒 Pedidos cerrados en la fase 1.4 (mesas y sesiones: 1.5)
 
 - `orders_public_update_status`: `USING (true) WITH CHECK (true)` para todos: `20260319160810_...sql:2-7`. El comentario de la migración explica el motivo: el mozo no usaba sesión de Supabase.
 - Lo mismo para sesiones de mesa (`table_sessions_public_update`, `20260319160810_...sql:10-15`) y mesas (`tables_public_update_status`, `20260313143718_...sql:1-6`).
@@ -98,7 +98,7 @@ Lectura pública total (`USING (true)`) en: `orders` (`20260307214709_...sql:368
 - `listUsers()` sin paginar (`:47`): falla cuando haya más de 50 usuarios.
 - Devuelve mensajes de error técnicos en inglés (`:65`, `:102`).
 
-### 3.6 Cocina, dueño y mozo cambian estados de pedido desde el navegador — ✅ CONFIRMADO
+### 3.6 Cocina, dueño y mozo cambian estados de pedido desde el navegador — ✅ CONFIRMADO · 🔒 Resuelto para pedidos en la fase 1.4 (mesas: 1.5)
 
 | Quién | Qué cambia | Dónde |
 |---|---|---|

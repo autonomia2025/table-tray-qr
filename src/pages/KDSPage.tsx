@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { cambiarEstadoPedido, marcarAgotado, type EstadoPedido } from "@/lib/pedidos";
 import { useSesion } from "@/contexts/SesionContext";
 import { ROLES_KDS } from "@/lib/roles";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
@@ -534,7 +536,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
   });
 
   // Initial orders fetch
-  const { data: initialOrders } = useQuery({
+  const { data: initialOrders, refetch: fetchOrders } = useQuery({
     queryKey: ["kds-orders", branchId],
     queryFn: async () => {
       const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
@@ -680,8 +682,13 @@ function KDSBoard({ branchId }: { branchId: string }) {
       );
     }
 
-    await supabase.from("orders").update(updateData).eq("id", orderId);
-  }, [orders]);
+    // El servidor valida el rol, la regla de prepago y deja registro (fase 1.4).
+    const r = await cambiarEstadoPedido(orderId, newStatus as EstadoPedido);
+    if (r.ok === false) {
+      toast({ title: "No se pudo actualizar el pedido", description: r.error, variant: "destructive" });
+      fetchOrders();
+    }
+  }, [orders, fetchOrders]);
 
   // Disable item handler (86)
   const handleDisableItem = useCallback(async (itemId: string, _itemName: string) => {
@@ -693,10 +700,11 @@ function KDSBoard({ branchId }: { branchId: string }) {
 
     if (!data?.menu_item_id) return;
 
-    await supabase
-      .from("menu_items")
-      .update({ status: "out_of_stock" })
-      .eq("id", data.menu_item_id);
+    const r = await marcarAgotado(data.menu_item_id, true);
+    if (r.ok === false) {
+      toast({ title: "No se pudo marcar agotado", description: r.error, variant: "destructive" });
+      return;
+    }
 
     setDisabledItems(prev => new Set([...prev, itemId]));
   }, []);

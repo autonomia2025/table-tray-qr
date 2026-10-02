@@ -85,3 +85,13 @@ export function useTableSession() {
 
   return { token, table, status };
 }
+
+/**
+ * Para pantallas del comensal que no pasan por la carta (seguimiento, cuenta, pago):
+ * asegura su identidad y lo registra en la mesa del código, para que pueda ver sus pedidos.
+ */
+export function useComensalEnMesa(token: string | null | undefined) {
+  useEffect(() => {
+    if (token) entrarComoComensal(token);
+  }, [token]);
+}

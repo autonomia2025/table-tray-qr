@@ -9,5 +9,9 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     fileParallelism: false,
+    // Un solo proceso que comparte las sesiones entre archivos (menos inicios de sesión).
+    isolate: false,
+    pool: "forks",
+    poolOptions: { forks: { singleFork: true } },
   },
 });

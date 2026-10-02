@@ -285,6 +285,7 @@ export type Database = {
           menu_id: string
           name: string
           sort_order: number | null
+          station_id: string | null
           tenant_id: string
         }
         Insert: {
@@ -299,6 +300,7 @@ export type Database = {
           menu_id: string
           name: string
           sort_order?: number | null
+          station_id?: string | null
           tenant_id: string
         }
         Update: {
@@ -313,6 +315,7 @@ export type Database = {
           menu_id?: string
           name?: string
           sort_order?: number | null
+          station_id?: string | null
           tenant_id?: string
         }
         Relationships: [
@@ -321,6 +324,13 @@ export type Database = {
             columns: ["menu_id"]
             isOneToOne: false
             referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
             referencedColumns: ["id"]
           },
           {
@@ -924,42 +934,121 @@ export type Database = {
           },
         ]
       }
+      order_events: {
+        Row: {
+          actor_rol: string | null
+          actor_user_id: string | null
+          created_at: string
+          estado_anterior: string | null
+          estado_nuevo: string
+          id: number
+          motivo: string | null
+          order_id: string
+          productos: number
+          station_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actor_rol?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          estado_anterior?: string | null
+          estado_nuevo: string
+          id?: never
+          motivo?: string | null
+          order_id: string
+          productos?: number
+          station_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actor_rol?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          estado_anterior?: string | null
+          estado_nuevo?: string
+          id?: never
+          motivo?: string | null
+          order_id?: string
+          productos?: number
+          station_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string | null
+          delivered_at: string | null
           id: string
           item_notes: string | null
           menu_item_id: string
           menu_item_name: string
           order_id: string
           quantity: number
+          ready_at: string | null
           selected_modifiers: Json | null
+          started_at: string | null
+          station_id: string | null
+          status: string
           subtotal: number
           tenant_id: string
           unit_price: number
         }
         Insert: {
           created_at?: string | null
+          delivered_at?: string | null
           id?: string
           item_notes?: string | null
           menu_item_id: string
           menu_item_name: string
           order_id: string
           quantity?: number
+          ready_at?: string | null
           selected_modifiers?: Json | null
+          started_at?: string | null
+          station_id?: string | null
+          status?: string
           subtotal: number
           tenant_id: string
           unit_price: number
         }
         Update: {
           created_at?: string | null
+          delivered_at?: string | null
           id?: string
           item_notes?: string | null
           menu_item_id?: string
           menu_item_name?: string
           order_id?: string
           quantity?: number
+          ready_at?: string | null
           selected_modifiers?: Json | null
+          started_at?: string | null
+          station_id?: string | null
+          status?: string
           subtotal?: number
           tenant_id?: string
           unit_price?: number
@@ -977,6 +1066,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
             referencedColumns: ["id"]
           },
           {
@@ -1528,6 +1624,54 @@ export type Database = {
           },
         ]
       }
+      stations: {
+        Row: {
+          branch_id: string
+          created_at: string
+          es_predeterminada: boolean
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          es_predeterminada?: boolean
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          es_predeterminada?: boolean
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_chat_uso: {
         Row: {
           dia: string
@@ -1937,6 +2081,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cambiar_estado_pedido: {
+        Args: {
+          _estado: string
+          _motivo?: string
+          _order_id: string
+          _station_id?: string
+        }
+        Returns: Json
+      }
       get_tenant_id: { Args: never; Returns: string }
       has_backoffice_role: {
         Args: { _role: string; _user_id: string }
@@ -1948,7 +2101,12 @@ export type Database = {
       }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
+      marcar_agotado: {
+        Args: { _agotado: boolean; _menu_item_id: string }
+        Returns: undefined
+      }
       mi_perfil: { Args: never; Returns: Json }
+      rango_estado: { Args: { _estado: string }; Returns: number }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }
         Returns: boolean

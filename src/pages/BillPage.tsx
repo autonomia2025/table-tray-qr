@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
@@ -52,6 +53,8 @@ export default function BillPage() {
   const tableTokenFromUrl = searchParams.get("t") || "";
   const storeTableToken = useCartStore((s) => s.tableToken);
   const tableToken = tableTokenFromUrl || storeTableToken || "";
+  // Identidad del comensal en su mesa: sin esto no puede ver sus pedidos (fase 1.4).
+  useComensalEnMesa(tableToken);
   const { toast } = useToast();
 
   const [pageState, setPageState] = useState<PageState>("summary");

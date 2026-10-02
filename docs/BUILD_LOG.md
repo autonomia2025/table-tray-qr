@@ -4,6 +4,40 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.4: dominio pedidos ✅
+**Base (migración `20261002050000_dominio_pedidos.sql`):**
+- **Estaciones** (`stations`): configurables por sucursal. Cada sucursal tiene su estación predeterminada "Cocina", y las nuevas la reciben solas (trigger). Cada categoría puede ir a una estación. Base para separar barra y cocina (fase 3.1).
+- **Estado por producto** (`order_items.status`, `station_id`, horas de inicio, listo y entrega). La estación se asigna sola desde la categoría o la predeterminada. El estado del pedido es el de su producto más atrasado.
+- **Registro de eventos** (`order_events`): cada cambio con la hora del servidor, quién lo hizo, su rol, cuántos productos cambiaron y el motivo. Solo crece: nadie lo escribe, edita ni borra desde la app.
+- **`cambiar_estado_pedido(pedido, estado, estación?, motivo?)`**, la única forma de cambiar estados:
+  - **Roles:** en cocina y listo, solo cocina, encargado, administrador o dueño. Entregado lo pueden marcar también los mozos, **pero el mozo solo entrega lo que cocina marcó listo**. Cancelar exige encargado o más, con motivo.
+  - **En prepago, la base no deja preparar un pedido sin pagar** (regla 1 del brief, ahora exigida por la base y no solo por la pantalla).
+  - Solo avanza: nunca vuelve atrás. Si se repite el mismo clic, no hace nada.
+- **`marcar_agotado(producto, sí/no)`**: cocina, encargado, administrador o dueño.
+- **Reglas de acceso:** se eliminaron la lectura, la inserción y la modificación públicas de `orders` y `order_items`. Leen el personal del local, **el comensal solo los pedidos de su sesión de mesa** y el superadmin. Nadie modifica directo, ni siquiera el dueño. Queda provisoria la inserción del personal para el pedido manual del mozo, hasta la 1.9.
+
+**App:** `src/lib/pedidos.ts` (cambios de estado con mensajes en español).
+- **KDS:** avanzar y marcar agotado por el servidor; si falla, avisa y recarga.
+- **Panel de pedidos del dueño:** avanzar y cancelar por el servidor. Cancelar pide el motivo. El aviso ya no muestra el estado en inglés.
+- **Mozo:** ya no puede mandar a cocina ni marcar listo (contra el brief); ve "Esperando cocina" o "En preparación" y solo puede marcar entregado lo que está listo. Al cerrar una mesa se entrega lo listo, y lo que sigue en cocina se queda en la cocina.
+- **Seguimiento, cuenta y pago:** registran al comensal en su mesa al abrirse, para que pueda ver sus pedidos aunque entre por el link directo.
+
+**Pruebas:**
+- `tests/seguridad/f1-4-pedidos.test.ts`: 10 pruebas.
+  - Un anónimo no puede marcar un pedido como pagado (el ataque del problema 2), y ni el dueño puede escribir directo.
+  - Sin sesión no se leen pedidos; el comensal ve los de su mesa y no los de otra.
+  - El mozo no maneja estados de cocina; la cocina sí, y el mozo entrega lo listo. No se vuelve atrás, y todo queda con hora.
+  - En prepago, la cocina no prepara lo no pagado.
+  - Cancelar exige rol y motivo, y queda registrado.
+  - El registro de eventos es inmodificable; el comensal no cambia estados; agotado según rol; el dueño de otro local no ve ni toca nada.
+- `e2e/seguimiento-en-vivo.spec.ts`: **con dos navegadores, el comensal ve su pedido pasar de Recibido a En cocina, Listo y Entregado sin recargar, mientras la cocina lo avanza.** El tiempo real sigue funcionando con la lectura cerrada.
+- Las pruebas de seguridad inician sesión una sola vez por rol y por corrida, en un solo proceso, para no chocar con los límites de Supabase.
+- **Base desechable:** 50 de seguridad y 48 de navegador. **Base de pruebas:** 49 de seguridad (más 1 que solo corre con "Local Ajeno") y 48 de navegador. Estilo: 122 errores (bajó 1), nuevo tope.
+
+**⚠️ Hallazgo: límites de Supabase por IP.** Una corrida falló por los límites de inicios de sesión y de invitados por IP. **En un bar, todos los comensales del wifi comparten la misma IP**, y el límite de invitados por defecto (unos 30 por hora por IP) bloquearía al comensal 31 de la noche. Hay que subirlos en el panel (Authentication → Rate Limits); la herramienta de línea de comandos instalada no los maneja. Se probó la versión 2.119 de la herramienta (Homebrew): quedó colgada esperando permiso del Llavero de macOS, así que se desinstaló y se volvió a la 2.72 sin aplicar nada.
+
+---
+
 ## 2026-10-02 — Fase 1.3: identidad del comensal (invitado o cliente) ✅
 **Decisión del fundador:** el comensal paga sin registrarse; quien quiera, guarda su cuenta para juntar sellos. Registro con **correo, Google o Apple**. La pantalla tiene que ser excelente.
 

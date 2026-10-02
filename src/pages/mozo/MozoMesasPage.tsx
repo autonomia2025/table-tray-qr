@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
+import { cambiarEstadoPedido } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCLP } from '@/lib/format';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -213,14 +214,13 @@ export default function MozoMesasPage() {
 
   const handleMarkDelivered = async (tableId: string) => {
     setActionLoading(tableId);
-    const now = new Date().toISOString();
-    await supabase
-      .from('orders')
-      .update({ status: 'delivered', delivered_at: now })
-      .eq('table_id', tableId)
-      .eq('status', 'ready');
+    // Entrega por el servidor los pedidos listos de la mesa (fase 1.4).
+    const { data: listos } = await supabase.from('orders').select('id').eq('table_id', tableId).eq('status', 'ready');
+    const resultados = await Promise.all((listos ?? []).map((o) => cambiarEstadoPedido(o.id, 'delivered')));
     fetchTables();
-    toast({ title: '✓ Entregado' });
+    const fallo = resultados.find((r) => r.ok === false);
+    if (fallo && fallo.ok === false) toast({ title: 'No se pudo marcar entregado', description: fallo.error, variant: 'destructive' });
+    else toast({ title: '✓ Entregado' });
     setActionLoading(null);
   };
 
@@ -245,7 +245,9 @@ export default function MozoMesasPage() {
     const now = new Date().toISOString();
     await supabase.from('bill_requests').update({ status: 'paid' }).eq('table_id', table.id).eq('status', 'pending');
     await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', table.id).eq('is_active', true);
-    await supabase.from('orders').update({ status: 'delivered', delivered_at: now }).eq('table_id', table.id).in('status', ['confirmed', 'in_kitchen', 'ready']);
+    // Entrega por el servidor lo que ya está listo; lo que sigue en cocina queda en la cocina.
+    const { data: listos } = await supabase.from('orders').select('id').eq('table_id', table.id).eq('status', 'ready');
+    for (const o of listos ?? []) await cambiarEstadoPedido(o.id, 'delivered');
     await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', table.id);
     setConfirmBillTable(null);
     setSheetOpen(false);
