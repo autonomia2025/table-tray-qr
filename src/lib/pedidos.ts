@@ -28,7 +28,7 @@ export async function marcarAgotado(productoId: string, agotado = true) {
 }
 
 // Los mensajes de la base ya vienen en español; si llega algo técnico, se reemplaza.
-function mensajeAmigable(mensaje: string) {
+export function mensajeAmigable(mensaje: string) {
   return /[a-z]{3,}_[a-z]{3,}|violates|permission denied|JWT/i.test(mensaje)
     ? "No se pudo hacer el cambio. Intenta de nuevo."
     : mensaje;

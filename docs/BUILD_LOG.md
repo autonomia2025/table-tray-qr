@@ -4,6 +4,46 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.5: dominio mesas y sesiones ✅
+**Base (migración `20261002060000_dominio_mesas.sql`):**
+- **Se cerró la lectura pública de mesas.** Cualquiera podía listar todas las mesas de todos los locales **con su código QR** y entrar a cualquier mesa a distancia. Ahora:
+  - el personal ve las de su local;
+  - el comensal solo la mesa donde está sentado;
+  - quien tiene el QR en la mano usa `ver_mesa(código)`, que devuelve esa mesa y su sesión, sin el código.
+- **Nadie escribe directo el estado de una mesa ni su sesión.** Se eliminaron la escritura pública de mesas y la inserción y modificación públicas de sesiones. El dueño solo edita la configuración (número, nombre, zona, capacidad, posición).
+- **Funciones del servidor**, cada una valida el rol y deja registro en `table_events`, que nadie puede editar:
+  - `abrir_mesa`: el mozo que abre una mesa sin mozo queda a cargo.
+  - `tomar_mesa`: **la mesa de otro mozo no se toma: se transfiere.**
+  - `transferir_mesa`: la hace el mozo a cargo o un encargado, y solo a alguien que atienda mesas en esa sucursal.
+  - `cerrar_mesa`: entrega lo que ya está listo, completa la cuenta, atiende las llamadas pendientes y libera la mesa. **Si quedan pedidos sin pagar, el mozo no puede cerrar; un encargado sí, con motivo, y queda registrado cuánto se perdió.**
+  - `calificar_mesa`: el comensal califica su visita (abierta o cerrada hace menos de 3 horas); un extraño no.
+- **El total de la sesión lo calcula la base** (la suma de sus pedidos no cancelados). Antes lo escribía el navegador del mozo.
+- Pedir la cuenta deja la mesa "esperando la cuenta" por la base. Las mesas nuevas reciben un código QR largo generado por la base; uno corto se rechaza.
+
+**App:** `src/lib/mesa.ts`.
+- **Mozo:** tomar, transferir y cerrar por el servidor, con mensajes claros si algo no se puede. **Nuevo botón "Cerrar mesa"** en el detalle de la mesa: en prepago nadie pide la cuenta, así que antes las mesas quedaban ocupadas para siempre. Para transferir solo aparece quien puede atender mesas.
+- **Pedido manual del mozo:** abre la mesa con `abrir_mesa`. Ya no calcula ni escribe el total.
+- **Comensal** (carta, seguimiento, cuenta y pago): su mesa con `verMesa`; la calificación con `calificar_mesa`. **El seguimiento muestra el estado del pedido en palabras** ("Recibido ✓", "En cocina 🍳"…), aunque haya un solo pedido.
+- **Mesas en el panel:** el código QR lo genera la base. Si una mesa con historial no se puede borrar, se avisa en vez de decir "eliminada".
+- `process-payment` ya no escribe el total de la sesión (lo hace la base) y se volvió a publicar.
+
+**Pruebas:**
+- `tests/seguridad/f1-5-mesas.test.ts`: 10 pruebas.
+  - Sin sesión no se leen mesas, códigos ni sesiones, ni se escriben.
+  - `ver_mesa` muestra solo esa mesa y sin su código.
+  - El comensal no lista las mesas ni toca su sesión.
+  - El personal no escribe estado ni mozo directo, y el dueño sí edita la configuración.
+  - Tomar y transferir siguen sus reglas y quedan registrados.
+  - Cerrar con pedidos sin pagar sigue sus reglas, y el total lo calcula la base.
+  - Al cerrar una mesa pagada se entrega lo listo, y la calificación sigue sus reglas.
+  - La caja cierra mesas; el registro es inmodificable.
+  - El código QR lo genera la base.
+  - El dueño de otro local no ve ni toca nada.
+- `e2e/mozo-mesa.spec.ts`: un comensal paga, y **el mozo toma la mesa y la cierra desde su pantalla**.
+- **Base desechable:** 60 de seguridad y 49 de navegador. **Base de pruebas:** 55 de seguridad pasan; 3 chocaron con el límite de Supabase de invitados por hora por IP (el riesgo del wifi del bar) y se repitieron después. Estilo: 121 errores (bajó 1).
+
+---
+
 ## 2026-10-02 — Fase 1.4: dominio pedidos ✅
 **Base (migración `20261002050000_dominio_pedidos.sql`):**
 - **Estaciones** (`stations`): configurables por sucursal. Cada sucursal tiene su estación predeterminada "Cocina", y las nuevas la reciben solas (trigger). Cada categoría puede ir a una estación. Base para separar barra y cocina (fase 3.1).

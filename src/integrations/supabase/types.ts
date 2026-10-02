@@ -1731,6 +1731,77 @@ export type Database = {
           },
         ]
       }
+      table_events: {
+        Row: {
+          accion: string
+          actor_rol: string | null
+          actor_user_id: string | null
+          branch_id: string
+          created_at: string
+          detalle: Json
+          id: number
+          motivo: string | null
+          session_id: string | null
+          table_id: string
+          tenant_id: string
+        }
+        Insert: {
+          accion: string
+          actor_rol?: string | null
+          actor_user_id?: string | null
+          branch_id: string
+          created_at?: string
+          detalle?: Json
+          id?: never
+          motivo?: string | null
+          session_id?: string | null
+          table_id: string
+          tenant_id: string
+        }
+        Update: {
+          accion?: string
+          actor_rol?: string | null
+          actor_user_id?: string | null
+          branch_id?: string
+          created_at?: string
+          detalle?: Json
+          id?: never
+          motivo?: string | null
+          session_id?: string | null
+          table_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_events_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_events_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       table_sessions: {
         Row: {
           branch_id: string
@@ -1807,7 +1878,7 @@ export type Database = {
           position_x: number | null
           position_y: number | null
           qr_token: string
-          status: string | null
+          status: string
           tenant_id: string
           zone: string | null
         }
@@ -1821,8 +1892,8 @@ export type Database = {
           number: number
           position_x?: number | null
           position_y?: number | null
-          qr_token: string
-          status?: string | null
+          qr_token?: string
+          status?: string
           tenant_id: string
           zone?: string | null
         }
@@ -1837,7 +1908,7 @@ export type Database = {
           position_x?: number | null
           position_y?: number | null
           qr_token?: string
-          status?: string | null
+          status?: string
           tenant_id?: string
           zone?: string | null
         }
@@ -2081,6 +2152,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _mesa_y_actor: {
+        Args: { _table_id: string }
+        Returns: Record<string, unknown>
+      }
+      abrir_mesa: { Args: { _table_id: string }; Returns: Json }
+      calificar_mesa: {
+        Args: { _estrellas: number; _qr_token: string }
+        Returns: undefined
+      }
       cambiar_estado_pedido: {
         Args: {
           _estado: string
@@ -2088,6 +2168,10 @@ export type Database = {
           _order_id: string
           _station_id?: string
         }
+        Returns: Json
+      }
+      cerrar_mesa: {
+        Args: { _motivo?: string; _table_id: string }
         Returns: Json
       }
       get_tenant_id: { Args: never; Returns: string }
@@ -2116,6 +2200,11 @@ export type Database = {
         Args: { _roles: string[]; _tenant_id: string }
         Returns: boolean
       }
+      tomar_mesa: { Args: { _table_id: string }; Returns: Json }
+      transferir_mesa: {
+        Args: { _staff_id: string; _table_id: string }
+        Returns: Json
+      }
       unirse_a_mesa: {
         Args: { _alias?: string; _qr_token: string }
         Returns: Json
@@ -2128,6 +2217,7 @@ export type Database = {
           rol: string
         }[]
       }
+      ver_mesa: { Args: { _qr_token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

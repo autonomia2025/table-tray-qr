@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useWaiters } from "@/contexts/WaitersContext";
 import { supabase } from "@/integrations/supabase/client";
+import { abrirMesa } from "@/lib/mesa";
 import { formatCLP } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -113,32 +114,14 @@ export default function MozoPedidoManualPage() {
     if (cart.length === 0) return;
     setSubmitting(true);
 
-    // Get or create active session
-    let { data: session } = await supabase
-      .from("table_sessions")
-      .select("id")
-      .eq("table_id", tableId!)
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-
-    if (!session) {
-      const { data: newSession } = await supabase
-        .from("table_sessions")
-        .insert({ table_id: tableId!, branch_id: branchId, tenant_id: tenantId })
-        .select("id")
-        .single();
-      session = newSession;
-
-      // Mark table as occupied
-      await supabase.from("tables").update({ status: "occupied" }).eq("id", tableId!);
-    }
-
-    if (!session) {
-      toast({ title: "Error", description: "No se pudo crear la sesión", variant: "destructive" });
+    // Abre la mesa por el servidor (o reutiliza la sesión abierta) — fase 1.5.
+    const apertura = await abrirMesa(tableId!);
+    if (apertura.ok === false) {
+      toast({ title: "No se pudo abrir la mesa", description: apertura.error, variant: "destructive" });
       setSubmitting(false);
       return;
     }
+    const session = { id: apertura.datos.session_id };
 
     // Generate order number
     const { count } = await supabase
@@ -183,16 +166,7 @@ export default function MozoPedidoManualPage() {
 
     await supabase.from("order_items").insert(orderItems);
 
-    // Update session total
-    await supabase.rpc("get_tenant_id"); // dummy to keep session alive
-    const { data: sessionOrders } = await supabase
-      .from("orders")
-      .select("total_amount")
-      .eq("session_id", session.id)
-      .neq("status", "cancelled");
-    const sessionTotal = (sessionOrders ?? []).reduce((s, o) => s + o.total_amount, 0);
-    await supabase.from("table_sessions").update({ total_amount: sessionTotal }).eq("id", session.id);
-
+    // El total de la sesión lo recalcula la base al crear el pedido.
     toast({ title: `Pedido #${orderNumber} creado`, description: `Mesa ${tableNumber} · ${formatCLP(cartTotal)}` });
     navigate("/mozo/mesas");
   };

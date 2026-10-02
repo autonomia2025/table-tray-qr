@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCartStore } from "@/store/cartStore";
+import { verMesa } from "@/lib/mesa";
 
 export interface TableInfo {
   id: string;
@@ -60,18 +61,14 @@ export function useTableSession() {
     }
     setStatus("loading");
     (async () => {
-      const { data } = await supabase
-        .from("tables")
-        .select("id, number, name, tenant_id, branch_id")
-        .eq("qr_token", token)
-        .maybeSingle();
+      const data = await verMesa(token);
       if (cancelled) return;
       if (!data) {
         setStatus("invalid");
         setTable(null);
         return;
       }
-      setTable(data as TableInfo);
+      setTable({ id: data.id, number: data.number, name: data.name, tenant_id: data.tenant_id, branch_id: data.branch_id });
       setTableToken(token);
       setTableNumber(data.number);
       setTableContext(data.tenant_id, data.branch_id);

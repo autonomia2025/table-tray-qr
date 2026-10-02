@@ -85,24 +85,31 @@ export default function SucursalPage() {
 
   const saveTable = async () => {
     setSaving(true);
-    if (editTable) {
-      await supabase.from("tables").update({
-        number: tableForm.number, name: tableForm.name || null, capacity: tableForm.capacity,
-      }).eq("id", editTable.id);
-    } else {
-      await supabase.from("tables").insert({
-        number: tableForm.number, name: tableForm.name || null, capacity: tableForm.capacity,
-        branch_id: branchId, tenant_id: tenantId, qr_token: crypto.randomUUID(),
-      });
+    const { error } = editTable
+      ? await supabase.from("tables").update({
+          number: tableForm.number, name: tableForm.name || null, capacity: tableForm.capacity,
+        }).eq("id", editTable.id)
+      : await supabase.from("tables").insert({
+          number: tableForm.number, name: tableForm.name || null, capacity: tableForm.capacity,
+          branch_id: branchId, tenant_id: tenantId,
+        });
+    setSaving(false);
+    if (error) {
+      toast({ title: "No se pudo guardar la mesa", description: "Revisa los datos e intenta de nuevo.", variant: "destructive" });
+      return;
     }
     setTableModal(false);
-    setSaving(false);
     toast({ title: editTable ? "Mesa actualizada" : "Mesa creada" });
     refreshTables();
   };
 
   const deleteTable = async (id: string) => {
-    await supabase.from("tables").delete().eq("id", id);
+    const { error } = await supabase.from("tables").delete().eq("id", id);
+    if (error) {
+      // Una mesa con historial (pedidos, sesiones) no se borra para no perder registros.
+      toast({ title: "No se puede eliminar", description: "Esta mesa ya tiene historial de pedidos.", variant: "destructive" });
+      return;
+    }
     toast({ title: "Mesa eliminada" });
     refreshTables();
   };

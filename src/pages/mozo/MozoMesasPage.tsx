@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { cambiarEstadoPedido } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
+import { cerrarMesa, tomarMesa, transferirMesa } from "@/lib/mesa";
 import { formatCLP } from '@/lib/format';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -206,9 +207,10 @@ export default function MozoMesasPage() {
   // --- Action handlers ---
   const handleTakeTable = async (tableId: string) => {
     setActionLoading(tableId);
-    await supabase.from('tables').update({ assigned_waiter_id: staffId }).eq('id', tableId);
+    const r = await tomarMesa(tableId);
     fetchTables();
-    toast({ title: 'Mesa tomada' });
+    if (r.ok === false) toast({ title: 'No se pudo tomar la mesa', description: r.error, variant: 'destructive' });
+    else toast({ title: 'Mesa tomada' });
     setActionLoading(null);
   };
 
@@ -242,17 +244,16 @@ export default function MozoMesasPage() {
 
   const executeCloseBill = async (table: TableData) => {
     setActionLoading(table.id);
-    const now = new Date().toISOString();
-    await supabase.from('bill_requests').update({ status: 'paid' }).eq('table_id', table.id).eq('status', 'pending');
-    await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', table.id).eq('is_active', true);
-    // Entrega por el servidor lo que ya está listo; lo que sigue en cocina queda en la cocina.
-    const { data: listos } = await supabase.from('orders').select('id').eq('table_id', table.id).eq('status', 'ready');
-    for (const o of listos ?? []) await cambiarEstadoPedido(o.id, 'delivered');
-    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', table.id);
+    // El servidor cierra la sesión, entrega lo listo y libera la mesa (fase 1.5).
+    const r = await cerrarMesa(table.id);
     setConfirmBillTable(null);
-    setSheetOpen(false);
     fetchTables();
-    toast({ title: '✅ Mesa cerrada' });
+    if (r.ok === false) {
+      toast({ title: 'No se pudo cerrar la mesa', description: r.error, variant: 'destructive' });
+    } else {
+      setSheetOpen(false);
+      toast({ title: '✅ Mesa cerrada' });
+    }
     setActionLoading(null);
   };
 
@@ -299,7 +300,8 @@ export default function MozoMesasPage() {
     const { data } = await supabase
       .from('staff_users')
       .select('id, name')
-      .eq('branch_id', branchId)
+      .or(`branch_id.eq.${branchId},branch_id.is.null`)
+      .in('role', ['waiter', 'manager', 'admin', 'owner'])
       .eq('is_active', true)
       .neq('id', staffId);
     setOtherWaiters(data ?? []);
@@ -309,11 +311,15 @@ export default function MozoMesasPage() {
 
   const confirmTransfer = async (newWaiterId: string) => {
     if (!selectedTable) return;
-    await supabase.from('tables').update({ assigned_waiter_id: newWaiterId }).eq('id', selectedTable.id);
+    const r = await transferirMesa(selectedTable.id, newWaiterId);
     setTransferOpen(false);
-    setSheetOpen(false);
     fetchTables();
-    toast({ title: 'Mesa transferida' });
+    if (r.ok === false) {
+      toast({ title: 'No se pudo transferir', description: r.error, variant: 'destructive' });
+    } else {
+      setSheetOpen(false);
+      toast({ title: 'Mesa transferida' });
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -516,6 +522,16 @@ export default function MozoMesasPage() {
                 Atender llamada
               </Button>
             )}
+            {/* Cerrar la mesa cuando los comensales se van (en prepago no se pide la cuenta). */}
+            {selectedTable && selectedPriority !== 1 && (!selectedTable.assigned_waiter_id || selectedTable.assigned_waiter_id === staffId) && (
+              <button
+                onClick={() => handleCloseBill(selectedTable)}
+                disabled={actionLoading === selectedTable.id}
+                className="w-full mt-2 py-3 rounded-xl text-sm font-semibold border border-border text-foreground flex items-center justify-center gap-2"
+              >
+                Cerrar mesa
+              </button>
+            )}
             {selectedTable && selectedTable.assigned_waiter_id === staffId && (
               <button
                 onClick={() => handleTransfer()}
@@ -559,7 +575,7 @@ export default function MozoMesasPage() {
           <DialogHeader>
             <DialogTitle>¿Cerrar mesa {confirmBillTable?.number}?</DialogTitle>
             <DialogDescription>
-              Esto marcará la cuenta como pagada, liberará la mesa y cerrará la sesión activa. Esta acción no se puede deshacer.
+              Se cierra la sesión de la mesa, lo que esté listo se da por entregado y la mesa queda libre. Si hay pedidos sin pagar, no se podrá cerrar: cóbralos o pide a un encargado.
             </DialogDescription>
           </DialogHeader>
 

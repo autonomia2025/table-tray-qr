@@ -72,7 +72,7 @@ Fecha: 1 de octubre de 2026 · Fase 1 del plan · Solo lectura: no se modificó 
 - **Agravante:** `tenants_staff_update` (`20260307214709_...sql:326`) deja que cualquier miembro cambie **su propio plan y estado de pago** (`plan_status`, `plan_id`, `is_active`). Eso afecta lo que Tablio factura.
 - **Agravante:** `is_tenant_member()` no revisa `is_active` (`20260308182620_...sql:13-24`), así que un miembro desactivado sigue viendo pagos y reembolsos.
 
-### 3.2 Cualquiera, sin sesión, puede modificar cualquier pedido, incluso marcarlo como pagado — ✅ CONFIRMADO · 🔒 Pedidos cerrados en la fase 1.4 (mesas y sesiones: 1.5)
+### 3.2 Cualquiera, sin sesión, puede modificar cualquier pedido, incluso marcarlo como pagado — ✅ CONFIRMADO · 🔒 Pedidos cerrados en la fase 1.4; mesas y sesiones en la 1.5
 
 - `orders_public_update_status`: `USING (true) WITH CHECK (true)` para todos: `20260319160810_...sql:2-7`. El comentario de la migración explica el motivo: el mozo no usaba sesión de Supabase.
 - Lo mismo para sesiones de mesa (`table_sessions_public_update`, `20260319160810_...sql:10-15`) y mesas (`tables_public_update_status`, `20260313143718_...sql:1-6`).
@@ -85,7 +85,7 @@ Fecha: 1 de octubre de 2026 · Fase 1 del plan · Solo lectura: no se modificó 
 - **Corrección:** ningún código lee ni escribe PIN. Los mozos entran con email y contraseña (`MozoLoginPage.tsx:32`). El riesgo depende de si hay PIN cargados en la base. **[verificar en la base]**
 - Lo que sí se expone hoy: nombres, roles, local y `auth_user_id` de todo el personal de todos los locales.
 
-### 3.4 Datos de pedidos, mesas y personal se pueden leer entre locales — ✅ CONFIRMADO
+### 3.4 Datos de pedidos, mesas y personal se pueden leer entre locales — ✅ CONFIRMADO · 🔒 Pedidos (1.4), mesas y sesiones (1.5) cerrados; personal pendiente (1.7)
 
 Lectura pública total (`USING (true)`) en: `orders` (`20260307214709_...sql:368`), `order_items` (`:373`), `table_sessions` (`:363`), `tables` (`:358`), `bill_requests` (`:378`), `waiter_calls` (`:383`), `tenants` (`:325`, con email, RUT y teléfono del local), `staff_users` (`20260308151352_...sql:39`), `staff_invitations` (`20260308171228_...sql:16`) y `backoffice_invitations` (`20260318051715_...sql:22`).
 
@@ -98,7 +98,7 @@ Lectura pública total (`USING (true)`) en: `orders` (`20260307214709_...sql:368
 - `listUsers()` sin paginar (`:47`): falla cuando haya más de 50 usuarios.
 - Devuelve mensajes de error técnicos en inglés (`:65`, `:102`).
 
-### 3.6 Cocina, dueño y mozo cambian estados de pedido desde el navegador — ✅ CONFIRMADO · 🔒 Resuelto para pedidos en la fase 1.4 (mesas: 1.5)
+### 3.6 Cocina, dueño y mozo cambian estados de pedido desde el navegador — ✅ CONFIRMADO · 🔒 Resuelto: pedidos en la fase 1.4, mesas en la 1.5
 
 | Quién | Qué cambia | Dónde |
 |---|---|---|

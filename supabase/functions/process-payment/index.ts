@@ -258,10 +258,7 @@ Deno.serve(async (req) => {
       if (iErr) console.error("order_items insert error", iErr);
 
       await admin.from("tables").update({ status: "occupied" }).eq("id", table.id);
-      await admin
-        .from("table_sessions")
-        .update({ total_amount: (session.total_amount || 0) + amount })
-        .eq("id", session.id);
+      // El total de la sesión lo recalcula la base al crear el pedido (fase 1.5).
 
       // popularidad
       const counts = new Map<string, number>();

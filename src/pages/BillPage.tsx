@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
+import { verMesa } from "@/lib/mesa";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, X, AlertTriangle, Loader2 } from "lucide-react";
 import { BrowserQRCodeReader } from "@zxing/browser";
@@ -96,12 +97,7 @@ export default function BillPage() {
   const { data: tableData } = useQuery({
     queryKey: ["table-bill", tableToken],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("tables")
-        .select("id, number, name, tenant_id, branch_id")
-        .eq("qr_token", tableToken)
-        .maybeSingle();
-      return data;
+      return verMesa(tableToken);
     },
     enabled: !!tableToken,
     staleTime: Infinity,
@@ -110,13 +106,8 @@ export default function BillPage() {
   const { data: session } = useQuery({
     queryKey: ["session-bill", tableData?.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("table_sessions")
-        .select("id, total_amount")
-        .eq("table_id", tableData!.id)
-        .eq("is_active", true)
-        .maybeSingle();
-      return data;
+      const mesa = await verMesa(tableToken);
+      return mesa?.sesion ?? null;
     },
     enabled: !!tableData?.id,
     staleTime: 0,
@@ -213,26 +204,14 @@ export default function BillPage() {
     async (scannedToken: string) => {
       setPageState("processing");
       try {
-        const { data: scannedTable } = await supabase
-          .from("tables")
-          .select("id, tenant_id, branch_id")
-          .eq("qr_token", scannedToken)
-          .maybeSingle();
+        const scannedTable = await verMesa(scannedToken);
 
         if (!scannedTable) throw new Error("QR no válido. Escanea la tarjeta de tu mesa.");
         if (tenant?.id && scannedTable.tenant_id !== tenant.id) throw new Error("QR incorrecto.");
 
         // Find active session from the scanned table (don't rely on pre-loaded session)
         let activeSessionId = session?.id;
-        if (!activeSessionId) {
-          const { data: foundSession } = await supabase
-            .from("table_sessions")
-            .select("id")
-            .eq("table_id", scannedTable.id)
-            .eq("is_active", true)
-            .maybeSingle();
-          activeSessionId = foundSession?.id;
-        }
+        if (!activeSessionId) activeSessionId = scannedTable.sesion?.id;
 
         if (!activeSessionId) throw new Error("No se encontró una sesión activa en esta mesa.");
 
@@ -276,8 +255,7 @@ export default function BillPage() {
           throw new Error("Error al enviar la solicitud: " + billError.message);
         }
 
-        // Update table status
-        await supabase.from("tables").update({ status: "waiting_bill" }).eq("id", scannedTable.id);
+        // La mesa queda "esperando la cuenta" por la base (fase 1.5).
 
         setFinalTotal(effectiveTotal);
         setFinalTip(effectiveTip);

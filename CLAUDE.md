@@ -10,7 +10,7 @@ Si algo de aquí contradice `docs/vision/TABLIO_BRIEF_v3.md`, **gana el brief**.
 3. **`docs/DIAGNOSTICO.md`**: problemas conocidos del código actual, con archivo y línea.
 4. **`ESTADO_LOVABLE.md`**: la auditoría que hizo Lovable. Es útil, pero tiene errores corregidos en el diagnóstico.
 
-**Fase actual:** fase 0 terminada; fase 1.1 (contención) y 1.2 (roles y login único) hechas. 1.3 (identidad del comensal) y 1.4 (dominio pedidos: estados por el servidor) hechas. Siguiente: 1.5 (mesas y sesiones). Se trabaja sobre `main`. Antes: 2 (migración), casi lista. La base nueva (`iznwvklzmyhzalabgfxl`) ya tiene estructura, datos, fotos, funciones y el local de demo, y `.env` apunta a ella. Falta: Vercel, Auth (URL del sitio), la clave de Claude, la revisión con el fundador y unir la rama `fase-2-migracion` con `main`. Credenciales del demo en `privado/` (fuera de git); cómo entrar en `docs/DEMO_ACCESS.md`.
+**Fase actual:** fase 0 terminada; fase 1.1 (contención) y 1.2 (roles y login único) hechas. 1.3 (identidad del comensal), 1.4 (dominio pedidos) y 1.5 (mesas y sesiones por el servidor) hechas. Siguiente: 1.6 (acciones del comensal sin cámara). Se trabaja sobre `main`. Antes: 2 (migración), casi lista. La base nueva (`iznwvklzmyhzalabgfxl`) ya tiene estructura, datos, fotos, funciones y el local de demo, y `.env` apunta a ella. Falta: Vercel, Auth (URL del sitio), la clave de Claude, la revisión con el fundador y unir la rama `fase-2-migracion` con `main`. Credenciales del demo en `privado/` (fuera de git); cómo entrar en `docs/DEMO_ACCESS.md`.
 
 **Decisiones tomadas:** Supabase propio (organización "Tablio", São Paulo, plan gratis) · hosting en Vercel · chat de soporte con Claude Haiku 4.5 · `create-platform-admin` y `create-jefe-ventas` no se publican en el proyecto nuevo (única excepción a "migrar tal cual") · los estados se quedan en inglés en la base, con una capa de traducción en pantalla · el dominio definitivo se decide antes de imprimir QR reales (último momento: inicio de la fase 5).
 
@@ -70,6 +70,7 @@ supabase functions deploy <nombre>      # publicar una edge function
 - **Nada con cámara.** "Llamar al mozo" y "pedir la cuenta" son botones, sin escanear.
 - **El comensal paga sin registrarse (invitado) y puede guardar su cuenta** (correo con código o enlace, Google o Apple) para juntar sellos. Su identidad de invitado se convierte en su cuenta: no pierde nada. Los sellos solo se suman con cuenta verificada.
 - **Estados de pedidos:** solo con `cambiar_estado_pedido()` (`src/lib/pedidos.ts`). Nadie escribe directo en `orders` ni en `order_items`.
+- **Mesas y sesiones:** abrir, tomar, transferir y cerrar solo con las funciones de `src/lib/mesa.ts`. El comensal resuelve su mesa con `verMesa(código)`: la lectura directa de `tables` está cerrada para él. El total de la sesión lo calcula la base.
 - **Auth se maneja desde `supabase/config.toml`.** Antes de empujar, revisar siempre la diferencia: `printf 'n\n' | supabase config push`.
 - **Siempre con pruebas completas.** Cada cambio pasa por la integración continua (`.github/workflows/ci.yml`).
 

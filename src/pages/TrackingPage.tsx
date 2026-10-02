@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
+import { calificarMesa, verMesa } from "@/lib/mesa";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Receipt, Bell, ChevronDown, ChevronUp, AlertTriangle, Camera, X } from "lucide-react";
 import { formatCLP } from "@/lib/format";
@@ -148,12 +149,7 @@ export default function TrackingPage() {
   const { data: tableData } = useQuery({
     queryKey: ["table-tracking", tableToken],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("tables")
-        .select("id, number, name, tenant_id, branch_id")
-        .eq("qr_token", tableToken!)
-        .maybeSingle();
-      return data;
+      return verMesa(tableToken!);
     },
     enabled: !!tableToken,
     staleTime: Infinity,
@@ -163,15 +159,10 @@ export default function TrackingPage() {
   const { data: session } = useQuery({
     queryKey: ["session-tracking", tableData?.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("table_sessions")
-        .select("id, total_amount")
-        .eq("table_id", tableData!.id)
-        .eq("is_active", true)
-        .maybeSingle();
-      return data;
+      const mesa = await verMesa(tableToken!);
+      return mesa?.sesion ?? null;
     },
-    enabled: !!tableData?.id,
+    enabled: !!tableData?.id && !!tableToken,
     staleTime: 0,
     refetchOnMount: true,
   });
@@ -392,11 +383,8 @@ export default function TrackingPage() {
   const submitRating = async (stars: number) => {
     setRatingValue(stars);
     setRatingSubmitted(true);
-    if (!session?.id) return;
-    await supabase
-      .from('table_sessions')
-      .update({ rating: stars } as any)
-      .eq('id', session.id);
+    if (!tableToken) return;
+    await calificarMesa(tableToken, stars);
   };
 
   // Waiter call — select reason then open scanner
@@ -457,11 +445,7 @@ export default function TrackingPage() {
       setWaiterSending(true);
 
       // Validate token matches this table
-      const { data: scannedTable } = await supabase
-        .from("tables")
-        .select("id")
-        .eq("qr_token", scannedToken)
-        .maybeSingle();
+      const scannedTable = await verMesa(scannedToken);
 
       if (!scannedTable || scannedTable.id !== tableData.id) {
         toast({ title: "QR no válido para esta mesa", variant: "destructive" });
@@ -646,6 +630,9 @@ export default function TrackingPage() {
           <p className="text-sm text-muted-foreground">
             Mesa {tableData?.number || "?"}{tableData?.name ? ` · ${tableData.name}` : ""}
           </p>
+          {!isCancelled && (
+            <p className={`mt-2 text-sm font-semibold ${currentStatusInfo.color}`}>{currentStatusInfo.label}</p>
+          )}
         </div>
 
         {/* Progress bar */}

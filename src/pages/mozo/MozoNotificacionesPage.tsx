@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { cambiarEstadoPedido } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
+import { cerrarMesa } from "@/lib/mesa";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -242,14 +243,10 @@ export default function MozoNotificacionesPage() {
 
   const handleBillClose = async (billId: string, tableId: string) => {
     setActionLoading(billId);
-    const now = new Date().toISOString();
-    await supabase.from('bill_requests').update({ status: 'paid', attended_at: now }).eq('id', billId);
-    await supabase.from('table_sessions').update({ is_active: false, closed_at: now }).eq('table_id', tableId).eq('is_active', true);
-    // Entrega por el servidor lo que ya está listo; lo que sigue en cocina queda en la cocina.
-    const { data: listos } = await supabase.from('orders').select('id').eq('table_id', tableId).eq('status', 'ready');
-    for (const o of listos ?? []) await cambiarEstadoPedido(o.id, 'delivered');
-    await supabase.from('tables').update({ status: 'free', assigned_waiter_id: null }).eq('id', tableId);
-    toast({ title: 'Mesa cerrada y cuenta completada ✓' });
+    // El servidor cierra la sesión, completa la cuenta, entrega lo listo y libera la mesa (fase 1.5).
+    const r = await cerrarMesa(tableId);
+    if (r.ok === false) toast({ title: 'No se pudo cerrar la mesa', description: r.error, variant: 'destructive' });
+    else toast({ title: 'Mesa cerrada y cuenta completada ✓' });
     fetchAll();
     setActionLoading(null);
   };

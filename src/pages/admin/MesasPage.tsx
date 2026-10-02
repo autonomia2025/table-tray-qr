@@ -96,7 +96,6 @@ export default function MesasPage() {
     setCreating(true);
     try {
       const nextNumber = tables.length > 0 ? Math.max(...tables.map((t) => t.number)) + 1 : 1;
-      const qrToken = crypto.randomUUID();
 
       const { error } = await supabase.from("tables").insert({
         number: nextNumber,
@@ -104,7 +103,6 @@ export default function MesasPage() {
         capacity: parseInt(newCapacity) || 4,
         branch_id: branchId,
         tenant_id: tenantId,
-        qr_token: qrToken,
       });
 
       if (error) throw error;

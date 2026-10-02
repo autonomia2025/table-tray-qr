@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, CreditCard, ShieldCheck, AlertTriangle, Gift, Apple
 import BloqueSellos from "@/components/comensal/BloqueSellos";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
+import { verMesa } from "@/lib/mesa";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
 import { detectWallets, requestWalletPayment, type WalletKind } from "@/lib/walletPayment";
@@ -68,12 +69,7 @@ export default function PayPage() {
   const { data: table } = useQuery({
     queryKey: ["pay-table", tableToken],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("tables")
-        .select("id, number, name, tenant_id, branch_id")
-        .eq("qr_token", tableToken)
-        .maybeSingle();
-      return data;
+      return verMesa(tableToken);
     },
     enabled: !!tableToken,
     staleTime: Infinity,
@@ -82,13 +78,8 @@ export default function PayPage() {
   const { data: session } = useQuery({
     queryKey: ["pay-session", table?.id],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("table_sessions")
-        .select("id, paid_amount")
-        .eq("table_id", table!.id)
-        .eq("is_active", true)
-        .maybeSingle();
-      return data;
+      const mesa = await verMesa(tableToken);
+      return mesa?.sesion ?? null;
     },
     enabled: !!table?.id,
     staleTime: 0,
