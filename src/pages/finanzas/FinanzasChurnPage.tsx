@@ -32,7 +32,7 @@ export default function FinanzasChurnPage() {
   useEffect(() => {
     const load = async () => {
       const [t, p] = await Promise.all([
-        supabase.from('tenants').select('id, name, plan_status, created_at, plan_id, is_active'),
+        supabase.rpc('tenants_privado').select('id, name, plan_status, created_at, plan_id, is_active'),
         supabase.from('plans').select('id, name, display_name'),
       ]);
       setTenants((t.data || []) as Tenant[]);

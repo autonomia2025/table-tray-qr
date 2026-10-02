@@ -37,7 +37,7 @@ export default function FinanzasClientesPage() {
   useEffect(() => {
     const load = async () => {
       const [t, p] = await Promise.all([
-        supabase.from('tenants').select('id, name, plan_status, created_at, plan_id, is_active, trial_ends_at, email'),
+        supabase.rpc('tenants_privado').select('id, name, plan_status, created_at, plan_id, is_active, trial_ends_at, email'),
         supabase.from('plans').select('id, name, display_name'),
       ]);
       setTenants((t.data || []) as Tenant[]);

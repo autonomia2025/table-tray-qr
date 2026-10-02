@@ -2176,6 +2176,14 @@ export type Database = {
         Returns: Record<string, unknown>
       }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
+      activar_personal: {
+        Args: { _activo: boolean; _staff_id: string }
+        Returns: undefined
+      }
+      actualizar_personal: {
+        Args: { _nombre: string; _rol: string; _staff_id: string }
+        Returns: undefined
+      }
       atender_cuenta: { Args: { _id: string }; Returns: undefined }
       atender_llamado: { Args: { _id: string }; Returns: undefined }
       calificar_mesa: {
@@ -2196,6 +2204,7 @@ export type Database = {
         Args: { _motivo?: string; _table_id: string }
         Returns: Json
       }
+      es_backoffice: { Args: never; Returns: boolean }
       get_tenant_id: { Args: never; Returns: string }
       has_backoffice_role: {
         Args: { _role: string; _user_id: string }
@@ -2220,12 +2229,50 @@ export type Database = {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
         Returns: Json
       }
+      puede_asignar_rol: {
+        Args: { _rol: string; _tenant_id: string }
+        Returns: boolean
+      }
+      puede_editar_fotos: { Args: { _carpeta: string }; Returns: boolean }
       rango_estado: { Args: { _estado: string }; Returns: number }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }
         Returns: boolean
       }
       reiniciar_demo: { Args: never; Returns: Json }
+      sa_activar_local: {
+        Args: { _activo: boolean; _tenant_id: string }
+        Returns: undefined
+      }
+      tenants_privado: {
+        Args: never
+        Returns: {
+          cover_image_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          plan_id: string | null
+          plan_status: string | null
+          primary_color: string | null
+          rut: string | null
+          secondary_color: string | null
+          slug: string
+          timezone: string | null
+          trial_ends_at: string | null
+          updated_at: string | null
+          welcome_message: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tenants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       tiene_rol: {
         Args: { _roles: string[]; _tenant_id: string }
         Returns: boolean

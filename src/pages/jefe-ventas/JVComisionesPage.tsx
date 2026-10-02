@@ -19,7 +19,7 @@ export default function JVComisionesPage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from('tenants').select('id, plan_status').eq('is_active', true);
+      const { data } = await supabase.rpc('tenants_privado').select('id, plan_status').eq('is_active', true);
       const paying = (data || []).filter(t => ['active', 'paying', 'pilot', 'trial'].includes(t.plan_status || ''));
       setTotalClients(paying.length);
       setProjectedClients([Math.max(paying.length, 5)]);

@@ -30,7 +30,7 @@ export default function SAMetricsPage() {
         weekOrders, staffUsers, tablesData, waiterCallsMonth, billRequestsMonth,
         allLeads, allMembers, allGoals, allActivities,
       ] = await Promise.all([
-        supabase.from("tenants").select("id, name, created_at, is_active, plan_status, trial_ends_at, slug, plan_id"),
+        supabase.rpc("tenants_privado").select("id, name, created_at, is_active, plan_status, trial_ends_at, slug, plan_id"),
         supabase.from("tenants").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("orders").select("id", { count: "exact", head: true }).gte("confirmed_at", today),
         fetchAll("orders", "id, tenant_id, confirmed_at, total_amount, status, source", [

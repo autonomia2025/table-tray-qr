@@ -6,11 +6,11 @@ Si algo de aquí contradice `docs/vision/TABLIO_BRIEF_v3.md`, **gana el brief**.
 ## Antes de empezar cualquier tarea
 
 1. **`docs/vision/TABLIO_BRIEF_v3.md`**: qué es Tablio y a dónde vamos. Las secciones 4 (reglas que no se negocian) y 9 (calidad) mandan.
-2. **`docs/PLAN_FASES.md`**: en qué fase estamos y qué paso toca.
+2. **`docs/MASTER_PLAN.md`**: el plan vigente, en qué fase estamos y qué paso toca (`docs/PLAN_FASES.md` es histórico).
 3. **`docs/DIAGNOSTICO.md`**: problemas conocidos del código actual, con archivo y línea.
 4. **`ESTADO_LOVABLE.md`**: la auditoría que hizo Lovable. Es útil, pero tiene errores corregidos en el diagnóstico.
 
-**Fase actual:** fase 0 terminada; fase 1.1 (contención) y 1.2 (roles y login único) hechas. 1.3 (identidad del comensal), 1.4 (dominio pedidos), 1.5 (mesas y sesiones) y 1.6 (acciones del comensal sin cámara) hechas. Siguiente: 1.7 (configuración del local). Se trabaja sobre `main`. Antes: 2 (migración), casi lista. La base nueva (`iznwvklzmyhzalabgfxl`) ya tiene estructura, datos, fotos, funciones y el local de demo, y `.env` apunta a ella. Falta: Vercel, Auth (URL del sitio), la clave de Claude, la revisión con el fundador y unir la rama `fase-2-migracion` con `main`. Credenciales del demo en `privado/` (fuera de git); cómo entrar en `docs/DEMO_ACCESS.md`.
+**Fase actual:** fase 0 terminada; fase 1.1 (contención) y 1.2 (roles y login único) hechas. 1.3 (identidad del comensal), 1.4 (dominio pedidos), 1.5 (mesas y sesiones), 1.6 (acciones del comensal sin cámara) y 1.7 (configuración del local) hechas. Siguiente: 1.8 (plataforma y backoffice). Se trabaja sobre `main`. Antes: 2 (migración), casi lista. La base nueva (`iznwvklzmyhzalabgfxl`) ya tiene estructura, datos, fotos, funciones y el local de demo, y `.env` apunta a ella. Falta: Vercel, Auth (URL del sitio), la clave de Claude, la revisión con el fundador y unir la rama `fase-2-migracion` con `main`. Credenciales del demo en `privado/` (fuera de git); cómo entrar en `docs/DEMO_ACCESS.md`.
 
 **Decisiones tomadas:** Supabase propio (organización "Tablio", São Paulo, plan gratis) · hosting en Vercel · chat de soporte con Claude Haiku 4.5 · `create-platform-admin` y `create-jefe-ventas` no se publican en el proyecto nuevo (única excepción a "migrar tal cual") · los estados se quedan en inglés en la base, con una capa de traducción en pantalla · el dominio definitivo se decide antes de imprimir QR reales (último momento: inicio de la fase 5).
 
@@ -73,6 +73,8 @@ supabase functions deploy <nombre>      # publicar una edge function
 - **Mesas y sesiones:** abrir, tomar, transferir y cerrar solo con las funciones de `src/lib/mesa.ts`. El comensal resuelve su mesa con `verMesa(código)`: la lectura directa de `tables` está cerrada para él. El total de la sesión lo calcula la base.
 - **Auth se maneja desde `supabase/config.toml`**, incluidos los límites por IP (`[auth.rate_limit]`: en un bar todos comparten la IP del wifi). Antes de empujar, revisar siempre la diferencia: `printf 'n\n' | supabase config push`.
 - **Acciones del comensal** (llamar al mozo, pedir la cuenta, calificar): solo con las funciones de `src/lib/mesa.ts`. El comensal debe estar registrado en la mesa (`useComensalEnMesa`, que avisa cuando terminó).
+- **Datos del local:** lo público de `tenants` es solo la marca (nombre, colores, logo, mensaje). RUT, correo, teléfono y plan se leen con `rpc('tenants_privado')` (solo superadmin y backoffice). El costo de los platos no se lee desde la app. El equipo se cambia solo con `actualizar_personal` y `activar_personal` (desactivar quita el acceso al instante); la ficha la crea `create-tenant-user`.
+- **Resend** está aprobado para correos (transaccionales y marketing), pero aún no se configura. Google y Apple, más adelante.
 - **Siempre con pruebas completas.** Cada cambio pasa por la integración continua (`.github/workflows/ci.yml`).
 
 ## Reglas del producto (resumen de la sección 4 del brief)

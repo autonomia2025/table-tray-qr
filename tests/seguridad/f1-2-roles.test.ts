@@ -67,7 +67,8 @@ describe("lista cerrada de roles", () => {
     const { error } = await cliente
       .from("staff_invitations")
       .insert({ tenant_id: DEMO.tenant, branch_id: DEMO.sucursal, role: "owner" });
-    expect(error?.code).toBe("23514");
+    // Desde la fase 1.7 lo frena primero la regla de acceso (42501); antes, la restricción de la tabla (23514).
+    expect(["23514", "42501"]).toContain(error?.code);
   });
 });
 

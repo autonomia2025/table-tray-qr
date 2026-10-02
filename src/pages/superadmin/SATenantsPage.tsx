@@ -118,7 +118,7 @@ export default function SATenantsPage() {
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
 
     const { data: tenantsData } = await supabase
-      .from('tenants')
+      .rpc('tenants_privado')
       .select('id, name, slug, is_active, created_at, email, phone, plan_status')
       .order('created_at', { ascending: false });
 
@@ -174,7 +174,12 @@ export default function SATenantsPage() {
   };
 
   const toggleActive = async (tenant: TenantRow) => {
-    await supabase.from('tenants').update({ is_active: !tenant.is_active }).eq('id', tenant.id);
+    // Por el servidor (fase 1.7): solo el superadmin, y queda en la auditoría.
+    const { error } = await supabase.rpc('sa_activar_local', { _tenant_id: tenant.id, _activo: !tenant.is_active });
+    if (error) {
+      toast({ title: 'No se pudo cambiar el local', description: 'Intenta de nuevo.', variant: 'destructive' });
+      return;
+    }
     setTenants(prev => prev.map(t => t.id === tenant.id ? { ...t, is_active: !t.is_active } : t));
     toast({ title: `${tenant.name} ${!tenant.is_active ? 'activado' : 'desactivado'}` });
   };

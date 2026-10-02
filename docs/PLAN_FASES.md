@@ -1,4 +1,6 @@
-# Plan por fases — Tablio
+# Plan por fases — Tablio (histórico)
+
+> **Este plan quedó reemplazado por [`docs/MASTER_PLAN.md`](MASTER_PLAN.md)** (2 de octubre de 2026). Se conserva como referencia de las pruebas y del local de demo.
 
 Basado en la sección 11 del brief y en `docs/DIAGNOSTICO.md`.
 

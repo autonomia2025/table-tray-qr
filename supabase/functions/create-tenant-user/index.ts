@@ -40,6 +40,8 @@ Deno.serve(async (req) => {
     const branchId = typeof body?.branch_id === "string" && body.branch_id ? body.branch_id : null;
     const rol = typeof body?.role === "string" && body.role ? body.role : "waiter";
     if (!(ROLES as readonly string[]).includes(rol)) return json({ error: "Rol inválido." }, 400);
+    // Nombre para la ficha del equipo (fase 1.7). Si no viene, se usa la parte del correo antes de la @.
+    const nombre = (typeof body?.name === "string" && body.name.trim() ? body.name.trim() : String(body?.email ?? "").split("@")[0]).slice(0, 60);
 
     if (tenantId && !UUID_RE.test(tenantId)) return json({ error: "Local inválido." }, 400);
     if (branchId && !UUID_RE.test(branchId)) return json({ error: "Sucursal inválida." }, 400);
@@ -119,6 +121,31 @@ Deno.serve(async (req) => {
         if (memberErr) {
           console.error("create-tenant-user member insert error:", memberErr.message);
           return json({ error: "Se creó el usuario, pero no se pudo agregar al local." }, 500);
+        }
+      }
+
+      // Ficha del equipo (la que usan el mozo, los reportes y la pantalla Equipo). Antes la creaba
+      // el navegador; desde la fase 1.7 nadie escribe el equipo directo.
+      if (branchId) {
+        const { data: ficha } = await admin
+          .from("staff_users")
+          .select("id")
+          .eq("auth_user_id", userId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        if (!ficha) {
+          const { error: staffErr } = await admin.from("staff_users").insert({
+            tenant_id: tenantId,
+            branch_id: branchId,
+            auth_user_id: userId,
+            name: nombre || "Sin nombre",
+            role: rol,
+            is_active: true,
+          });
+          if (staffErr) {
+            console.error("create-tenant-user staff insert error:", staffErr.message);
+            return json({ error: "Se creó la cuenta, pero no se pudo agregar al equipo." }, 500);
+          }
         }
       }
     }

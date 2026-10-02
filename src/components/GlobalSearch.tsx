@@ -41,7 +41,7 @@ export default function GlobalSearch() {
       setLoading(true);
       const q = query.toLowerCase();
       const [tenantsRes, leadsRes, membersRes] = await Promise.all([
-        supabase.from('tenants').select('id, name, slug, plan_status').ilike('name', `%${q}%`).limit(5),
+        supabase.rpc('tenants_privado').select('id, name, slug, plan_status').ilike('name', `%${q}%`).limit(5),
         supabase.from('leads').select('id, restaurant_name, stage, zone').ilike('restaurant_name', `%${q}%`).limit(5),
         supabase.from('backoffice_members').select('id, name, role, zone').ilike('name', `%${q}%`).limit(5),
       ]);

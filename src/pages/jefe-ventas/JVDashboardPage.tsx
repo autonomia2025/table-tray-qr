@@ -26,7 +26,7 @@ export default function JVDashboardPage() {
     const load = async () => {
       try {
         const [tenantsRes, leadsRes, membersRes] = await Promise.all([
-          supabase.from('tenants').select('id, name, plan_status, is_active, created_at'),
+          supabase.rpc('tenants_privado').select('id, name, plan_status, is_active, created_at'),
           supabase.from('leads').select('id, stage, assigned_seller_id, monthly_value, created_at, updated_at, zone'),
           supabase.from('backoffice_members').select('id, name, role').eq('is_active', true),
         ]);

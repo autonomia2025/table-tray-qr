@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { mensajeAmigable } from "@/lib/pedidos";
 import { NOMBRE_ROL } from "@/lib/roles";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useToast } from "@/hooks/use-toast";
@@ -84,24 +85,26 @@ export default function EquipoPage() {
     setSaving(true);
 
     if (editingId) {
-      const { error: updateError } = await supabase
-        .from("staff_users")
-        .update({ name: name.trim(), role })
-        .eq("id", editingId);
+      // Por el servidor (fase 1.7): respeta la jerarquía y actualiza también el acceso.
+      const { error: updateError } = await supabase.rpc("actualizar_personal", {
+        _staff_id: editingId,
+        _nombre: name.trim(),
+        _rol: role,
+      });
 
       if (updateError) {
-        setError("Error al actualizar");
+        setError(mensajeAmigable(updateError.message));
         setSaving(false);
         return;
       }
-      toast({ title: "Mozo actualizado" });
+      toast({ title: "Datos actualizados" });
     } else {
       if (!email.trim()) { setError("Email obligatorio"); setSaving(false); return; }
       if (password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); setSaving(false); return; }
 
       // Create auth user via edge function
       const { data: userData, error: fnError } = await supabase.functions.invoke("create-tenant-user", {
-        body: { email: email.trim(), password, tenant_id: tenantId, branch_id: branchId, role },
+        body: { email: email.trim(), password, tenant_id: tenantId, branch_id: branchId, role, name: name.trim() },
       });
 
       if (fnError || userData?.error) {
@@ -110,24 +113,8 @@ export default function EquipoPage() {
         return;
       }
 
-      // Create staff_users record
-      const { error: staffError } = await supabase
-        .from("staff_users")
-        .insert({
-          name: name.trim(),
-          role,
-          branch_id: branchId,
-          tenant_id: tenantId,
-          is_active: true,
-          auth_user_id: userData.user_id,
-        });
-
-      if (staffError) {
-        setError("Error al crear el mozo");
-        setSaving(false);
-        return;
-      }
-      toast({ title: "Mozo creado con email y contraseña" });
+      // La ficha del equipo la crea el servidor junto con la cuenta (fase 1.7).
+      toast({ title: "Cuenta creada con correo y contraseña" });
     }
 
     setModalOpen(false);
@@ -136,7 +123,12 @@ export default function EquipoPage() {
   };
 
   const toggleActive = async (s: StaffRow) => {
-    await supabase.from("staff_users").update({ is_active: !s.is_active }).eq("id", s.id);
+    // Desactivado, pierde el acceso al local de inmediato (fase 1.7).
+    const { error: err } = await supabase.rpc("activar_personal", { _staff_id: s.id, _activo: !s.is_active });
+    if (err) {
+      toast({ title: "No se pudo cambiar", description: mensajeAmigable(err.message), variant: "destructive" });
+      return;
+    }
     toast({ title: `${s.name} ${!s.is_active ? "activado" : "desactivado"}` });
     fetchStaff();
   };

@@ -85,7 +85,7 @@ Fecha: 1 de octubre de 2026 · Fase 1 del plan · Solo lectura: no se modificó 
 - **Corrección:** ningún código lee ni escribe PIN. Los mozos entran con email y contraseña (`MozoLoginPage.tsx:32`). El riesgo depende de si hay PIN cargados en la base. **[verificar en la base]**
 - Lo que sí se expone hoy: nombres, roles, local y `auth_user_id` de todo el personal de todos los locales.
 
-### 3.4 Datos de pedidos, mesas y personal se pueden leer entre locales — ✅ CONFIRMADO · 🔒 Pedidos (1.4), mesas y sesiones (1.5) cerrados; personal pendiente (1.7)
+### 3.4 Datos de pedidos, mesas y personal se pueden leer entre locales — ✅ CONFIRMADO · 🔒 Resuelto: pedidos (1.4), mesas y sesiones (1.5), equipo, carta y datos del local (1.7)
 
 Lectura pública total (`USING (true)`) en: `orders` (`20260307214709_...sql:368`), `order_items` (`:373`), `table_sessions` (`:363`), `tables` (`:358`), `bill_requests` (`:378`), `waiter_calls` (`:383`), `tenants` (`:325`, con email, RUT y teléfono del local), `staff_users` (`20260308151352_...sql:39`), `staff_invitations` (`20260308171228_...sql:16`) y `backoffice_invitations` (`20260318051715_...sql:22`).
 
@@ -164,7 +164,7 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | N5 | **Sellos sin límite:** se suma una visita por cada pago. Diez pagos de $1.000 son diez visitas. El brief exige límites | 🟠 Medio | `process-payment/index.ts:343` |
 | N6 | **Modificadores inventados:** si el navegador manda un modificador que no existe, se cobra $0 pero llega igual a cocina. Tampoco se validan los modificadores obligatorios | 🟠 Medio | `process-payment/index.ts:160-166` |
 | N7 | El servidor no revisa si el local está activo, si la sucursal está abierta ni si la categoría está en su horario antes de cobrar | 🟠 Medio | `process-payment/index.ts:59-65` |
-| N8 | Los roles no se distinguen en la base: un mozo (miembro del local) puede cambiar precios, el modo de pago de la sucursal o marcar pedidos como pagados | 🟠 Medio | todas las políticas `*_staff_manage` |
+| N8 | ✅ **Resuelto en las fases 1.4 a 1.7** (cada acción revisa el rol en la base; el mozo ya no cambia precios, modo de pago ni pagos). Los roles no se distinguen en la base: un mozo (miembro del local) puede cambiar precios, el modo de pago de la sucursal o marcar pedidos como pagados | 🟠 Medio | todas las políticas `*_staff_manage` |
 | N9 | El cierre de caja usa días en UTC: una noche de bar (20:00 a 03:00 de Chile) queda partida en dos días | 🟠 Medio | `reconcile-payments/index.ts:57-58` |
 | N10 | Un cierre de caja ya cerrado se puede reabrir y sobrescribir. Y cualquier miembro del local, incluido un mozo, puede cerrar caja | 🟠 Medio | `reconcile-payments/index.ts:53, 77-95` |
 | N11 | `get_tenant_id()` usa `LIMIT 1` sin orden: si un usuario pertenece a dos locales, el sistema elige uno al azar | 🟡 Bajo hoy | `20260309045023_...sql:12` |

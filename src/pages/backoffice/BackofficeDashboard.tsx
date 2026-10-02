@@ -46,7 +46,7 @@ export default function BackofficeDashboard() {
       const [leadsRes, sellersRes, tenantsRes] = await Promise.all([
         supabase.from('leads').select('*'),
         supabase.from('backoffice_members').select('id, name').eq('role', 'vendedor'),
-        supabase.from('tenants').select('id, plan_status, created_at'),
+        supabase.rpc('tenants_privado').select('id, plan_status, created_at'),
       ]);
       setLeads((leadsRes.data as Lead[]) || []);
       setSellers((sellersRes.data as Seller[]) || []);

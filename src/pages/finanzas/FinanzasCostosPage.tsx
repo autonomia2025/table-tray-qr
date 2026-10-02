@@ -51,7 +51,7 @@ export default function FinanzasCostosPage() {
   useEffect(() => {
     const load = async () => {
       const [t, l] = await Promise.all([
-        supabase.from('tenants').select('plan_id, plan_status, is_active, created_at'),
+        supabase.rpc('tenants_privado').select('plan_id, plan_status, is_active, created_at'),
         supabase.from('leads').select('id, source, stage'),
       ]);
       const tenants = (t.data || []).sort((a: any, b: any) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());

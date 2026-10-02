@@ -4,6 +4,69 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-02 — Fase 1.7: configuración del local ✅
+**Lo que estaba abierto y se cerró:**
+- **Datos privados de todos los locales a la vista:** cualquiera, sin iniciar sesión, leía RUT, correo, teléfono y estado del plan.
+  - Ahora lo público de un local es solo su marca: nombre, colores, logo, portada y mensaje de bienvenida.
+  - Los datos completos los leen solo el superadmin y el equipo de Tablio, con la función `tenants_privado()`.
+- **El costo de cada plato** (los márgenes del local) era público. Ya no lo lee nadie desde la app; tendrá su pantalla con permisos cuando haga falta.
+- **El equipo de todos los locales** era público. Ahora lo ve solo el personal de ese local.
+- **Cualquier miembro, también un mozo, podía:**
+  - cambiar el plan y el estado del local;
+  - editar la carta, la sucursal y el programa de lealtad;
+  - escribir en la auditoría (cualquiera podía, incluso sin sesión).
+
+  Ahora:
+  - la marca y la sucursal las editan dueño y administrador;
+  - la carta y la lealtad, dueño, administrador y encargado;
+  - el plan y la activación del local, solo Tablio (`sa_activar_local`, con registro);
+  - la auditoría solo la escriben el servidor y las funciones de la base.
+- **Desactivar a alguien del equipo no le quitaba el acceso.** Solo cambiaba su ficha, y podía seguir operando.
+  - Ahora `activar_personal` también le quita el acceso real (`tenant_members`) **al instante**, aunque tenga la sesión abierta, y libera sus mesas.
+  - `actualizar_personal` cambia nombre y rol respetando la jerarquía: el dueño nombra hasta administrador y el administrador hasta encargado; nadie se cambia su propio rol.
+  - Todo queda en la auditoría.
+- **La ficha del equipo la creaba el navegador.** Ahora la crea `create-tenant-user` junto con la cuenta (función publicada de nuevo).
+- **Invitaciones:** las crean dueño o administrador, solo para mozo, cocina o caja.
+- **Clientes de lealtad y premios:** dueño, administrador, encargado y caja; ya no la cocina ni el mozo.
+- **Nada apunta a otro local:** por ejemplo, un plato no puede ir en la categoría de otro local. Lo valida la base en carta, estaciones, sucursales, equipo, invitaciones y lealtad.
+- **Fotos de la carta:** las suben y borran quienes editan la carta (antes, cualquier miembro). Precios negativos, rechazados. Las ventas de cada plato las cuenta solo el servidor.
+- **Reinicio del demo:** también borra el registro de mesas que dejan las pruebas.
+- **Asesor de seguridad de Supabase:**
+  - sin errores;
+  - las funciones que solo usan los disparadores ya no se pueden llamar directo;
+  - dos funciones quedaron con ruta de búsqueda fija.
+
+  Las advertencias que quedan son esperadas: funciones que la app llama a propósito y el acceso de invitados. "Contraseñas filtradas" requiere el plan Pro (fase 5).
+
+**Migraciones:** `20261002080000_configuracion_local.sql`, `20261002081000_ajustes_asesor_seguridad.sql`, `20261002082000_fotos_carta.sql`.
+
+**App:**
+- Las pantallas de superadmin, ventas y finanzas leen los datos completos con `rpc('tenants_privado')`. El superadmin activa o desactiva locales con `sa_activar_local`.
+- **Equipo:** editar y activar o desactivar por el servidor, con mensajes claros si no se puede.
+
+**Plan:** se guardó el plan vigente en `docs/MASTER_PLAN.md` (`PLAN_FASES.md` queda como histórico). Incluye las ideas de experiencia, cada una en su fase, según lo que más vende y lo que aprovecha lo ya construido:
+- la mesa en vivo, "otra ronda" y sellos animados, en la fase 3;
+- invitar una ronda, dividir un plato, niveles, juegos y premios, en la fase 7;
+- la noche de trivia, en la fase 8;
+- la comunidad, en la fase 9.
+
+**Pruebas:**
+- `tests/seguridad/f1-7-configuracion.test.ts`: 11 pruebas.
+  - Carta y marca públicas, pero sin costos ni datos privados.
+  - Sin ser del local no se ve el equipo ni nada privado.
+  - El mozo no edita carta, marca ni lealtad; el administrador sí edita la carta.
+  - El plan no lo cambia nadie del local. La auditoría nadie la escribe.
+  - Desactivar quita el acceso al instante. Los roles respetan la jerarquía.
+  - Invitaciones con tope de rol y fotos de la carta.
+  - El comensal sigue viendo la carta.
+  - El dueño de otro local no mete platos en la carta del demo.
+- `e2e/equipo.spec.ts`:
+  - el dueño desactiva y vuelve a activar a un mozo;
+  - en la base desechable, crea la cuenta de un mozo y aparece vinculado.
+- **Base desechable:** 76 de seguridad y 51 de navegador. **Base de pruebas:** 73 de seguridad (más 3 que solo corren con "Local Ajeno").
+
+---
+
 ## 2026-10-02 — Fase 1.6: acciones del comensal sin cámara ✅
 **Decisión del fundador:** nada con cámara. "Llamar al mozo" y "pedir la cuenta" ya no piden escanear la tarjeta de la mesa.
 
