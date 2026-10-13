@@ -33,6 +33,7 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 - **Detalles que salieron al revisar las fotos del recorrido:**
   - la mesa del mozo decía "🍳 En cocina" con un pedido que en realidad esperaba el cobro; ahora dice **"💳 Por cobrar"**;
   - en el panel de pedidos del dueño, los pedidos sin cobrar llevan la etiqueta **"Por cobrar"**, y cada producto muestra las opciones elegidas ("Tres cuartos · Palta") y la nota.
+  - en el detalle de un plato aparecía un "0" suelto bajo el nombre (plato sin ventas y tiempo de preparación en cero). Ya no aparece.
 
 **Pruebas:**
 - `tests/seguridad/f1-9-precios.test.ts`: 8 pruebas.

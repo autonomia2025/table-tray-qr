@@ -110,7 +110,7 @@ export default function MenuItemCard({ item, isHot, primaryColor, onTap }: MenuI
         <div className="mt-auto flex items-end justify-between pt-1">
           <div>
             <span className="text-sm font-bold text-card-foreground">{formatCLP(item.price)}</span>
-            {item.prep_time_minutes && (
+            {(item.prep_time_minutes ?? 0) > 0 && (
               <span className="ml-1.5 inline-flex items-center gap-0.5 text-[11px] text-muted-foreground">
                 <Clock className="h-3 w-3" />~{item.prep_time_minutes} min
               </span>

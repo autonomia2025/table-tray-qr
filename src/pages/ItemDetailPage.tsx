@@ -422,14 +422,14 @@ export default function ItemDetailPage() {
         <h1 className="text-[22px] font-bold leading-tight text-foreground">{item.name}</h1>
 
         {/* Social proof */}
-        {item.total_orders && item.total_orders > 5 && (
+        {(item.total_orders ?? 0) > 5 && (
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
             🔥 <span>{item.total_orders} personas lo pidieron</span>
           </p>
         )}
 
         {/* Prep time pill */}
-        {item.prep_time_minutes && (
+        {(item.prep_time_minutes ?? 0) > 0 && (
           <div className="flex items-center gap-1 mt-2">
             <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full flex items-center gap-1">
               <Clock className="h-3 w-3" /> {item.prep_time_minutes} min aprox.
