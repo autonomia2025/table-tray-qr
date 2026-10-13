@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { registrarAccesoSoporte } from "@/lib/soporte";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSesion } from "@/contexts/SesionContext";
 import type { RolLocal } from "@/lib/roles";
@@ -101,6 +102,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         userId: perfil.user_id,
       });
       setIsImpersonating(soporte);
+      if (soporte) registrarAccesoSoporte("local", tenantId);
       setIsLoading(false);
     })();
 

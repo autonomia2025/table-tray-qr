@@ -4,6 +4,57 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-13 — Fase 1.8: plataforma y backoffice ✅
+**Lo que estaba abierto y se cerró:**
+- **Pagos a la vista:** cualquiera, sin sesión, leía los pagos de las mesas abiertas, con el correo del cliente.
+- **Ventas:**
+  - un vendedor desactivado seguía viendo y editando sus prospectos;
+  - un vendedor podía pasarle sus prospectos a otro y firmar actividades a nombre de otro. Ahora la base firma cada actividad con la ficha de quien la crea, y el historial no se reescribe.
+- **Equipo de Tablio:**
+  - el jefe de ventas podía cambiar el rol, la cuenta o el correo de cualquier miembro. Ahora solo edita y activa o desactiva a sus vendedores, y solo invita vendedores;
+  - rol, cuenta y correo los cambia solo el superadmin;
+  - cada uno edita su propio perfil;
+  - activar o desactivar queda en la auditoría.
+  - La regla antigua se consultaba a sí misma (posible error de "recursión infinita", N14). Ahora usa funciones auxiliares que revisan que el miembro esté activo.
+- **Finanzas** lee el embudo de ventas sin poder editarlo (antes no lo veía y sus números salían en cero).
+- **Soporte:** cualquier miembro del local, incluso un mozo, veía y creaba tickets. Ahora solo dueño, administrador y encargado, firmados con su propia cuenta.
+- **Planes:** los cambia solo el superadmin; siguen públicos porque son la oferta de Tablio.
+- **Datos del negocio que vivían en el navegador** (regla de calidad 6) y se perdían al cambiar de computador:
+  - los gastos de Tablio pasaron a la tabla `gastos_tablio` (finanzas y superadmin);
+  - zonas de venta, comisiones y alertas pasaron a `configuracion_tablio` (las cambia el superadmin y las lee el equipo).
+- **Modo soporte registrado (N3):**
+  - cuando el superadmin entra al panel de un local, queda en la auditoría;
+  - cuando el superadmin o el jefe "ve como" a otro miembro, también.
+
+  Solo puede hacerlo quien corresponde.
+- **Registro de vendedores** (`register-seller`, publicada de nuevo):
+  - la invitación se reserva de forma atómica: dos personas no pueden usar el mismo enlace;
+  - si el superadmin ya había creado la ficha con ese correo, se vincula en vez de duplicarse;
+  - los errores salen en español.
+
+**Migración:** `20261013010000_plataforma_backoffice.sql`.
+
+**⚠️ El proyecto de Supabase estaba pausado.** El plan gratis pausa el proyecto tras 7 días sin uso, y habían pasado 11, así que la app y el demo no tenían base. Se reactivó (no cambia datos) y se revisó que todo siguiera igual: las funciones de la base, las del servidor y la configuración de acceso, con los límites por IP.
+- Para que no se repita, la nueva revisión diaria de salud (`.github/workflows/salud.yml`) revisa cada mañana que la app, la base y el inicio de sesión respondan. Si algo falla, GitHub avisa por correo, y de paso el proyecto no queda inactivo.
+- Antes del piloto conviene el plan Pro (F.8 del plan maestro).
+
+**Pruebas:**
+- `tests/seguridad/f1-8-plataforma.test.ts`: 9 pruebas.
+  - Sin sesión no se ven pagos ni nada de Tablio.
+  - Prospectos: el vendedor trabaja solo los suyos y la firma la pone la base.
+  - Roles, cuentas y correos del equipo protegidos; cada uno edita su perfil.
+  - Desactivar quita el acceso al instante y queda registrado.
+  - El jefe invita solo vendedores.
+  - Finanzas: embudo de solo lectura y gastos en la base.
+  - La configuración de Tablio la cambia solo el superadmin.
+  - Tickets de soporte por rol.
+  - El modo soporte queda en la auditoría.
+- `e2e/backoffice.spec.ts`: finanzas registra un gasto, que sigue ahí en otra pestaña (sin nada en el navegador), y lo borra.
+- **Base desechable:** 85 de seguridad y 52 de navegador. **Base de pruebas:** 82 de seguridad (más 3 que solo corren con "Local Ajeno").
+- El contenedor local de funciones del servidor se cayó una vez después de reiniciar Docker (todas respondían 503). Se reinició el entorno y todo pasó.
+
+---
+
 ## 2026-10-02 — Fase 1.7: configuración del local ✅
 **Lo que estaba abierto y se cerró:**
 - **Datos privados de todos los locales a la vista:** cualquiera, sin iniciar sesión, leía RUT, correo, teléfono y estado del plan.

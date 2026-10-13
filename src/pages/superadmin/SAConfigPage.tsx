@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useConfigTablio } from '@/hooks/useConfigTablio';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,15 +14,16 @@ import { Loader2, AlertTriangle, Copy, UserPlus, MapPin, Target, DollarSign, Bel
 // ─── Zones Config ───
 function ZonesSection() {
   const { toast } = useToast();
-  const [zones, setZones] = useState<string[]>(() => {
-    const saved = localStorage.getItem('tablio_zones');
-    return saved ? JSON.parse(saved) : ['Barrio Italia', 'Ñuñoa', 'Lastarria', 'Providencia', 'Las Condes', 'Vitacura', 'Santiago Centro'];
-  });
+  // Guardadas en la base (antes en el navegador): fase 1.8.
+  const { valor: zones, guardar } = useConfigTablio<string[]>('zonas_venta', ['Barrio Italia', 'Ñuñoa', 'Lastarria', 'Providencia', 'Las Condes', 'Vitacura', 'Santiago Centro']);
   const [newZone, setNewZone] = useState('');
 
-  const save = (z: string[]) => { setZones(z); localStorage.setItem('tablio_zones', JSON.stringify(z)); };
-  const add = () => { if (newZone.trim() && !zones.includes(newZone.trim())) { save([...zones, newZone.trim()]); setNewZone(''); toast({ title: 'Zona agregada' }); } };
-  const remove = (z: string) => { save(zones.filter(x => x !== z)); toast({ title: 'Zona eliminada' }); };
+  const save = async (z: string[], mensaje: string) => {
+    if (await guardar(z)) toast({ title: mensaje });
+    else toast({ title: 'No se pudo guardar', description: 'Intenta de nuevo.', variant: 'destructive' });
+  };
+  const add = () => { if (newZone.trim() && !zones.includes(newZone.trim())) { save([...zones, newZone.trim()], 'Zona agregada'); setNewZone(''); } };
+  const remove = (z: string) => { save(zones.filter(x => x !== z), 'Zona eliminada'); };
 
   return (
     <Card>
@@ -105,15 +107,15 @@ function GoalsSection() {
 // ─── Commissions Config ───
 function CommissionsSection() {
   const { toast } = useToast();
-  const [base, setBase] = useState(() => Number(localStorage.getItem('tablio_commission_base') || '50'));
-  const [bonus, setBonus] = useState(() => Number(localStorage.getItem('tablio_commission_bonus') || '25'));
-  const [threshold, setThreshold] = useState(() => Number(localStorage.getItem('tablio_commission_threshold') || '5'));
+  const { valor, guardar } = useConfigTablio('comisiones', { base: 50, bonus: 25, threshold: 5 });
+  const [base, setBase] = useState(valor.base);
+  const [bonus, setBonus] = useState(valor.bonus);
+  const [threshold, setThreshold] = useState(valor.threshold);
+  useEffect(() => { setBase(valor.base); setBonus(valor.bonus); setThreshold(valor.threshold); }, [valor]);
 
-  const save = () => {
-    localStorage.setItem('tablio_commission_base', String(base));
-    localStorage.setItem('tablio_commission_bonus', String(bonus));
-    localStorage.setItem('tablio_commission_threshold', String(threshold));
-    toast({ title: 'Estructura de comisiones guardada' });
+  const save = async () => {
+    if (await guardar({ base, bonus, threshold })) toast({ title: 'Estructura de comisiones guardada' });
+    else toast({ title: 'No se pudo guardar', description: 'Intenta de nuevo.', variant: 'destructive' });
   };
 
   return (
@@ -135,19 +137,18 @@ function CommissionsSection() {
 // ─── Alerts Config ───
 function AlertsSection() {
   const { toast } = useToast();
-  const [alerts, setAlerts] = useState(() => {
-    const saved = localStorage.getItem('tablio_alerts');
-    return saved ? JSON.parse(saved) : {
-      stale_leads_days: 7,
-      inactive_tenant_days: 14,
-      onboarding_max_days: 7,
-      email_daily_summary: true,
-    };
+  const { valor, guardar } = useConfigTablio('alertas', {
+    stale_leads_days: 7,
+    inactive_tenant_days: 14,
+    onboarding_max_days: 7,
+    email_daily_summary: true,
   });
+  const [alerts, setAlerts] = useState(valor);
+  useEffect(() => { setAlerts(valor); }, [valor]);
 
-  const save = () => {
-    localStorage.setItem('tablio_alerts', JSON.stringify(alerts));
-    toast({ title: 'Alertas configuradas' });
+  const save = async () => {
+    if (await guardar(alerts)) toast({ title: 'Alertas configuradas' });
+    else toast({ title: 'No se pudo guardar', description: 'Intenta de nuevo.', variant: 'destructive' });
   };
 
   return (

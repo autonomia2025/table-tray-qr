@@ -25,7 +25,7 @@ Son trámites de calendario, no de programación. De ellos dependen decisiones d
 | F.5 | Clave de la API de Claude para el chat de soporte | ⏳ |
 | F.6 | **Resend** para correos (transaccionales y marketing): **aprobado**, se configura más adelante | ⏳ |
 | F.7 | Credenciales de Google y cuenta de desarrollador de Apple (registro del comensal) | ⏳ más adelante |
-| F.8 | Fotos reales para el demo · plan de Supabase (Pro) cuando se mida el tiempo real | ⏳ |
+| F.8 | Fotos reales para el demo · **plan Pro de Supabase antes del piloto**: el plan gratis pausa el proyecto tras 7 días sin uso (pasó el 13 de octubre; mientras tanto, la revisión diaria de salud lo mantiene activo) | ⏳ |
 
 ---
 
@@ -46,7 +46,7 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | 1.5 | Mesas y sesiones: abrir, tomar, transferir y cerrar por el servidor | ✅ |
 | 1.6 | Acciones del comensal sin cámara: llamar al mozo, pedir la cuenta, calificar | ✅ |
 | 1.7 | Configuración del local: carta, marca, sucursal, equipo, lealtad, fotos y auditoría | ✅ |
-| 1.8 | Plataforma y backoffice: superadmin, ventas, finanzas, soporte, planes; datos de clientes de Tablio | ⏳ |
+| 1.8 | Plataforma y backoffice: superadmin, ventas, finanzas, soporte, planes; datos de clientes de Tablio | ✅ |
 | 1.9 | Precios por el servidor y pedido manual del mozo por el servidor (cierra la inserción provisoria de pedidos) | ⏳ |
 | 1.10 | Compuerta de seguridad: barrido final de reglas y funciones, ataques del diagnóstico, asesor de Supabase | ⏳ |
 

@@ -16,8 +16,8 @@ const CLOSE_COMMISSION = 50000;
 const PILOT_ACTIVE_COMMISSION = 30000;
 const COMMERCIAL_ACTIVE_COMMISSION = 40000;
 
-// Local storage for expenses (no DB table yet)
-const EXPENSES_KEY = 'tablio_expenses';
+// Los gastos se guardan en la base (tabla gastos_tablio, fase 1.8); antes vivían en el navegador.
+const AUTO_COMISIONES = 'auto-comisiones';
 
 interface Expense {
   id: string;
@@ -38,9 +38,17 @@ const COLORS = [
 ];
 
 export default function FinanzasCostosPage() {
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    try { return JSON.parse(localStorage.getItem(EXPENSES_KEY) || '[]'); } catch { return []; }
-  });
+  const [gastos, setGastos] = useState<Expense[]>([]);
+  const [comisionAuto, setComisionAuto] = useState(0);
+  // Las comisiones se calculan solas y se muestran junto a los gastos guardados.
+  const expenses: Expense[] = comisionAuto > 0
+    ? [...gastos, { id: AUTO_COMISIONES, category: 'Comisiones', description: 'Comisiones vendedores (auto)', amount: comisionAuto, date: new Date().toISOString() }]
+    : gastos;
+
+  const cargarGastos = async () => {
+    const { data } = await supabase.from('gastos_tablio').select('id, categoria, descripcion, monto, fecha').order('fecha', { ascending: false });
+    setGastos((data ?? []).map((g) => ({ id: g.id, category: g.categoria, description: g.descripcion, amount: g.monto, date: g.fecha })));
+  };
   const [newCat, setNewCat] = useState(CATEGORIES[0]);
   const [newDesc, setNewDesc] = useState('');
   const [newAmt, setNewAmt] = useState('');
@@ -65,38 +73,33 @@ export default function FinanzasCostosPage() {
       const commissionCosts = closedLeads * CLOSE_COMMISSION + paying.reduce((s: number, _: any, i: number) =>
         s + (i < PILOT_THRESHOLD ? PILOT_ACTIVE_COMMISSION : COMMERCIAL_ACTIVE_COMMISSION), 0);
 
-      // Auto-add commission as expense category if not present
-      setExpenses(prev => {
-        const hasComm = prev.some(e => e.category === 'Comisiones');
-        if (!hasComm && commissionCosts > 0) {
-          return [...prev, { id: 'auto-comisiones', category: 'Comisiones', description: 'Comisiones vendedores (auto)', amount: commissionCosts, date: new Date().toISOString() }];
-        }
-        return prev.map(e => e.id === 'auto-comisiones' ? { ...e, amount: commissionCosts } : e);
-      });
+      setComisionAuto(commissionCosts);
     };
     load();
+    cargarGastos();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(EXPENSES_KEY, JSON.stringify(expenses));
-  }, [expenses]);
-
-  const addExpense = () => {
-    const amount = parseFloat(newAmt);
+  const addExpense = async () => {
+    const amount = Math.round(Number(newAmt));
     if (!amount || amount <= 0) { toast.error('Monto inválido'); return; }
-    setExpenses(prev => [...prev, {
-      id: crypto.randomUUID(),
-      category: newCat,
-      description: newDesc || newCat,
-      amount,
-      date: new Date().toISOString(),
-    }]);
+    const { error } = await supabase.from('gastos_tablio').insert({
+      categoria: newCat,
+      descripcion: (newDesc || newCat).slice(0, 200),
+      monto: amount,
+    });
+    if (error) { toast.error('No se pudo guardar el gasto'); return; }
     setNewDesc('');
     setNewAmt('');
     toast.success('Gasto agregado');
+    cargarGastos();
   };
 
-  const removeExpense = (id: string) => setExpenses(prev => prev.filter(e => e.id !== id));
+  const removeExpense = async (id: string) => {
+    if (id === AUTO_COMISIONES) return; // se calcula sola
+    const { error } = await supabase.from('gastos_tablio').delete().eq('id', id);
+    if (error) { toast.error('No se pudo eliminar el gasto'); return; }
+    cargarGastos();
+  };
 
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const grossMargin = mrr > 0 ? Math.round(((mrr - totalExpenses) / mrr) * 100) : 0;
@@ -169,7 +172,7 @@ export default function FinanzasCostosPage() {
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <Input placeholder="Descripción" value={newDesc} onChange={e => setNewDesc(e.target.value)} />
-              <Input placeholder="Monto USD" type="number" value={newAmt} onChange={e => setNewAmt(e.target.value)} />
+              <Input placeholder="Monto en pesos" type="number" value={newAmt} onChange={e => setNewAmt(e.target.value)} />
               <Button onClick={addExpense} className="w-full gap-2" size="sm">
                 <Plus className="w-3 h-3" /> Agregar gasto
               </Button>

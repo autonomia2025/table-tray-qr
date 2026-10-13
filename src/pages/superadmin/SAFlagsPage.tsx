@@ -63,10 +63,12 @@ export default function SAFlagsPage() {
 
     const newVal = !flag.enabled;
 
-    if (flag.fromDb) {
-      await supabase.from('feature_flags').update({ default_enabled: newVal }).eq('key', key);
-    } else {
-      await supabase.from('feature_flags').insert({ key, default_enabled: newVal, description: flag.description });
+    const { error } = flag.fromDb
+      ? await supabase.from('feature_flags').update({ default_enabled: newVal }).eq('key', key)
+      : await supabase.from('feature_flags').insert({ key, default_enabled: newVal, description: flag.description });
+    if (error) {
+      toast({ title: 'No se pudo guardar el cambio', description: 'Intenta de nuevo.', variant: 'destructive' });
+      return;
     }
 
     setFlags(prev => prev.map(f => f.key === key ? { ...f, enabled: newVal, fromDb: true } : f));

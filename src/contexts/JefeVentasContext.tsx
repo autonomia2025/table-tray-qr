@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useSesion } from '@/contexts/SesionContext';
 import { supabase } from '@/integrations/supabase/client';
+import { registrarAccesoSoporte } from '@/lib/soporte';
 
 interface JefeVentasProfile {
   id: string;
@@ -47,6 +48,7 @@ export const JefeVentasProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setImpersonatingIdState(id);
     if (id) {
       sessionStorage.setItem('jv_impersonating', id);
+      registrarAccesoSoporte('miembro', id);
     } else {
       sessionStorage.removeItem('jv_impersonating');
     }

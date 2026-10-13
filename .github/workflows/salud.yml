@@ -1,0 +1,43 @@
+# Revisión diaria de salud: la app publicada y la base responden.
+# Si algo falla, GitHub avisa por correo al dueño del repositorio.
+# Además, la actividad diaria evita que Supabase pause el proyecto del plan gratis
+# por inactividad (le pasó el 13 de octubre de 2026, tras 11 días sin uso).
+name: Salud diaria
+
+on:
+  schedule:
+    - cron: "0 12 * * *" # todos los días, 09:00 de Chile (12:00 UTC)
+  workflow_dispatch:
+
+env:
+  APP_URL: https://table-tray-qr.vercel.app
+  SUPABASE_URL: https://iznwvklzmyhzalabgfxl.supabase.co
+  # Clave pública (la misma que usa el navegador); no da acceso a nada privado.
+  SUPABASE_PUBLISHABLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6bnd2a2x6bXloemFsYWJnZnhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4ODAyNDMsImV4cCI6MjEwNjQ1NjI0M30.thX4nOQ54k5NZNXdUw4Us--yCtll_Daaj1Qyf1m_pDY
+
+jobs:
+  salud:
+    name: La app y la base responden
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: La app publicada abre
+        run: |
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$APP_URL/")
+          echo "App: $codigo"
+          test "$codigo" = "200"
+
+      - name: La base responde (planes públicos)
+        run: |
+          codigo=$(curl -s -o /tmp/r.json -w "%{http_code}" --max-time 30 \
+            "$SUPABASE_URL/rest/v1/plans?select=id&limit=1" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
+          echo "Base: $codigo"
+          test "$codigo" = "200"
+
+      - name: El inicio de sesión responde
+        run: |
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            "$SUPABASE_URL/auth/v1/health" -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
+          echo "Auth: $codigo"
+          test "$codigo" = "200"

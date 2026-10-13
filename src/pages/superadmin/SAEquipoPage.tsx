@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { supabase } from '@/integrations/supabase/client';
+import { registrarAccesoSoporte } from '@/lib/soporte';
 import { useSuperAdmin } from '@/contexts/SuperAdminContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -121,6 +122,7 @@ export default function SAEquipoPage() {
     const config = ROLE_CONFIG[member.role] || ROLE_CONFIG.vendedor;
     // Store in sessionStorage for the target panel's context to pick up
     sessionStorage.setItem('superadmin_impersonating', member.id);
+    registrarAccesoSoporte('miembro', member.id);
     setImpersonating(member.user_id);
     navigate(config.panel);
   };

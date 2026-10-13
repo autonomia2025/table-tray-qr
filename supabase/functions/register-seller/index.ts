@@ -60,54 +60,88 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Create auth user
+    // 2. Reservar la invitación de forma atómica (fase 1.8): si dos personas usan el mismo enlace
+    //    a la vez, solo una gana. Se libera si algo falla después.
+    const ahora = new Date().toISOString();
+    const { data: reservada } = await supabaseAdmin
+      .from("backoffice_invitations")
+      .update({ used_at: ahora })
+      .eq("id", invitation.id)
+      .is("used_at", null)
+      .select("id")
+      .maybeSingle();
+    if (!reservada) {
+      return new Response(
+        JSON.stringify({ error: "Esta invitación ya fue utilizada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const liberar = () =>
+      supabaseAdmin.from("backoffice_invitations").update({ used_at: null }).eq("id", invitation.id);
+
+    // 3. Crear la cuenta
+    const correo = String(email).trim().toLowerCase();
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: correo,
       password,
       email_confirm: true,
     });
 
-    if (authError) {
-      if (authError.message.includes("already been registered")) {
-        return new Response(
-          JSON.stringify({ error: "Este email ya está registrado." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (authError || !authData.user) {
+      await liberar();
+      const yaExiste = /already been registered|already registered|exists/i.test(authError?.message ?? "");
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: yaExiste ? "Este correo ya está registrado." : "No se pudo crear la cuenta. Intenta de nuevo." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const userId = authData.user.id;
 
-    // 3. Create backoffice_members record
-    const { data: member, error: memberError } = await supabaseAdmin
+    // 4. Ficha del miembro: si el superadmin ya la había creado con este correo (sin cuenta), se vincula;
+    //    si no, se crea. Así no quedan miembros duplicados.
+    const { data: existente } = await supabaseAdmin
       .from("backoffice_members")
-      .insert({
-        name: name.trim(),
-        email: email.trim(),
-        role: invitation.role,
-        zone: invitation.zone,
-        is_active: true,
-        user_id: userId,
-      })
-      .select('id')
-      .single();
+      .select("id")
+      .ilike("email", correo)
+      .is("user_id", null)
+      .eq("role", invitation.role)
+      .limit(1)
+      .maybeSingle();
 
-    if (memberError) {
+    const { data: member, error: memberError } = existente
+      ? await supabaseAdmin
+          .from("backoffice_members")
+          .update({ user_id: userId, name: name.trim(), is_active: true, zone: invitation.zone })
+          .eq("id", existente.id)
+          .select("id")
+          .single()
+      : await supabaseAdmin
+          .from("backoffice_members")
+          .insert({
+            name: name.trim(),
+            email: correo,
+            role: invitation.role,
+            zone: invitation.zone,
+            is_active: true,
+            user_id: userId,
+          })
+          .select("id")
+          .single();
+
+    if (memberError || !member) {
       await supabaseAdmin.auth.admin.deleteUser(userId);
+      await liberar();
       return new Response(
         JSON.stringify({ error: "Error al crear el perfil" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 4. Mark invitation as used
+    // 5. Dejar anotado quién usó la invitación
     await supabaseAdmin
       .from("backoffice_invitations")
-      .update({ used_at: new Date().toISOString(), used_by_member_id: member.id })
+      .update({ used_by_member_id: member.id })
       .eq("id", invitation.id);
 
     return new Response(
@@ -115,8 +149,9 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
+    console.error("register-seller error:", e);
     return new Response(
-      JSON.stringify({ error: e.message }),
+      JSON.stringify({ error: "Ocurrió un error. Intenta de nuevo." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

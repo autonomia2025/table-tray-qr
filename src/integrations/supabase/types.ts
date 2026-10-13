@@ -410,6 +410,27 @@ export type Database = {
           },
         ]
       }
+      configuracion_tablio: {
+        Row: {
+          clave: string
+          updated_at: string
+          updated_by: string | null
+          valor: Json
+        }
+        Insert: {
+          clave: string
+          updated_at?: string
+          updated_by?: string | null
+          valor: Json
+        }
+        Update: {
+          clave?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: Json
+        }
+        Relationships: []
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -431,6 +452,36 @@ export type Database = {
           description?: string | null
           id?: string
           key?: string
+        }
+        Relationships: []
+      }
+      gastos_tablio: {
+        Row: {
+          categoria: string
+          creado_por: string | null
+          created_at: string
+          descripcion: string
+          fecha: string
+          id: string
+          monto: number
+        }
+        Insert: {
+          categoria: string
+          creado_por?: string | null
+          created_at?: string
+          descripcion: string
+          fecha?: string
+          id?: string
+          monto: number
+        }
+        Update: {
+          categoria?: string
+          creado_por?: string | null
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          id?: string
+          monto?: number
         }
         Relationships: []
       }
@@ -2205,6 +2256,7 @@ export type Database = {
         Returns: Json
       }
       es_backoffice: { Args: never; Returns: boolean }
+      es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
       get_tenant_id: { Args: never; Returns: string }
       has_backoffice_role: {
         Args: { _role: string; _user_id: string }
@@ -2224,6 +2276,7 @@ export type Database = {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined
       }
+      mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       pedir_cuenta: {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
@@ -2235,6 +2288,10 @@ export type Database = {
       }
       puede_editar_fotos: { Args: { _carpeta: string }; Returns: boolean }
       rango_estado: { Args: { _estado: string }; Returns: number }
+      registrar_acceso_soporte: {
+        Args: { _id: string; _tipo: string }
+        Returns: undefined
+      }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }
         Returns: boolean
