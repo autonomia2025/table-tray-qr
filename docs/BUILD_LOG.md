@@ -30,6 +30,9 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
   - el resumen muestra opciones y notas;
   - al confirmar avisa el número y el total que calculó el servidor, y si hay que cobrar para que pase a cocina.
 - **Botón nuevo "Tomar pedido"** en las mesas del mozo. La pantalla de pedido manual existía, pero ningún botón llevaba a ella.
+- **Detalles que salieron al revisar las fotos del recorrido:**
+  - la mesa del mozo decía "🍳 En cocina" con un pedido que en realidad esperaba el cobro; ahora dice **"💳 Por cobrar"**;
+  - en el panel de pedidos del dueño, los pedidos sin cobrar llevan la etiqueta **"Por cobrar"**, y cada producto muestra las opciones elegidas ("Tres cuartos · Palta") y la nota.
 
 **Pruebas:**
 - `tests/seguridad/f1-9-precios.test.ts`: 8 pruebas.

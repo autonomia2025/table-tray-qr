@@ -25,6 +25,7 @@ interface OrderRow {
   delivered_at: string | null;
   cancelled_reason: string | null;
   table_id: string;
+  payment_status: string | null;
 }
 
 interface OrderItem {
@@ -91,6 +92,15 @@ const ESTADO_TEXTO: Record<EstadoPedido, string> = {
   cancelled: "cancelado",
 };
 
+/** Opciones elegidas de un producto ("Pisco 40° premium · Ginger ale"). */
+function textoOpciones(opciones: unknown): string {
+  if (!Array.isArray(opciones)) return "";
+  return opciones
+    .map((o) => (o && typeof o === "object" && "modifierName" in o ? String((o as { modifierName: unknown }).modifierName) : ""))
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export default function PedidosPage() {
   const { branchId, tenantId } = useAdmin();
   const { toast } = useToast();
@@ -118,7 +128,7 @@ export default function PedidosPage() {
     const [ordersRes, tablesRes] = await Promise.all([
       supabase
         .from("orders")
-        .select("id, order_number, status, total_amount, notes, source, confirmed_at, kitchen_accepted_at, ready_at, delivered_at, cancelled_reason, table_id")
+        .select("id, order_number, status, total_amount, notes, source, confirmed_at, kitchen_accepted_at, ready_at, delivered_at, cancelled_reason, table_id, payment_status")
         .eq("branch_id", branchId)
         .gte("confirmed_at", today.toISOString())
         .order("confirmed_at", { ascending: false }),
@@ -263,13 +273,21 @@ export default function PedidosPage() {
           {timeAgo(order.confirmed_at)}
         </span>
       </div>
-      <div className="flex items-center gap-2 mb-2">
-        <Badge variant="outline" className="text-[10px]">Mesa {tableMap[order.table_id] ?? "?"}</Badge>
+      <div className="flex flex-wrap items-center gap-1.5 mb-2">
+        <Badge variant="outline" className="text-[10px] whitespace-nowrap">Mesa {tableMap[order.table_id] ?? "?"}</Badge>
         {order.source === "waiter" && <Badge variant="secondary" className="text-[10px]">Mozo</Badge>}
+        {order.payment_status !== "paid" && order.payment_status !== "refunded" && order.status !== "cancelled" && (
+          <Badge variant="outline" className="text-[10px] whitespace-nowrap border-primary text-primary">Por cobrar</Badge>
+        )}
       </div>
       <div className="space-y-0.5">
         {(itemsMap[order.id] ?? []).slice(0, 3).map((item, i) => (
-          <p key={i} className="text-xs text-foreground truncate">{item.quantity}× {item.menu_item_name}</p>
+          <div key={i}>
+            <p className="text-xs text-foreground truncate">{item.quantity}× {item.menu_item_name}</p>
+            {textoOpciones(item.selected_modifiers) && (
+              <p className="text-[11px] text-muted-foreground truncate pl-3">{textoOpciones(item.selected_modifiers)}</p>
+            )}
+          </div>
         ))}
         {(itemsMap[order.id]?.length ?? 0) > 3 && (
           <p className="text-xs text-muted-foreground">+{(itemsMap[order.id]?.length ?? 0) - 3} más</p>
@@ -367,7 +385,8 @@ export default function PedidosPage() {
               <div key={item.id} className="flex justify-between items-start py-1 border-b border-border last:border-0">
                 <div>
                   <p className="text-sm font-medium">{item.quantity}× {item.menu_item_name}</p>
-                  {item.item_notes && <p className="text-xs text-muted-foreground">{item.item_notes}</p>}
+                  {textoOpciones(item.selected_modifiers) && <p className="text-xs text-muted-foreground">{textoOpciones(item.selected_modifiers)}</p>}
+                  {item.item_notes && <p className="text-xs text-muted-foreground italic">"{item.item_notes}"</p>}
                 </div>
                 <span className="text-sm font-medium">{formatCLP(item.subtotal)}</span>
               </div>

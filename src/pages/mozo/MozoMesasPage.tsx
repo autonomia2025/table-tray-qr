@@ -27,6 +27,8 @@ interface TableData {
   sessionTotal: number;
   sessionOpenedAt: string | null;
   activeOrdersCount: number;
+  /** Pedidos sin cobrar que en prepago esperan el pago para pasar a cocina. */
+  porCobrar: number;
   tipAmount: number;
   tipPercentage: number;
 }
@@ -83,6 +85,7 @@ function getPriorityStyles(priority: number): string {
 function getStatusPill(t: TableData): string {
   if (t.hasBillRequest) return '🧾 Pide la cuenta';
   if (t.hasReadyFood) return '✓ Lista para entregar';
+  if (t.porCobrar > 0 && t.porCobrar === t.activeOrdersCount) return '💳 Por cobrar';
   if (t.activeOrdersCount > 0) return '🍳 En cocina';
   if ((t.status === 'occupied' || t.status === 'waiting_bill') && t.sessionOpenedAt) {
     return `Ocupada · ${minutesAgo(t.sessionOpenedAt)}min`;
@@ -114,13 +117,15 @@ export default function MozoMesasPage() {
       .order('number');
 
     if (!tablesData) return;
+    const { data: sucursal } = await supabase.from('branches').select('payment_mode').eq('id', branchId).maybeSingle();
+    const prepago = sucursal?.payment_mode === 'prepaid';
 
     const occupiedIds = tablesData
       .filter(t => t.status === 'occupied' || t.status === 'waiting_bill')
       .map(t => t.id);
 
     let sessionsMap: Record<string, { total: number; opened: string }> = {};
-    let ordersMap: Record<string, { confirmed: number; ready: number; inKitchen: number }> = {};
+    let ordersMap: Record<string, { confirmed: number; ready: number; inKitchen: number; porCobrar: number }> = {};
     let billMap: Record<string, number> = {};
     let callMap: Record<string, number> = {};
     let tipMap: Record<string, { amount: number; percentage: number }> = {};
@@ -134,7 +139,7 @@ export default function MozoMesasPage() {
           .eq('is_active', true),
         supabase
           .from('orders')
-          .select('id, table_id, status')
+          .select('id, table_id, status, payment_status')
           .in('table_id', occupiedIds)
           .in('status', ['confirmed', 'in_kitchen', 'ready']),
         supabase
@@ -153,7 +158,8 @@ export default function MozoMesasPage() {
         sessionsMap[s.table_id] = { total: s.total_amount ?? 0, opened: s.opened_at ?? '' };
       });
       activeOrders?.forEach(o => {
-        if (!ordersMap[o.table_id]) ordersMap[o.table_id] = { confirmed: 0, ready: 0, inKitchen: 0 };
+        if (!ordersMap[o.table_id]) ordersMap[o.table_id] = { confirmed: 0, ready: 0, inKitchen: 0, porCobrar: 0 };
+        if (prepago && o.status === 'confirmed' && o.payment_status !== 'paid') ordersMap[o.table_id].porCobrar++;
         if (o.status === 'confirmed') ordersMap[o.table_id].confirmed++;
         else if (o.status === 'ready') ordersMap[o.table_id].ready++;
         else if (o.status === 'in_kitchen') ordersMap[o.table_id].inKitchen++;
@@ -168,7 +174,7 @@ export default function MozoMesasPage() {
     }
 
     setTables(tablesData.map(t => {
-      const om = ordersMap[t.id] ?? { confirmed: 0, ready: 0, inKitchen: 0 };
+      const om = ordersMap[t.id] ?? { confirmed: 0, ready: 0, inKitchen: 0, porCobrar: 0 };
       return {
         ...t,
         hasNewOrder: om.confirmed > 0 && !t.assigned_waiter_id,
@@ -179,6 +185,7 @@ export default function MozoMesasPage() {
         sessionTotal: sessionsMap[t.id]?.total ?? 0,
         sessionOpenedAt: sessionsMap[t.id]?.opened ?? null,
         activeOrdersCount: om.confirmed + om.ready + om.inKitchen,
+        porCobrar: om.porCobrar,
         tipAmount: tipMap[t.id]?.amount ?? 0,
         tipPercentage: tipMap[t.id]?.percentage ?? 0,
       };

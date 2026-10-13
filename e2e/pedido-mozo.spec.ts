@@ -49,6 +49,8 @@ test("el mozo toma un pedido con opciones obligatorias y extras; la cocina lo ve
   const aviso = page.getByText(/Pedido #\d+ creado · /).first();
   await expect(aviso).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText(/cóbralo para que pase a cocina/).first()).toBeVisible();
+  // La mesa dice que hay que cobrar (no "en cocina")
+  await expect(tarjeta.getByText("💳 Por cobrar")).toBeVisible({ timeout: 10_000 });
   await foto(page, "06-mozo-pedido-creado");
 
   // La cocina (pantalla fija de escritorio) lo ve como "esperando pago", no para preparar
@@ -59,4 +61,14 @@ test("el mozo toma un pedido con opciones obligatorias y extras; la cocina lo ve
   await expect(kds.getByText(/esperando pago/)).toBeVisible({ timeout: 15_000 });
   await foto(kds, "07-cocina-esperando-pago");
   await cocinaCtx.close();
+
+  // El dueño lo ve marcado "Por cobrar", con las opciones elegidas
+  const duenoCtx = await browser.newContext({ ...devices["Desktop Chrome"] });
+  const admin = await duenoCtx.newPage();
+  await entrar(admin, "owner");
+  await expect(admin).toHaveURL(/\/admin\/demo-tablio\//, { timeout: 15_000 });
+  await admin.goto("/admin/demo-tablio/pedidos");
+  await expect(admin.getByText("Por cobrar").first()).toBeVisible({ timeout: 15_000 });
+  await expect(admin.getByText("Tres cuartos · Palta").first()).toBeVisible();
+  await duenoCtx.close();
 });
