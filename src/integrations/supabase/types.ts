@@ -431,6 +431,29 @@ export type Database = {
         }
         Relationships: []
       }
+      contadores_pedidos: {
+        Row: {
+          branch_id: string
+          ultimo: number
+        }
+        Insert: {
+          branch_id: string
+          ultimo?: number
+        }
+        Update: {
+          branch_id?: string
+          ultimo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contadores_pedidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -2237,6 +2260,10 @@ export type Database = {
       }
       atender_cuenta: { Args: { _id: string }; Returns: undefined }
       atender_llamado: { Args: { _id: string }; Returns: undefined }
+      calcular_precios: {
+        Args: { _branch_id: string; _items: Json; _tenant_id: string }
+        Returns: Json
+      }
       calificar_mesa: {
         Args: { _estrellas: number; _qr_token: string }
         Returns: undefined
@@ -2253,6 +2280,10 @@ export type Database = {
       cancelar_llamado: { Args: { _id: string }; Returns: undefined }
       cerrar_mesa: {
         Args: { _motivo?: string; _table_id: string }
+        Returns: Json
+      }
+      crear_pedido_mozo: {
+        Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
       }
       es_backoffice: { Args: never; Returns: boolean }
@@ -2301,6 +2332,7 @@ export type Database = {
         Args: { _activo: boolean; _tenant_id: string }
         Returns: undefined
       }
+      siguiente_numero_pedido: { Args: { _branch_id: string }; Returns: number }
       tenants_privado: {
         Args: never
         Returns: {

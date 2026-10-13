@@ -110,23 +110,22 @@ describe.skipIf(!hayCredenciales)("acciones del comensal", () => {
     expect((await comensal.rpc("pedir_cuenta", { _qr_token: qrMesa(5)!, _propina: 0, _porcentaje: 0 })).error?.message).toContain("nada pendiente");
 
     // Un pedido sin pagar tomado por el mozo (cuenta abierta)
+    const pedido = await mozo.rpc("crear_pedido_mozo", { _table_id: id, _items: [{ menu_item_id: (await anonimo().from("menu_items").select("id").eq("tenant_id", DEMO.tenant).eq("name", "Agua mineral").single()).data!.id, quantity: 5 }] });
+    expect(pedido.error).toBeNull();
+    const total = (pedido.data as { total: number }).total;
     const { data: sesion } = await dueno.from("table_sessions").select("id").eq("table_id", id).eq("is_active", true).single();
-    await mozo.from("orders").insert({
-      tenant_id: DEMO.tenant, branch_id: DEMO.sucursal, table_id: id, session_id: sesion!.id,
-      order_number: 8000 + Math.floor(Math.random() * 900), total_amount: 10000, status: "confirmed", source: "waiter",
-    });
 
     // La propina no puede ser mayor que la cuenta
-    expect((await comensal.rpc("pedir_cuenta", { _qr_token: qrMesa(5)!, _propina: 50000, _porcentaje: 0 })).error).not.toBeNull();
+    expect((await comensal.rpc("pedir_cuenta", { _qr_token: qrMesa(5)!, _propina: 10_000_000, _porcentaje: 0 })).error).not.toBeNull();
 
     const r = await comensal.rpc("pedir_cuenta", { _qr_token: qrMesa(5)!, _propina: 1000, _porcentaje: 10 });
     expect(r.error).toBeNull();
-    expect(r.data).toMatchObject({ total: 10000, propina: 1000, a_pagar: 11000 });
+    expect(r.data).toMatchObject({ total, propina: 1000, a_pagar: total + 1000 });
     const otra = await comensal.rpc("pedir_cuenta", { _qr_token: qrMesa(5)!, _propina: 1500, _porcentaje: 15 });
     expect((otra.data as { id: string }).id).toBe((r.data as { id: string }).id);
 
     const { data: cuentas } = await dueno.from("bill_requests").select("total_amount, tip_amount, status").eq("session_id", sesion!.id);
-    expect(cuentas).toEqual([{ total_amount: 10000, tip_amount: 1500, status: "pending" }]);
+    expect(cuentas).toEqual([{ total_amount: total, tip_amount: 1500, status: "pending" }]);
     const { data: mesa } = await dueno.from("tables").select("status").eq("id", id).single();
     expect(mesa!.status).toBe("waiting_bill");
 

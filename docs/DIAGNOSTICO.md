@@ -111,7 +111,7 @@ Lectura pública total (`USING (true)`) en: `orders` (`20260307214709_...sql:368
 
 **Agravante importante para la plata:** cuando el mozo cierra la mesa, la cuenta queda `paid` **sin crear ningún pago** y sin marcar los pedidos como pagados. En cuenta abierta, la plata cobrada por el mozo no queda registrada en ningún lado y la caja no cuadra.
 
-### 3.7 El pedido manual del mozo usa precios del navegador — ✅ CONFIRMADO
+### 3.7 El pedido manual del mozo usa precios del navegador — ✅ CONFIRMADO · 🔒 Resuelto en la fase 1.9 (`crear_pedido_mozo`)
 
 - Total calculado en el navegador: `src/pages/mozo/MozoPedidoManualPage.tsx:109`.
 - Inserta sesión, pedido y productos directo desde el navegador: `:126-134, 151-184`.
@@ -162,8 +162,8 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | N3 | ✅ **Resuelto en las fases 1.2 y 1.8** (el acceso lo decide la sesión verificada, y entrar a un local o "ver como" un miembro queda en la auditoría). La suplantación del superadmin es un dato del navegador (`sessionStorage.superadmin_impersonating`), **no queda registrada** (rompe la regla 7) y salta la verificación de acceso en el panel del dueño | 🔴 Alto | `src/contexts/AdminContext.tsx:39-42, 75-78`, `SATenantsPage.tsx:211` |
 | N4 | ✅ **Resuelto en la fase 1.3** (los sellos van ligados a la cuenta verificada del cliente). **Robo de premios de lealtad:** `loyalty-status` entrega los premios de cualquier email sin verificarlo, y `process-payment` permite canjear un premio con solo poner ese email. Además la búsqueda usa `ilike`, así que un email con `%` puede coincidir con otros clientes | 🟠 Alto | `loyalty-status/index.ts:38-53`, `process-payment/index.ts:329-334, 369-379` |
 | N5 | **Sellos sin límite:** se suma una visita por cada pago. Diez pagos de $1.000 son diez visitas. El brief exige límites | 🟠 Medio | `process-payment/index.ts:343` |
-| N6 | **Modificadores inventados:** si el navegador manda un modificador que no existe, se cobra $0 pero llega igual a cocina. Tampoco se validan los modificadores obligatorios | 🟠 Medio | `process-payment/index.ts:160-166` |
-| N7 | El servidor no revisa si el local está activo, si la sucursal está abierta ni si la categoría está en su horario antes de cobrar | 🟠 Medio | `process-payment/index.ts:59-65` |
+| N6 | ✅ **Resuelto en la fase 1.9** (`calcular_precios` rechaza opciones inventadas, repetidas o faltantes). **Modificadores inventados:** si el navegador manda un modificador que no existe, se cobra $0 pero llega igual a cocina. Tampoco se validan los modificadores obligatorios | 🟠 Medio | `process-payment/index.ts:160-166` |
+| N7 | ✅ **Resuelto en la fase 1.9** (local activo, sucursal abierta, día y horario de cada categoría). El servidor no revisa si el local está activo, si la sucursal está abierta ni si la categoría está en su horario antes de cobrar | 🟠 Medio | `process-payment/index.ts:59-65` |
 | N8 | ✅ **Resuelto en las fases 1.4 a 1.7** (cada acción revisa el rol en la base; el mozo ya no cambia precios, modo de pago ni pagos). Los roles no se distinguen en la base: un mozo (miembro del local) puede cambiar precios, el modo de pago de la sucursal o marcar pedidos como pagados | 🟠 Medio | todas las políticas `*_staff_manage` |
 | N9 | El cierre de caja usa días en UTC: una noche de bar (20:00 a 03:00 de Chile) queda partida en dos días | 🟠 Medio | `reconcile-payments/index.ts:57-58` |
 | N10 | Un cierre de caja ya cerrado se puede reabrir y sobrescribir. Y cualquier miembro del local, incluido un mozo, puede cerrar caja | 🟠 Medio | `reconcile-payments/index.ts:53, 77-95` |

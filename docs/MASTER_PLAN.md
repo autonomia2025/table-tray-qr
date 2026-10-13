@@ -47,12 +47,12 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | 1.6 | Acciones del comensal sin cámara: llamar al mozo, pedir la cuenta, calificar | ✅ |
 | 1.7 | Configuración del local: carta, marca, sucursal, equipo, lealtad, fotos y auditoría | ✅ |
 | 1.8 | Plataforma y backoffice: superadmin, ventas, finanzas, soporte, planes; datos de clientes de Tablio | ✅ |
-| 1.9 | Precios por el servidor y pedido manual del mozo por el servidor (cierra la inserción provisoria de pedidos) | ⏳ |
+| 1.9 | Precios por el servidor y pedido manual del mozo por el servidor (cierra la inserción provisoria de pedidos) | ✅ |
 | 1.10 | Compuerta de seguridad: barrido final de reglas y funciones, ataques del diagnóstico, asesor de Supabase | ⏳ |
 
 ## Fase 2 — Núcleo de la plata ⏳
 
-Cotización con precio congelado → intento de pago reservado antes de cobrar → confirmación atómica (`confirmar_pago`) → checkout → **"Pagar al mozo"** (efectivo o POS: el mozo cobra, lo registra y recién ahí va a cocina) → caja con permisos del cajero → reembolsos → día de negocio y cierre diario bloqueado → compuerta de pruebas de plata (pago repetido, pagos simultáneos, pago tardío, reembolso doble, dos personas pagando lo último).
+Cotización con precio congelado → intento de pago reservado antes de cobrar → confirmación atómica (`confirmar_pago`) → checkout → **"Pagar al mozo"** (efectivo o POS: el mozo cobra, lo registra y recién ahí va a cocina) → caja con permisos del cajero → reembolsos → día de negocio y **cierre de caja con conciliación automática** (al cerrar, el sistema cuadra solo lo cobrado en la app, el efectivo y el POS registrados y los reembolsos, y marca las diferencias; el cierre queda bloqueado) → compuerta de pruebas de plata (pago repetido, pagos simultáneos, pago tardío, reembolso doble, dos personas pagando lo último).
 
 - Diseño de pago asíncrono, para que la pasarela se elija más tarde sin rehacer.
 - Cada pago guarda el mozo asignado: informe de propinas por mozo y turno (brief 7).
@@ -76,7 +76,7 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 
 ## Fase 4 — Dinero real ⏳
 
-Pasarela real y su receptor de avisos (webhooks) · boleta electrónica (una por venta) · privacidad Ley 21.719 (consentimiento, borrado, retención; bloqueante: estará vigente al lanzar) · excepciones del cajero (pago sin pedido, monto que no calza, boleta fallida) · correos con Resend.
+Pasarela real y su receptor de avisos (webhooks) · **conciliación automática contra lo que la pasarela deposita** (al cerrar la caja, decisión del fundador del 13 de octubre) · boleta electrónica (una por venta) · privacidad Ley 21.719 (consentimiento, borrado, retención; bloqueante: estará vigente al lanzar) · excepciones del cajero (pago sin pedido, monto que no calza, boleta fallida) · correos con Resend.
 
 ## Fase 5 — Producción y piloto ⏳
 
@@ -92,7 +92,7 @@ Proyecto de producción armado desde el repositorio · dominio y tarjetas impres
 - Pasaporte de la casa: coleccionar estilos y tragos probados, con insignias.
 - Premio sorpresa al pagar (raspe y gana) con presupuesto fijado por el local.
 - **Juegos en la mesa:** trivia corta mientras esperan (el ganador puede llevarse un sello extra) y la ruleta "¿quién invita la próxima?" (solo diversión, no mueve plata).
-- Billeteras digitales reales, conciliación automática, `tiene_funcion()` (módulos por plan).
+- Billeteras digitales reales, `tiene_funcion()` (módulos por plan).
 
 **Fase 8 — El negocio de Tablio:** planes con precio real, cobro a los locales, métricas del backoffice, **noche de trivia en vivo** del bar (pantallas del local y celulares; conecta con el modo eventos).
 

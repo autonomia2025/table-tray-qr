@@ -84,15 +84,15 @@ describe.skipIf(!hayCredenciales)("pedidos", () => {
   });
 
   it("en prepago, la cocina no puede preparar un pedido sin pagar (regla 1)", async () => {
+    // Un pedido tomado por el mozo, todavía sin cobrar (desde la fase 1.9, por el servidor)
     const c = await invitado();
     const mesa = (await c.rpc("unirse_a_mesa", { _qr_token: qrMesa(5)! })).data as { session_id: string; table_id: string };
-    const { data: sinPagar, error } = await mozo
-      .from("orders")
-      .insert({ tenant_id: DEMO.tenant, branch_id: DEMO.sucursal, session_id: mesa.session_id, table_id: mesa.table_id, order_number: 90000 + Math.floor(Math.random() * 9999), total_amount: 1000, source: "waiter" })
-      .select("id")
-      .single();
+    const { data: sinPagar, error } = await mozo.rpc("crear_pedido_mozo", {
+      _table_id: mesa.table_id,
+      _items: [{ menu_item_id: (await anonimo().from("menu_items").select("id").eq("tenant_id", DEMO.tenant).eq("name", "Agua mineral").single()).data!.id, quantity: 1 }],
+    });
     expect(error).toBeNull();
-    const r = await cocina.rpc("cambiar_estado_pedido", { _order_id: sinPagar!.id, _estado: "in_kitchen" });
+    const r = await cocina.rpc("cambiar_estado_pedido", { _order_id: (sinPagar as { order_id: string }).order_id, _estado: "in_kitchen" });
     expect(r.error?.message).toContain("no está pagado");
   });
 

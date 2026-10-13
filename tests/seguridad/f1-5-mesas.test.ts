@@ -123,21 +123,20 @@ describe.skipIf(!hayCredenciales)("mesas y sesiones", () => {
     const apertura = await mozo.rpc("abrir_mesa", { _table_id: id });
     expect(apertura.error).toBeNull();
     const sesion = (apertura.data as { session_id: string }).session_id;
-    const { error: e } = await mozo.from("orders").insert({
-      tenant_id: DEMO.tenant, branch_id: DEMO.sucursal, table_id: id, session_id: sesion,
-      order_number: 9000 + Math.floor(Math.random() * 900), total_amount: 4500, status: "confirmed", source: "waiter",
-    });
-    expect(e).toBeNull();
+    // Pedido del mozo sin cobrar (desde la fase 1.9, por el servidor)
+    const pedido = await mozo.rpc("crear_pedido_mozo", { _table_id: id, _items: [{ menu_item_id: (await anonimo().from("menu_items").select("id").eq("tenant_id", DEMO.tenant).eq("name", "Agua mineral").single()).data!.id, quantity: 3 }] });
+    expect(pedido.error).toBeNull();
+    const monto = (pedido.data as { total: number }).total;
 
     // El total de la sesión lo calcula la base
     const { data: s } = await dueno.from("table_sessions").select("total_amount").eq("id", sesion).single();
-    expect(s!.total_amount).toBe(4500);
+    expect(s!.total_amount).toBe(monto);
 
     expect((await mozo.rpc("cerrar_mesa", { _table_id: id })).error?.message).toContain("sin pagar");
     expect((await dueno.rpc("cerrar_mesa", { _table_id: id })).error?.message).toContain("motivo");
     const cierre = await dueno.rpc("cerrar_mesa", { _table_id: id, _motivo: "se fueron sin pagar" });
     expect(cierre.error).toBeNull();
-    expect(cierre.data).toMatchObject({ pedidos_sin_pagar: 1, monto_sin_pagar: 4500 });
+    expect(cierre.data).toMatchObject({ pedidos_sin_pagar: 1, monto_sin_pagar: monto });
 
     const { data: mesa } = await dueno.from("tables").select("status, assigned_waiter_id").eq("id", id).single();
     expect(mesa).toEqual({ status: "free", assigned_waiter_id: null });

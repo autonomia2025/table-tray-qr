@@ -4,6 +4,60 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-13 — Fase 1.9: precios y pedido del mozo por el servidor ✅
+**Lo que cambió:**
+- **Un solo cálculo de precios en la base: `calcular_precios()`.** Lo usan el pago del comensal (`process-payment`, publicada de nuevo) y el pedido del mozo. Rechaza:
+  - opciones inventadas (antes se cobraban a $0 y llegaban igual a cocina, **N6**), repetidas o faltantes (por ejemplo, el punto de la carne);
+  - demasiadas opciones en un grupo;
+  - productos agotados u ocultos;
+  - productos fuera del día o el horario de su categoría (con horarios que cruzan la medianoche);
+  - cantidades fuera de 1 a 20;
+  - local inactivo o sucursal cerrada (**N7**).
+
+  Los mensajes llegan en español al comensal y al mozo.
+- **El pedido del mozo lo crea el servidor: `crear_pedido_mozo()`.** Antes el navegador del mozo escribía el pedido con sus propios precios (3.7 del diagnóstico). Ahora el servidor:
+  - valida el rol (mozo, encargado, administrador o dueño; no cocina ni caja) y que la mesa sea suya o esté libre;
+  - abre la mesa si hace falta y calcula precios;
+  - numera el pedido y lo deja anotado en el registro de eventos.
+
+  En prepago, el pedido queda "esperando pago" y la cocina no lo prepara hasta que se cobre (el cobro del mozo llega en la fase 2). En cuenta abierta va directo a cocina.
+- **Se cerró la inserción provisoria** de pedidos y productos pedidos que quedó en la fase 1.4. Desde el navegador ya nadie crea pedidos.
+- **Número de pedido sin choques:** un contador por sucursal (`siguiente_numero_pedido`). Antes era "contar pedidos + 1", y dos pedidos al mismo tiempo podían repetir número. El reinicio del demo también reinicia el contador.
+
+**App:**
+- **Pedido del mozo, rehecho:**
+  - **elige las opciones de cada plato** (obligatorias marcadas; el botón dice qué falta), con extras y nota para cocina;
+  - el resumen muestra opciones y notas;
+  - al confirmar avisa el número y el total que calculó el servidor, y si hay que cobrar para que pase a cocina.
+- **Botón nuevo "Tomar pedido"** en las mesas del mozo. La pantalla de pedido manual existía, pero ningún botón llevaba a ella.
+
+**Pruebas:**
+- `tests/seguridad/f1-9-precios.test.ts`: 8 pruebas.
+  - Nadie crea pedidos directo.
+  - Pedido del mozo con opciones y extras: total, número, registro y espera de pago.
+  - Opciones inventadas, faltantes, repetidas o de más; agotados; cantidades; productos ajenos; pedido vacío.
+  - Solo el personal de sala, y en sus mesas.
+  - **Seis pedidos al mismo tiempo, sin números repetidos.**
+  - **El pago del comensal:** rechaza opciones inventadas o faltantes, cobra los extras reales y, con un **pago repetido con la misma clave**, no cobra dos veces.
+  - Sucursal cerrada.
+  - El dueño de otro local no toma pedidos en el demo.
+- Las pruebas de las fases 1.4 a 1.6 que creaban pedidos sin pagar escribiendo directo ahora usan `crear_pedido_mozo`.
+- `e2e/pedido-mozo.spec.ts` (en celular):
+  - el mozo toma la mesa y toca "Tomar pedido";
+  - la hamburguesa no se puede agregar sin el punto de la carne;
+  - elige punto, palta y nota, suma un agua y revisa el resumen;
+  - confirma y la cocina lo ve "esperando pago".
+- **Recorrido con fotos** (pedido del fundador): `foto()` en `e2e/apoyo/recorrido.ts` guarda fotos con `RECORRIDO=<carpeta>`.
+- **Base desechable:** 93 de seguridad y 53 de navegador. **Base de pruebas:** 89 de seguridad (más 4 que solo corren con "Local Ajeno"). Estilo: bajaron los errores.
+
+**Conciliación al cerrar la caja** (recordatorio del fundador): queda en el plan como parte del cierre de caja.
+- **Fase 2:** cuadra lo cobrado en la app, el efectivo, el POS y los reembolsos, y marca las diferencias.
+- **Fase 4:** se agrega lo que deposita la pasarela.
+
+Ya no queda "a mano en el piloto".
+
+---
+
 ## 2026-10-13 — Fase 1.8: plataforma y backoffice ✅
 **Lo que estaba abierto y se cerró:**
 - **Pagos a la vista:** cualquiera, sin sesión, leía los pagos de las mesas abiertas, con el correo del cliente.

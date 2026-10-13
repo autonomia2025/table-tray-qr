@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { cambiarEstadoPedido } from '@/lib/pedidos';
@@ -90,6 +91,7 @@ function getStatusPill(t: TableData): string {
 }
 
 export default function MozoMesasPage() {
+  const navigate = useNavigate();
   const { branchId, staffId } = useWaiters();
   const { toast } = useToast();
   const [tables, setTables] = useState<TableData[]>([]);
@@ -425,6 +427,17 @@ export default function MozoMesasPage() {
                     onClick={(e) => { e.stopPropagation(); handleAttendCall(t.id); }}
                   >
                     {actionLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Atender llamada'}
+                  </Button>
+                )}
+                {/* Tomar el pedido de una mesa que atiende (fase 1.9) */}
+                {isMine && priority !== 1 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full h-8 text-xs mt-1.5"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/mozo/pedido-manual/${t.id}`); }}
+                  >
+                    Tomar pedido
                   </Button>
                 )}
                 {priority === 1 && (
