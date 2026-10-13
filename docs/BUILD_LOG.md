@@ -4,6 +4,57 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-13 — Fase 1.10: compuerta de seguridad ✅ · Fase 1 terminada
+**Barrido completo antes de tocar la plata.** El estado de partida era bueno: todas las tablas con reglas de acceso, y las únicas lecturas públicas son la carta, la marca, los planes y las funciones globales, a propósito. Se cerró lo que quedaba:
+- **Pagos, reembolsos y cierres:** antes los veía cualquier miembro del local (también cocina y mozos), con el correo del cliente. Ahora solo dueño, administrador, encargado y caja (y Tablio). El navegador no puede escribirlos (regla 2 del brief).
+- **El mozo sigue viendo "pagado hace…"** gracias a la nueva columna `orders.paid_at`, que escribe solo el servidor, sin acceso a los pagos.
+- **Funciones antiguas** (`get_tenant_id`, `is_tenant_member`, `has_staff_role`, `has_backoffice_role`): cualquiera, incluso sin sesión, podía llamarlas. Ninguna regla las usa ya, así que se cerraron. `is_platform_admin` queda solo para usuarios con sesión.
+- **Permisos sobrantes** de escritura sin sesión en `platform_admins` y `tenant_members` (las reglas ya lo impedían; segunda capa).
+- **Pagos sin identidad:** `process-payment` aceptaba un pago sin sesión. Ahora todo pago queda ligado a una persona (invitado o cliente).
+- **Cierre de caja (N10):** `reconcile-payments` lo podía hacer cualquier miembro, incluso un mozo, y un día cerrado se podía rehacer.
+  - Ahora solo concilian caja, encargado, administrador y dueño, y un día cerrado no se reabre ni se sobrescribe.
+  - En la pantalla de Caja, el día cerrado muestra "🔒 Caja cerrada" con los botones bloqueados.
+  - El cierre completo con conciliación automática llega en la fase 2.
+- **Alta de mozos con invitación** (`register-waiter`):
+  - la invitación se reserva de forma atómica: dos personas no la usan a la vez;
+  - si falla el acceso real o la ficha, no queda una cuenta a medias;
+  - los errores salen en español.
+- `list-tenant-users` ya no muestra errores técnicos.
+- Funciones del servidor publicadas de nuevo: `process-payment`, `reconcile-payments`, `register-waiter` y `list-tenant-users`.
+
+**Auditoría automática, en cada cambio:** `auditoria_seguridad()` (solo superadmin) revisa la base y devuelve lo que encuentre:
+- tablas sin reglas;
+- reglas "para todos" fuera de las públicas a propósito;
+- escrituras para el rol público;
+- reglas con funciones antiguas;
+- permisos de escritura sin sesión;
+- funciones `SECURITY DEFINER` sin ruta de búsqueda fija;
+- funciones llamables sin sesión fuera de las públicas a propósito (ver la mesa del QR, ver una invitación);
+- plata o registros escribibles desde el navegador.
+
+Se probó abriendo a propósito cinco agujeros dentro de una transacción que después se deshizo: los detectó todos. La prueba nueva exige que la auditoría salga vacía, en la base desechable y en la real.
+
+**Asesor de Supabase:** sin errores. Lo que marca a propósito: las dos funciones públicas, las que la app llama con sesión y el acceso de invitados. "Contraseñas filtradas" requiere el plan Pro.
+
+**Migración:** `20261013030000_compuerta_seguridad.sql`.
+
+**Pruebas:**
+- `tests/seguridad/f1-10-compuerta.test.ts`: 9 pruebas.
+  - La auditoría sale vacía, y solo la corre el superadmin.
+  - **Barrido de 31 tablas sensibles sin sesión:** nada se lee ni se escribe.
+  - El invitado no ve nada del personal ni de la plata.
+  - Pagos por rol.
+  - Pago sin sesión rechazado.
+  - Cierre de caja: el mozo no; la caja sí; un día cerrado no se cambia.
+  - Las funciones antiguas están cerradas.
+  - **Una invitación usada por dos personas a la vez sirve para una sola.**
+- `e2e/caja.spec.ts`: la caja concilia, cierra y el día queda bloqueado; el mozo no entra a la caja.
+- **Base desechable:** 102 de seguridad y 55 de navegador. **Base de pruebas:** 97 de seguridad (más 5 que solo corren con "Local Ajeno").
+
+**Fase 1 completa (1.1 a 1.10):** cada dominio (pedidos, mesas, comensal, configuración, plataforma, precios) quedó con las reglas en la base y los cambios importantes por el servidor, con registro y pruebas de ataque que corren en cada cambio. Lo siguiente es la fase 2: el núcleo de la plata.
+
+---
+
 ## 2026-10-13 — Ajuste: pantalla del mozo para autoservicio (colores y cronómetros) ✅
 **Aclaración del fundador:** el flujo principal es autoservicio en prepago. El comensal pide y paga con el QR, y el mozo sobre todo lleva a la mesa lo que ya está pagado y listo. Tomar pedidos a mano o cobrar en efectivo existe, pero como respaldo.
 

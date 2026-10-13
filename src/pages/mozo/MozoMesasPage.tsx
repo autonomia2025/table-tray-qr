@@ -192,7 +192,7 @@ export default function MozoMesasPage() {
           .eq('is_active', true),
         supabase
           .from('orders')
-          .select('id, table_id, status, payment_status, confirmed_at, ready_at, source')
+          .select('id, table_id, status, payment_status, confirmed_at, ready_at, paid_at')
           .in('table_id', occupiedIds)
           .in('status', ['confirmed', 'in_kitchen', 'ready']),
         supabase
@@ -207,14 +207,6 @@ export default function MozoMesasPage() {
           .eq('status', 'pending'),
       ]);
 
-      // Cuándo se pagó cada pedido (para el cronómetro "pagado hace").
-      const idsPedidos = (activeOrders ?? []).map(o => o.id);
-      const { data: pagos } = idsPedidos.length
-        ? await supabase.from('payments').select('order_id, created_at').in('order_id', idsPedidos).eq('status', 'approved')
-        : { data: [] as { order_id: string | null; created_at: string | null }[] };
-      const pagadoEn: Record<string, string> = {};
-      (pagos ?? []).forEach(p => { if (p.order_id && p.created_at) pagadoEn[p.order_id] = p.created_at; });
-
       sessions?.forEach(s => {
         sessionsMap[s.table_id] = { total: s.total_amount ?? 0, opened: s.opened_at ?? '' };
       });
@@ -225,7 +217,8 @@ export default function MozoMesasPage() {
         const pagado = o.payment_status === 'paid';
         m.pedidoDesde = masAntiguo(m.pedidoDesde, o.confirmed_at);
         // Pedido por QR en prepago: se paga en el mismo momento en que se pide.
-        if (pagado) m.pagadoDesde = masAntiguo(m.pagadoDesde, pagadoEn[o.id] ?? o.confirmed_at);
+        // La hora de pago la escribe el servidor (orders.paid_at); el mozo no ve los pagos (datos del cliente).
+        if (pagado) m.pagadoDesde = masAntiguo(m.pagadoDesde, o.paid_at ?? o.confirmed_at);
         if (o.status === 'ready') m.listoDesde = masAntiguo(m.listoDesde, o.ready_at);
         if (prepago && o.status === 'confirmed' && !pagado) {
           m.porCobrar++;

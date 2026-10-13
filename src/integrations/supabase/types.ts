@@ -1175,6 +1175,7 @@ export type Database = {
           kitchen_accepted_at: string | null
           notes: string | null
           order_number: number
+          paid_at: string | null
           payment_status: string
           ready_at: string | null
           session_id: string
@@ -1195,6 +1196,7 @@ export type Database = {
           kitchen_accepted_at?: string | null
           notes?: string | null
           order_number: number
+          paid_at?: string | null
           payment_status?: string
           ready_at?: string | null
           session_id: string
@@ -1215,6 +1217,7 @@ export type Database = {
           kitchen_accepted_at?: string | null
           notes?: string | null
           order_number?: number
+          paid_at?: string | null
           payment_status?: string
           ready_at?: string | null
           session_id?: string
@@ -2260,6 +2263,14 @@ export type Database = {
       }
       atender_cuenta: { Args: { _id: string }; Returns: undefined }
       atender_llamado: { Args: { _id: string }; Returns: undefined }
+      auditoria_seguridad: {
+        Args: never
+        Returns: {
+          detalle: string
+          objeto: string
+          tipo: string
+        }[]
+      }
       calcular_precios: {
         Args: { _branch_id: string; _items: Json; _tenant_id: string }
         Returns: Json

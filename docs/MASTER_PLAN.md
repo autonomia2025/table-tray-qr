@@ -33,7 +33,7 @@ Son trámites de calendario, no de programación. De ellos dependen decisiones d
 
 Migración al Supabase propio, Vercel, integración continua, base desechable para pruebas (Docker), local de demo con todos los roles y reinicio del demo.
 
-## Fase 1 — Seguridad y operaciones en el servidor, por dominio 🔨
+## Fase 1 — Seguridad y operaciones en el servidor, por dominio ✅
 
 Cada dominio se cierra completo de una vez: funciones del servidor, reglas de acceso y pantallas adaptadas. Nada provisorio.
 
@@ -48,9 +48,9 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | 1.7 | Configuración del local: carta, marca, sucursal, equipo, lealtad, fotos y auditoría | ✅ |
 | 1.8 | Plataforma y backoffice: superadmin, ventas, finanzas, soporte, planes; datos de clientes de Tablio | ✅ |
 | 1.9 | Precios por el servidor y pedido manual del mozo por el servidor (cierra la inserción provisoria de pedidos) | ✅ |
-| 1.10 | Compuerta de seguridad: barrido final de reglas y funciones, ataques del diagnóstico, asesor de Supabase | ⏳ |
+| 1.10 | Compuerta de seguridad: barrido final de reglas y funciones, ataques del diagnóstico, asesor de Supabase; auditoría automática en cada cambio | ✅ |
 
-## Fase 2 — Núcleo de la plata ⏳
+## Fase 2 — Núcleo de la plata 🔨 (siguiente)
 
 Cotización con precio congelado → intento de pago reservado antes de cobrar → confirmación atómica (`confirmar_pago`) → checkout → **"Pagar al mozo"** (efectivo o POS: el mozo cobra, lo registra y recién ahí va a cocina) → caja con permisos del cajero → reembolsos → día de negocio y **cierre de caja con conciliación automática** (al cerrar, el sistema cuadra solo lo cobrado en la app, el efectivo y el POS registrados y los reembolsos, y marca las diferencias; el cierre queda bloqueado) → compuerta de pruebas de plata (pago repetido, pagos simultáneos, pago tardío, reembolso doble, dos personas pagando lo último).
 

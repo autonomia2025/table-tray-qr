@@ -50,9 +50,21 @@ Deno.serve(async (req) => {
         .eq("tenant_id", branch.tenant_id)
         .eq("is_active", true)
         .maybeSingle();
-      allowed = !!member;
+      // Fase 1.10 (DIAGNOSTICO N10): la caja la manejan dueño, administrador, encargado y cajero; no mozos ni cocina.
+      allowed = !!member && ["owner", "admin", "manager", "cashier"].includes(member.role);
     }
-    if (!allowed) return json({ error: "Sin permisos para esta sucursal" }, 403);
+    if (!allowed) return json({ error: "Solo la caja, el encargado o el dueño pueden conciliar" }, 403);
+
+    // Un día ya cerrado no se reabre ni se sobrescribe (DIAGNOSTICO N10).
+    const { data: previo } = await admin
+      .from("payment_settlements")
+      .select("id, status")
+      .eq("branch_id", branchId)
+      .eq("settlement_date", date)
+      .maybeSingle();
+    if (previo?.status === "closed") {
+      return json({ error: "La caja de ese día ya está cerrada y no se puede cambiar" }, 409);
+    }
 
     const from = `${date}T00:00:00.000Z`;
     const to = `${date}T23:59:59.999Z`;

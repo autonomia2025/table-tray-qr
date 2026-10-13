@@ -60,50 +60,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Create auth user
+    // 2. Reservar la invitación de forma atómica (fase 1.10): dos personas no usan el mismo enlace.
+    const { data: reservada } = await supabaseAdmin
+      .from("staff_invitations")
+      .update({ used_at: new Date().toISOString() })
+      .eq("id", invitation.id)
+      .is("used_at", null)
+      .select("id")
+      .maybeSingle();
+    if (!reservada) {
+      return new Response(
+        JSON.stringify({ error: "Esta invitación ya fue utilizada" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const liberar = () =>
+      supabaseAdmin.from("staff_invitations").update({ used_at: null }).eq("id", invitation.id);
+
+    // 3. Crear la cuenta
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: String(email).trim().toLowerCase(),
       password,
       email_confirm: true,
     });
 
-    if (authError) {
-      if (authError.message.includes("already been registered")) {
-        return new Response(
-          JSON.stringify({ error: "Este email ya está registrado. Intenta con otro o inicia sesión." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    if (authError || !authData.user) {
+      await liberar();
+      const yaExiste = /already been registered|already registered|exists/i.test(authError?.message ?? "");
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: yaExiste ? "Este email ya está registrado. Intenta con otro o inicia sesión." : "No se pudo crear la cuenta. Intenta de nuevo." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const userId = authData.user.id;
 
-    // 3. Create staff_users record
-    const { error: staffError } = await supabaseAdmin
-      .from("staff_users")
-      .insert({
-        name: name.trim(),
-        role: invitation.role,
-        branch_id: invitation.branch_id,
-        tenant_id: invitation.tenant_id,
-        is_active: true,
-        auth_user_id: userId,
-      });
-
-    if (staffError) {
-      // Rollback: delete auth user
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      return new Response(
-        JSON.stringify({ error: "Error al crear el perfil del mozo" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 3b. Also add to tenant_members so get_tenant_id() works for RLS
+    // 4. Acceso real al local (tenant_members) y ficha del equipo. Si algo falla, no queda nada a medias.
     const { error: memberError } = await supabaseAdmin
       .from("tenant_members")
       .insert({
@@ -113,25 +105,36 @@ Deno.serve(async (req) => {
         role: invitation.role,
         is_active: true,
       });
+    const { error: staffError } = memberError
+      ? { error: memberError }
+      : await supabaseAdmin.from("staff_users").insert({
+          name: String(name).trim().slice(0, 60),
+          role: invitation.role,
+          branch_id: invitation.branch_id,
+          tenant_id: invitation.tenant_id,
+          is_active: true,
+          auth_user_id: userId,
+        });
 
-    if (memberError) {
-      console.error("tenant_members insert error:", memberError);
-      // Non-fatal: staff_users record exists, but RLS may not work
+    if (memberError || staffError) {
+      console.error("register-waiter alta error:", memberError ?? staffError);
+      await supabaseAdmin.from("tenant_members").delete().eq("user_id", userId);
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      await liberar();
+      return new Response(
+        JSON.stringify({ error: "Error al crear el perfil del mozo" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    // 4. Mark invitation as used
-    await supabaseAdmin
-      .from("staff_invitations")
-      .update({ used_at: new Date().toISOString() })
-      .eq("id", invitation.id);
 
     return new Response(
       JSON.stringify({ success: true, user_id: userId }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
+    console.error("register-waiter error:", e);
     return new Response(
-      JSON.stringify({ error: e.message }),
+      JSON.stringify({ error: "Ocurrió un error. Intenta de nuevo." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

@@ -28,6 +28,8 @@ Deno.serve(async (req) => {
     const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
     const { data: quien } = token ? await admin.auth.getUser(token) : { data: { user: null } };
     const comensal = quien?.user ?? null;
+    // Fase 1.10: todo pago queda ligado a una persona (invitado o cliente). Todo comensal tiene sesión.
+    if (!comensal) return json({ error: "Abre la carta desde el QR de tu mesa para pagar." }, 401);
     // Los sellos solo se suman a clientes registrados, con el correo verificado de su cuenta.
     // Antes se aceptaba cualquier correo escrito a mano (DIAGNOSTICO N4).
     const correoVerificado =
@@ -193,6 +195,7 @@ Deno.serve(async (req) => {
           notes: orderNotes || null,
           confirmed_at: new Date().toISOString(),
           payment_status: "paid",
+          paid_at: new Date().toISOString(),
           user_id: comensal?.id ?? null,
         })
         .select("id, order_number")
@@ -267,7 +270,7 @@ Deno.serve(async (req) => {
     if (!isCartCheckout) {
       const paidIds = targetOrders.map((o) => o.id);
       if (paidIds.length) {
-        await admin.from("orders").update({ payment_status: "paid" }).in("id", paidIds);
+        await admin.from("orders").update({ payment_status: "paid", paid_at: new Date().toISOString() }).in("id", paidIds);
       }
     }
 

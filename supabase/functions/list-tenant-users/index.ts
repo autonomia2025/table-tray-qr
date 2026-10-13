@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
 
     return json({ users });
   } catch (e) {
-    return json({ error: (e as Error).message }, 500);
+    console.error("list-tenant-users error:", e);
+    return json({ error: "Ocurrió un error. Intenta de nuevo." }, 500);
   }
 });

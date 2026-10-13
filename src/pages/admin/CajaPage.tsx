@@ -149,6 +149,9 @@ export default function CajaPage() {
     };
   }, [payments]);
 
+  // Un día cerrado queda bloqueado: no se reabre ni se sobrescribe (fase 1.10).
+  const diaCerrado = settlements.find((s) => s.settlement_date === date && s.status === "closed");
+
   const runReconciliation = async (close: boolean) => {
     setReconciling(true);
     const { data, error } = await supabase.functions.invoke("reconcile-payments", {
@@ -315,7 +318,12 @@ export default function CajaPage() {
         {/* ---------- CONCILIACIÓN ---------- */}
         <TabsContent value="conciliacion">
           <Card className="mb-4">
-            <CardHeader className="pb-2"><CardTitle className="text-base">Cierre del {date}</CardTitle></CardHeader>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                Cierre del {date}
+                {diaCerrado && <Badge variant="secondary">🔒 Caja cerrada</Badge>}
+              </CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Compara lo cobrado en la app contra lo liquidado por el proveedor de pagos. Las diferencias quedan marcadas para revisión.
@@ -324,11 +332,16 @@ export default function CajaPage() {
                 <Label className="text-xs">Notas del cierre (opcional)</Label>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={2} />
               </div>
+              {diaCerrado && (
+                <p className="rounded-xl bg-muted p-3 text-sm text-muted-foreground">
+                  Este día ya está cerrado y no se puede cambiar.
+                </p>
+              )}
               <div className="flex gap-2">
-                <Button onClick={() => runReconciliation(false)} disabled={reconciling}>
+                <Button onClick={() => runReconciliation(false)} disabled={reconciling || !!diaCerrado}>
                   {reconciling ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null} Generar conciliación
                 </Button>
-                <Button variant="outline" onClick={() => runReconciliation(true)} disabled={reconciling}>
+                <Button variant="outline" onClick={() => runReconciliation(true)} disabled={reconciling || !!diaCerrado}>
                   Cerrar caja del día
                 </Button>
               </div>
