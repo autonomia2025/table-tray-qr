@@ -66,6 +66,7 @@ supabase functions deploy <nombre>      # publicar una edge function
 ## Decisiones de producto del fundador (1 de octubre de 2026)
 
 - **No hay MVP:** se construye el producto completo. Las fases solo ordenan dependencias; ninguna funcionalidad queda "para después".
+- **El flujo principal es autoservicio en prepago:** el comensal pide y paga con el QR; el mozo sobre todo lleva a la mesa lo que la cocina dejó listo. Tomar pedidos a mano y cobrar en efectivo existen, pero como respaldo: nunca se muestran como lo principal.
 - **Un solo QR hace todo.** Al pagar, el comensal elige: **"Pagar ahora"** (destacado; va pagado directo a cocina), **"Pagar al mozo"** (efectivo o POS; el mozo cobra, lo registra y recién ahí va a cocina) o, solo en locales con cuenta abierta, **"Agregar a mi cuenta"** (paga su propia cuenta al final, en la app o con el mozo).
 - **Nada con cámara.** "Llamar al mozo" y "pedir la cuenta" son botones, sin escanear.
 - **El comensal paga sin registrarse (invitado) y puede guardar su cuenta** (correo con código o enlace, Google o Apple) para juntar sellos. Su identidad de invitado se convierte en su cuenta: no pierde nada. Los sellos solo se suman con cuenta verificada.

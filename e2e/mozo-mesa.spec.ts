@@ -43,24 +43,23 @@ test("visita completa: pagar, llamar al mozo sin cámara, atender, cerrar la mes
   await expect(page).toHaveURL(/\/mozo\/mesas/, { timeout: 15_000 });
 
   const tarjeta = page.locator("div.rounded-xl").filter({ has: page.locator("span.text-4xl", { hasText: /^6$/ }) }).first();
-  await expect(tarjeta.getByText("🔔")).toBeVisible({ timeout: 15_000 });
-  const tomar = tarjeta.getByRole("button", { name: "Tomar mesa →" });
+  await expect(tarjeta.getByText("🔔 Llamando")).toBeVisible({ timeout: 15_000 });
+  await expect(tarjeta.getByText(/llamó hace/)).toBeVisible();
+  // Atiende la llamada desde la tarjeta: el comensal lo ve al instante
+  await tarjeta.getByRole("button", { name: "Voy en camino" }).click();
+  await expect(comensal.getByText("Mozo atendió tu llamada")).toBeVisible({ timeout: 15_000 });
+
+  // Toma la mesa (desde el detalle) y la cierra cuando se van
+  await tarjeta.click();
+  const tomar = page.getByRole("dialog").getByRole("button", { name: "Tomar mesa", exact: true });
   if (await tomar.isVisible()) {
     await tomar.click();
     await expect(page.getByText("Mesa tomada").first()).toBeVisible();
   }
-  await expect(tarjeta.getByText("YO")).toBeVisible({ timeout: 10_000 });
-
-  // Atiende la llamada: el comensal lo ve al instante
-  await tarjeta.getByRole("button", { name: "Atender llamada" }).click();
-  await expect(comensal.getByText("Mozo atendió tu llamada")).toBeVisible({ timeout: 15_000 });
-
-  // Cierra la mesa cuando se van
-  await tarjeta.click();
   await page.getByRole("button", { name: "Cerrar mesa", exact: true }).click();
   await page.getByRole("button", { name: "Sí, cerrar mesa" }).click();
   await expect(page.getByText("✅ Mesa cerrada").first()).toBeVisible({ timeout: 10_000 });
-  await expect(tarjeta.getByRole("button", { name: "Tomar mesa →" })).toBeVisible({ timeout: 10_000 });
+  await expect(tarjeta.getByText("Libre", { exact: true })).toBeVisible({ timeout: 10_000 });
   await expect(tarjeta.getByText("YO")).toHaveCount(0);
 
   // El comensal ve el cierre y califica su visita

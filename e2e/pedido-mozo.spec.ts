@@ -15,11 +15,14 @@ test("el mozo toma un pedido con opciones obligatorias y extras; la cocina lo ve
 
   const tarjeta = page.locator("div.rounded-xl").filter({ has: page.locator("span.text-4xl", { hasText: /^8$/ }) }).first();
   await expect(tarjeta).toBeVisible({ timeout: 15_000 });
-  const tomar = tarjeta.getByRole("button", { name: "Tomar mesa →" });
-  if (await tomar.isVisible()) await tomar.click();
-  await expect(tarjeta.getByRole("button", { name: "Tomar pedido" })).toBeVisible({ timeout: 10_000 });
-  await foto(page, "01-mozo-mesas-tomar-pedido");
-  await tarjeta.getByRole("button", { name: "Tomar pedido" }).click();
+  // Lo principal es el QR: tomar el pedido a mano es una opción secundaria, dentro de la mesa
+  await expect(tarjeta.getByRole("button", { name: /Tomar pedido/ })).toHaveCount(0);
+  await tarjeta.click();
+  const tomarMesa = page.getByRole("dialog").getByRole("button", { name: "Tomar mesa", exact: true });
+  if (await tomarMesa.isVisible()) await tomarMesa.click();
+  await expect(page.getByRole("button", { name: /Tomar pedido a mano/ })).toBeVisible({ timeout: 10_000 });
+  await foto(page, "01-mozo-mesa-tomar-pedido-a-mano");
+  await page.getByRole("button", { name: /Tomar pedido a mano/ }).click();
   await expect(page.getByText(/Pedido manual · Mesa 8/)).toBeVisible({ timeout: 10_000 });
   await foto(page, "02-mozo-carta");
 

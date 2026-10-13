@@ -4,6 +4,40 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-13 — Ajuste: pantalla del mozo para autoservicio (colores y cronómetros) ✅
+**Aclaración del fundador:** el flujo principal es autoservicio en prepago. El comensal pide y paga con el QR, y el mozo sobre todo lleva a la mesa lo que ya está pagado y listo. Tomar pedidos a mano o cobrar en efectivo existe, pero como respaldo.
+
+**Cambios en la pantalla de mesas del mozo:**
+- **Cada mesa tiene un color, un estado y un cronómetro:**
+
+  | Estado | Color | Cronómetro |
+  |---|---|---|
+  | 🔔 Llamando | rojo | llamó hace… |
+  | ✅ Listo para llevar | verde | listo hace… |
+  | 🧾 Pide la cuenta | violeta | pidió hace… |
+  | 💳 Por cobrar | ámbar | esperando pago hace… |
+  | 🍳 En cocina | azul | pagado hace… |
+  | Sentados | neutro | hace… |
+  | Libre | gris | — |
+
+- **El cronómetro pasa a amarillo y después a rojo** si la mesa espera demasiado. Por ejemplo, un plato listo hace más de 3 minutos se pone amarillo, y a los 7 se pone rojo porque se enfría.
+- Cada mesa con pedidos muestra también **"Pidió hace… · pagó hace…"**. Los cronómetros avanzan solos.
+- **Orden:** primero lo urgente (llamados, comida lista, cuenta, cobros); dentro de cada color, las mesas propias y la que más espera.
+- **Resumen arriba por color**, que sirve de leyenda: "Listo para llevar · 1", "En cocina · 2"…
+- **Una sola acción por tarjeta:**
+  - "Entregado ✓" (cualquier mozo, aunque la mesa no esté a su nombre);
+  - "Voy en camino" para un llamado;
+  - "Cobrar y cerrar mesa" cuando piden la cuenta.
+- **"Tomar pedido a mano" queda como opción secundaria** dentro del detalle de la mesa ("Para quien prefiere pedirle al mozo"). **"Tomar mesa"** también pasa al detalle.
+- El detalle ya no repite "Mesa 3 · Mesa 3" y dice "Sentados hace…".
+
+**Pruebas:**
+- `e2e/mozo-mesa.spec.ts` y `e2e/pedido-mozo.spec.ts`, ajustadas: el pedido a mano no aparece en las tarjetas y se llega por el detalle.
+- `e2e/recorridos/mozo-colores.spec.ts`: recorrido con fotos en la base desechable, con mesas en todos los estados y horas adelantadas, para que se vean los cronómetros en amarillo y rojo.
+- **Base desechable:** 93 de seguridad y 53 de navegador.
+
+---
+
 ## 2026-10-13 — Fase 1.9: precios y pedido del mozo por el servidor ✅
 **Lo que cambió:**
 - **Un solo cálculo de precios en la base: `calcular_precios()`.** Lo usan el pago del comensal (`process-payment`, publicada de nuevo) y el pedido del mozo. Rechaza:

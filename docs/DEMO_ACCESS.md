@@ -45,7 +45,7 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 3. En el celular del comensal, el estado cambia en vivo.
 4. En el celular del comensal, toca "Llamar al mozo" (sin escanear nada). Con la cuenta del mozo (Camila), la mesa aparece con 🔔: tómala y toca "Atender llamada"; el comensal lo ve al instante.
 5. Cuando se van, el mozo abre la mesa y toca "Cerrar mesa". El comensal ve "¿Cómo estuvo tu experiencia?" y califica.
-6. Con la cuenta del mozo, en una mesa suya toca **"Tomar pedido"**: elige una hamburguesa (el punto de la carne es obligatorio) con palta. El precio lo calcula el servidor. En prepago, el pedido queda "esperando pago" en la cocina hasta que se cobre (el cobro del mozo llega en la fase 2).
+6. La pantalla del mozo muestra cada mesa con su color y su cronómetro: rojo si llaman, verde si hay algo listo para llevar, ámbar si falta cobrar, azul si está en cocina. Como respaldo, dentro del detalle de una mesa está **"Tomar pedido a mano"**: elige una hamburguesa (el punto de la carne es obligatorio) con palta. El precio lo calcula el servidor. En prepago, el pedido queda "esperando pago" en la cocina hasta que se cobre (el cobro del mozo llega en la fase 2).
 7. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
 ## Experiencia del comensal (invitado o cliente)
