@@ -29,7 +29,8 @@ test("recorrido 1.9: comensal con opciones y vista del dueño", async ({ page, b
   await entrar(admin, "owner");
   await expect(admin).toHaveURL(/\/admin\/demo-tablio\//, { timeout: 15_000 });
   await admin.goto("/admin/demo-tablio/pedidos");
-  await expect(admin.getByText(/Mesa 3|#0/).first()).toBeVisible({ timeout: 15_000 });
+  await expect(admin.getByText("Centro de Pedidos")).toBeVisible({ timeout: 30_000 });
+  await expect(admin.getByText("Mesa 3").first()).toBeVisible({ timeout: 30_000 });
   await foto(admin, "12-dueno-pedidos");
   await ctx.close();
 });
