@@ -1,5 +1,5 @@
 import { test, expect, devices } from "@playwright/test";
-import { cuenta, entrar, foto, linkMesa } from "./apoyo/recorrido";
+import { cuenta, entrar, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
 
 // Fase 2.D — Cierre de caja con conciliación automática: la base cuadra lo cobrado (app, efectivo,
 // POS) menos los reembolsos; la caja anota lo contado, la diferencia sale sola y el cierre queda
@@ -25,6 +25,7 @@ test("la caja cuadra sola, exige explicar las diferencias y el cierre queda bloq
       await expect(comensal.getByText("¡Pago listo!")).toBeVisible({ timeout: 20_000 });
     } else {
       await comensal.getByRole("button", { name: /Prefiero pagarle al mozo/ }).click();
+      await ingresarCodigo(comensal, mesa);
       await expect(comensal.getByText("¡Pedido enviado!")).toBeVisible({ timeout: 20_000 });
     }
     await comensal.close();

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO } from "./entorno";
+import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO, confirmarPresencia } from "./entorno";
 
 // Fase 3.1 — Turnos de mozo y propina para el mozo que tomó la mesa (decisión del fundador, 14 de
 // octubre de 2026: el cliente no elige).
@@ -29,6 +29,7 @@ describe.skipIf(!hayCredenciales)("turnos y propinas", () => {
   async function comensalEn(mesa: number) {
     const c = await invitado();
     await c.rpc("unirse_a_mesa", { _qr_token: qrMesa(mesa)! });
+    await confirmarPresencia(c, mesa);
     return { c, token: (await c.auth.getSession()).data.session!.access_token };
   }
 

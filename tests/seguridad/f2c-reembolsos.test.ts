@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO } from "./entorno";
+import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO, confirmarPresencia } from "./entorno";
 
 // Fase 2.C — Reembolsos atómicos: nunca más de lo cobrado, siempre con motivo, por rol.
 
@@ -87,6 +87,7 @@ describe.skipIf(!hayCredenciales)("reembolsos", () => {
     await dueno.rpc("cerrar_mesa", { _table_id: mesa, _motivo: "preparar prueba" });
     const c = await invitado();
     await c.rpc("unirse_a_mesa", { _qr_token: qrMesa(5)! });
+    await confirmarPresencia(c, 5);
     const { data: item } = await anonimo().from("menu_items").select("id").eq("tenant_id", DEMO.tenant).eq("name", "Agua mineral").single();
     const pedido = (await c.rpc("pedir_sin_pagar", { _qr_token: qrMesa(5)!, _items: [{ menu_item_id: item!.id, quantity: 1 }], _forma: "mozo" })).data as { order_id: string };
     const caja = (await conSesion("cashier")).cliente;

@@ -87,3 +87,29 @@ export const pedirCuenta = (qrToken: string, propina: number, porcentaje: number
 
 export const atenderLlamado = (id: string) => llamar<null>("atender_llamado", { _id: id });
 export const atenderCuenta = (id: string) => llamar<null>("atender_cuenta", { _id: id });
+
+/* ---------- Código de presencia, unir mesas y cuenta abierta (fase 3.5) ---------- */
+
+/** ¿El error dice que falta el código de la mesa? (lo pide la base para pedir sin pagar) */
+export const pideCodigoMesa = (error: string) => /código de 4 números/i.test(error);
+
+/** Ingresa el código impreso en la mesa. No lanza error al fallar: devuelve el mensaje. */
+export const confirmarPresencia = (qrToken: string, codigo: string) =>
+  llamar<{ ok: boolean; bloqueado?: boolean; mensaje?: string }>("confirmar_presencia", { _qr_token: qrToken, _codigo: codigo });
+
+export const unirMesas = (principalId: string, secundariaId: string) =>
+  llamar<{ session_id: string; principal: number; secundaria: number }>("unir_mesas", { _principal: principalId, _secundaria: secundariaId });
+
+export const separarMesa = (mesaId: string) => llamar<{ separada: number }>("separar_mesa", { _secundaria: mesaId });
+
+export const cambiarCodigosMesa = (sucursalId: string) => llamar<number>("cambiar_codigos_mesa", { _branch_id: sucursalId });
+
+export interface RiesgoCuentaAbierta {
+  modo: string;
+  limite_persona: number;
+  en_riesgo: { monto: number; pedidos: number; mesas: number };
+  perdido_30_dias: { monto: number; pedidos: number; mesas: number };
+  ultimas_perdidas: { cuando: string; mesa: number; monto: number; pedidos: number; motivo: string | null }[];
+}
+export const riesgoCuentaAbierta = (sucursalId: string) =>
+  llamar<RiesgoCuentaAbierta>("riesgo_cuenta_abierta", { _branch_id: sucursalId });

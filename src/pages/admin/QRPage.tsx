@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { QRCodeCanvas } from "qrcode.react";
-import { Download, Printer, QrCode, AlertTriangle } from "lucide-react";
+import { Download, Printer, QrCode, AlertTriangle, RefreshCw } from "lucide-react";
+import { cambiarCodigosMesa } from "@/lib/mesa";
 
 interface TableRow2 {
   id: string;
@@ -26,6 +27,21 @@ export default function QRPage() {
   const [tenantName, setTenantName] = useState("");
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<TableRow2 | null>(null);
+  // Código de presencia de cada mesa (fase 3.5)
+  const [codigos, setCodigos] = useState<Record<string, string>>({});
+  const [confirmarCambio, setConfirmarCambio] = useState(false);
+  const cargarCodigos = useCallback(async () => {
+    if (!branchId) return;
+    const { data } = await supabase.from("codigos_mesa").select("table_id, codigo").eq("branch_id", branchId);
+    setCodigos(Object.fromEntries((data ?? []).map((c) => [c.table_id, c.codigo])));
+  }, [branchId]);
+  const cambiarCodigos = async () => {
+    setConfirmarCambio(false);
+    const r = await cambiarCodigosMesa(branchId);
+    if (r.ok === false) { toast({ title: "No se pudieron cambiar los códigos", description: r.error, variant: "destructive" }); return; }
+    toast({ title: "Códigos nuevos listos", description: "Imprime las tarjetas otra vez: los códigos anteriores ya no sirven." });
+    cargarCodigos();
+  };
   const dialogQrRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +58,8 @@ export default function QRPage() {
       setTables(data ?? []);
       setLoading(false);
     })();
-  }, [branchId]);
+    cargarCodigos();
+  }, [branchId, cargarCodigos]);
 
   useEffect(() => {
     if (!slug) return;
@@ -102,8 +119,15 @@ export default function QRPage() {
           <p className="text-sm text-muted-foreground">
             Un solo QR por mesa. El comensal escanea, pide y paga desde su teléfono.
           </p>
+          <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+            Cada mesa tiene además un <strong>código de 4 números</strong> que prueba que el cliente está en el local. Se pide para lo que no se paga al pedir
+            (se configura en Sucursal). Si puedes, pégalo en la mesa aparte del QR: así una foto del QR no basta.
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setConfirmarCambio(true)} disabled={!tables.length}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Cambiar códigos
+          </Button>
           <Button variant="outline" onClick={downloadAll} disabled={!withToken.length}>
             <Download className="mr-2 h-4 w-4" /> Descargar todos
           </Button>
@@ -137,6 +161,7 @@ export default function QRPage() {
                 <TableHead>Mesa</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Zona</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -147,6 +172,7 @@ export default function QRPage() {
                   <TableCell className="font-bold">{t.number}</TableCell>
                   <TableCell className="text-muted-foreground">{t.name || "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{t.zone || "—"}</TableCell>
+                  <TableCell className="font-mono font-semibold tracking-widest">{codigos[t.id] ?? "—"}</TableCell>
                   <TableCell>
                     {t.qr_token ? (
                       <Badge variant="secondary">QR listo</Badge>
@@ -163,7 +189,7 @@ export default function QRPage() {
               ))}
               {tables.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                     Aún no hay mesas creadas.
                   </TableCell>
                 </TableRow>
@@ -188,9 +214,28 @@ export default function QRPage() {
             <p className="text-[11px] font-semibold text-neutral-700">
               Escanea, pide y paga desde tu teléfono
             </p>
+            {codigos[t.id] && (
+              <p className="mt-2 rounded-lg border border-neutral-300 px-3 py-1 text-xs text-neutral-700">
+                Código de mesa: <span className="font-mono text-base font-black tracking-widest text-neutral-900">{codigos[t.id]}</span>
+              </p>
+            )}
           </div>
         ))}
       </div>
+
+      {/* Cambiar los códigos de todas las mesas */}
+      <Dialog open={confirmarCambio} onOpenChange={setConfirmarCambio}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>¿Cambiar los códigos de todas las mesas?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Úsalo si crees que alguien conoce los códigos. Después hay que imprimir las tarjetas otra vez: los códigos anteriores dejan de servir al instante.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmarCambio(false)}>Volver</Button>
+            <Button onClick={cambiarCodigos}>Cambiar códigos</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Detalle */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /**
  * Fotos del recorrido de cada fase (pedido del fundador, 13 de octubre de 2026).
@@ -34,4 +34,36 @@ export async function entrar(page: Page, rol: string) {
   await page.locator('input[type="email"]').fill(c.correo);
   await page.locator('input[type="password"]').fill(c.clave);
   await page.locator('button[type="submit"]').click();
+}
+
+/** URL y clave pública de la base que usa la app (las mismas que el navegador). */
+function baseDeDatos() {
+  const env = Object.fromEntries((fs.existsSync(".env") ? fs.readFileSync(".env", "utf-8") : "")
+    .split("\n").filter((l) => l.includes("=")).map((l) => {
+      const [k, ...v] = l.split("=");
+      return [k.trim(), v.join("=").trim().replace(/^"|"$/g, "")];
+    }));
+  return {
+    url: process.env.VITE_SUPABASE_URL ?? env.VITE_SUPABASE_URL,
+    clave: process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  };
+}
+
+/** Código de presencia de una mesa del demo (fase 3.5): lo lee el dueño, como en su pantalla de QR. */
+export async function codigoMesa(numero: number): Promise<string> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = baseDeDatos();
+  const dueno = createClient(url, clave, { auth: { persistSession: false } });
+  const c = cuenta("owner")!;
+  await dueno.auth.signInWithPassword({ email: c.correo, password: c.clave });
+  const { data: mesa } = await dueno.from("tables").select("id").eq("number", numero).eq("branch_id", SUCURSAL_DEMO).single();
+  const { data } = await dueno.from("codigos_mesa").select("codigo").eq("table_id", mesa!.id).single();
+  return data!.codigo as string;
+}
+const SUCURSAL_DEMO = "aebe7faa-0e29-5aa9-83c2-1e1b336f1554";
+
+/** Si la app pide el código de la mesa, lo escribe (como haría el cliente leyendo su mesa). */
+export async function ingresarCodigo(page: Page, numero: number) {
+  await expect(page.getByText("Código de tu mesa")).toBeVisible({ timeout: 10_000 });
+  await page.getByLabel("Código de 4 números de tu mesa").fill(await codigoMesa(numero));
 }

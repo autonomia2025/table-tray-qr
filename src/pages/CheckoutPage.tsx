@@ -19,6 +19,8 @@ import { useSesion } from "@/contexts/SesionContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { mensajeAmigable, pedirSinPagar } from "@/lib/pedidos";
+import { pideCodigoMesa } from "@/lib/mesa";
+import CodigoMesa from "@/components/comensal/CodigoMesa";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
 import { useTableSession } from "@/hooks/useTableSession";
@@ -79,6 +81,8 @@ export default function CheckoutPage() {
   );
   const [cotizacion, setCotizacion] = useState<{ id: string; subtotal: number; expira_at: string } | null>(null);
   const [errorCotizacion, setErrorCotizacion] = useState("");
+  // Código de presencia (fase 3.5): si la base lo pide, se ingresa y se repite lo que se estaba haciendo
+  const [pideCodigo, setPideCodigo] = useState<null | { reintentar: () => void }>(null);
   const cotizar = async () => {
     if (!token || lineas.length === 0) return null;
     const { data, error } = await supabase.rpc("cotizar", {
@@ -88,6 +92,11 @@ export default function CheckoutPage() {
     });
     if (error || !data) {
       setCotizacion(null);
+      if (pideCodigoMesa(error?.message ?? "")) {
+        setErrorCotizacion("");
+        setPideCodigo({ reintentar: () => { cotizar(); } });
+        return null;
+      }
       setErrorCotizacion(mensajeAmigable(error?.message ?? ""));
       return null;
     }
@@ -262,6 +271,10 @@ export default function CheckoutPage() {
     const r = await pedirSinPagar(token, lineas, forma, orderNotes.trim() || undefined);
     setPaying(false);
     if (r.ok === false) {
+      if (pideCodigoMesa(r.error)) {
+        setPideCodigo({ reintentar: () => { pedirSinPagarEnApp(forma); } });
+        return;
+      }
       setErrorMsg(r.error);
       return;
     }
@@ -643,6 +656,15 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+      )}
+      {token && (
+        <CodigoMesa
+          abierto={!!pideCodigo}
+          tokenMesa={token}
+          color={primaryColor}
+          onCerrar={() => setPideCodigo(null)}
+          onListo={() => { const r = pideCodigo; setPideCodigo(null); r?.reintentar(); }}
+        />
       )}
     </div>
   );

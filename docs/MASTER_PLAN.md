@@ -77,7 +77,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 | 3.3 | Control del equipo: ranking por período, tiempos objetivo con semáforo, alertas de pedido listo sin entregar, calificación atribuida al mozo que cerró la mesa, metas por mozo | ✅ |
 | 3.4 | La mesa en vivo (comensal): quién está, tu pedido por estación, "otra ronda", "lo de siempre", tiempo estimado real y aviso cuando algo queda listo (con la página abierta) | ✅ |
 | 3.4b | Aviso con la pantalla bloqueada: la app se instala sin tienda (PWA) y envía notificaciones push (estándar del navegador, sin cuentas externas) | ✅ |
-| 3.5 | Código de presencia en las tarjetas de mesa, cuenta abierta controlada y unir mesas | ⏳ |
+| 3.5 | Código de presencia en las tarjetas de mesa, cuenta abierta controlada y unir mesas | ✅ |
 | 3.6 | Reportes calculados por el servidor; inicio del dueño que cuenta una historia; productividad de cocina y mapa de calor de horas | ⏳ |
 | 3.7 | Sellos que se sienten (el sello "cae" al pagar) | ⏳ |
 | 3.8 | Compuerta de la fase 3 | ⏳ |

@@ -78,3 +78,17 @@ export function qrMesa(numero: number): string | null {
   const m = texto.match(new RegExp(`^\\| ${numero} \\| \\w+ \\| \`[^\`]*\\?t=([0-9a-f]+)\` \\|$`, "m"));
   return m?.[1] ?? null;
 }
+
+/** Código de presencia de una mesa del demo (lo lee el dueño, como en su pantalla de QR). Fase 3.5. */
+export async function codigoMesa(numero: number): Promise<string> {
+  const dueno = (await conSesion("owner")).cliente;
+  const { data } = await dueno.from("tables").select("id").eq("branch_id", DEMO.sucursal).eq("number", numero).single();
+  const { data: c } = await dueno.from("codigos_mesa").select("codigo").eq("table_id", data!.id).single();
+  return c!.codigo as string;
+}
+
+/** El comensal ingresa el código impreso en su mesa (hace falta para pedir sin pagar). */
+export async function confirmarPresencia(cliente: SupabaseClient, numero: number) {
+  const { data, error } = await cliente.rpc("confirmar_presencia", { _qr_token: qrMesa(numero)!, _codigo: await codigoMesa(numero) });
+  if (error || !(data as { ok: boolean }).ok) throw new Error(`No se pudo confirmar la presencia en la mesa ${numero}`);
+}

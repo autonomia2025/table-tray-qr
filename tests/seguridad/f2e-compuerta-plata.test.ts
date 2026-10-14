@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execFileSync } from "node:child_process";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO } from "./entorno";
+import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO, confirmarPresencia } from "./entorno";
 
 // Fase 2.E — Compuerta de la plata. Los casos difíciles que faltaban (los demás están en f2a a f2d) y la
 // auditoría automática: después de todo, la plata tiene que calzar en toda la base.
@@ -26,6 +26,7 @@ describe.skipIf(!hayCredenciales)("compuerta de la plata", () => {
   async function comensalEn(mesa: number) {
     const c = await invitado();
     await c.rpc("unirse_a_mesa", { _qr_token: qrMesa(mesa)! });
+    await confirmarPresencia(c, mesa);
     const token = (await c.auth.getSession()).data.session!.access_token;
     return { c, token };
   }

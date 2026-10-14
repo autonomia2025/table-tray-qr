@@ -28,7 +28,8 @@ export default function SucursalPage() {
 
   const [tenantForm, setTenantForm] = useState({ name: "", primary_color: "#E8531D", logo_url: "", cover_image_url: "", welcome_message: "" });
   const [branchForm, setBranchForm] = useState({ name: "", is_open: true, payment_mode: "open_tab",
-    objetivo_llamado_min: 2, objetivo_retiro_min: 5, objetivo_pedido_min: 20 });
+    objetivo_llamado_min: 2, objetivo_retiro_min: 5, objetivo_pedido_min: 20,
+    pedir_codigo: "sin_pagar", limite_cuenta_persona: 30000 });
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,7 +43,7 @@ export default function SucursalPage() {
     async function load() {
       const [{ data: tenant }, { data: branch }, { data: tabs }] = await Promise.all([
         supabase.from("tenants").select("name, primary_color, logo_url, cover_image_url, welcome_message").eq("id", tenantId).single(),
-        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min").eq("id", branchId).single(),
+        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min, pedir_codigo, limite_cuenta_persona").eq("id", branchId).single(),
         supabase.from("tables").select("id, number, name, capacity").eq("branch_id", branchId).order("number"),
       ]);
       if (tenant) setTenantForm({
@@ -51,7 +52,8 @@ export default function SucursalPage() {
         welcome_message: tenant.welcome_message ?? "",
       });
       if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true, payment_mode: branch.payment_mode ?? "open_tab",
-        objetivo_llamado_min: branch.objetivo_llamado_min, objetivo_retiro_min: branch.objetivo_retiro_min, objetivo_pedido_min: branch.objetivo_pedido_min });
+        objetivo_llamado_min: branch.objetivo_llamado_min, objetivo_retiro_min: branch.objetivo_retiro_min, objetivo_pedido_min: branch.objetivo_pedido_min,
+        pedir_codigo: branch.pedir_codigo, limite_cuenta_persona: branch.limite_cuenta_persona });
       setTables(tabs ?? []);
       setLoading(false);
     }
@@ -70,6 +72,7 @@ export default function SucursalPage() {
         name: branchForm.name, is_open: branchForm.is_open, payment_mode: branchForm.payment_mode,
         objetivo_llamado_min: branchForm.objetivo_llamado_min, objetivo_retiro_min: branchForm.objetivo_retiro_min,
         objetivo_pedido_min: branchForm.objetivo_pedido_min,
+        pedir_codigo: branchForm.pedir_codigo, limite_cuenta_persona: branchForm.limite_cuenta_persona,
       }).eq("id", branchId),
 
     ]);
@@ -178,6 +181,50 @@ export default function SucursalPage() {
               })}
             </div>
           </div>
+
+          {/* Código de presencia y cuenta abierta (fase 3.5) */}
+          <div>
+            <Label>Código de mesa</Label>
+            <p className="mb-2 text-xs text-muted-foreground">4 números impresos en cada mesa que prueban que el cliente está en el local (los ves en QR).</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                { value: "sin_pagar", title: "Para pedir sin pagar", desc: "Recomendado: pagar al mozo y cuenta abierta." },
+                { value: "siempre", title: "Siempre", desc: "También para pagar con la app." },
+                { value: "nunca", title: "Nunca", desc: "Sin código (más riesgo de pedidos en broma)." },
+              ].map((opt) => {
+                const active = branchForm.pedir_codigo === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setBranchForm((p) => ({ ...p, pedir_codigo: opt.value }))}
+                    className={`rounded-xl border-2 p-3 text-left transition-colors ${active ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
+                    <p className="text-sm font-semibold text-foreground">{opt.title}</p>
+                    <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {branchForm.payment_mode === "open_tab" && (
+            <div>
+              <Label htmlFor="limite-cuenta">Límite de cuenta abierta por persona</Label>
+              <p className="mb-2 text-xs text-muted-foreground">Lo máximo que alguien puede deber antes de pagar. Al llegar, la app le pide pagar lo que lleva para seguir pidiendo. 0 = sin límite.</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">$</span>
+                <Input
+                  id="limite-cuenta"
+                  inputMode="numeric"
+                  value={branchForm.limite_cuenta_persona}
+                  onChange={(e) => setBranchForm((p) => ({ ...p, limite_cuenta_persona: Math.min(2000000, parseInt(e.target.value.replace(/\D/g, "")) || 0) }))}
+                  className="h-9 w-36"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Tiempos objetivo (fase 3.3): el semáforo del mozo y el ranking del equipo usan estos minutos */}
           <div>

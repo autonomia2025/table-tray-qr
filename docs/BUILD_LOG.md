@@ -4,6 +4,44 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.5: código de presencia, cuenta abierta controlada y unir mesas ✅
+**Código de presencia** (brief 5.1). Cada mesa tiene 4 números impresos que prueban que el cliente está ahí y no en su casa con una foto del QR.
+- **Dónde se guarda:** los códigos viven en `codigos_mesa`, que solo lee el personal. El comensal puede leer la fila de su mesa, así que ahí se lo saltaría.
+- **Cuándo se pide:** solo para lo que no se paga al pedir (pagar al mozo, agregar a mi cuenta). Pagar con la app no tiene riesgo y no se le suma fricción. Es configurable en Sucursal: solo para pedir sin pagar (recomendado), siempre (también para pagar con la app) o nunca.
+- **Cómo se exige:** disparadores en `orders` y `cotizaciones`; se pide una vez por visita.
+- **Contra adivinanzas:** `confirmar_presencia` bloquea 10 minutos tras 5 intentos fallidos, así que no se puede adivinar probando.
+- **El comensal** lo escribe en una ventanita; si no lo encuentra, el mozo lo ve en el detalle de la mesa.
+- **El dueño** lo ve en QR, sale en las tarjetas impresas y puede cambiarlos todos (`cambiar_codigos_mesa`, queda auditado). Se recomienda pegarlo aparte del QR.
+
+**Cuenta abierta controlada** (brief 4).
+- Límite por persona (`branches.limite_cuenta_persona`, $30.000 por defecto). Al llegar, la app le pide pagar lo que lleva para seguir pidiendo.
+- Lo que queda sin pagar al cerrar una mesa (solo un encargado puede hacerlo, con motivo) se marca como **pérdida** (`orders.perdido_at`) y queda en la auditoría.
+- En **Mesas**, el dueño ve "Lo que todavía no se paga": lo que arriesga ahora y lo perdido en 30 días, con el motivo de cada mesa (`riesgo_cuenta_abierta`).
+
+**Unir mesas** (brief 5.2).
+- El mozo une una mesa a otra para un grupo grande (`unir_mesas`). Lo que ya pasaba en la secundaria (comensales, pedidos, pagos, llamados) pasa a la principal, y su QR lleva a la principal.
+- Todas las entradas del comensal por QR resuelven la mesa con `_mesa_del_qr`: un solo cambio, comprobado.
+- Los pedidos guardan su mesa física, para saber a cuál llevar.
+- "Separar" (`separar_mesa`) la libera, y al cerrar la principal se liberan solas.
+
+**Pruebas:**
+- `tests/seguridad/f3-5-mesas.test.ts`: 6 pruebas.
+  - Sin código no se pide sin pagar; un código malo se rechaza; probar 5 veces bloquea.
+  - El comensal no ve el código (ni leyendo su mesa); el mozo y el dueño sí, la cocina no; solo el dueño los cambia.
+  - Modos "nunca" y "siempre".
+  - Límite de cuenta, pérdida registrada y riesgo visible (no para el mozo).
+  - Unir, con pedidos y pagos que se mudan, y QR que lleva a la principal; separar y cerrar liberan.
+  - No se une una mesa de otro mozo.
+- Las pruebas anteriores de "pagar al mozo" ahora ingresan el código, como un cliente real.
+- `e2e/mesas-presencia.spec.ts`:
+  - el cliente ingresa un código equivocado y después el correcto;
+  - el mozo ve el código, une la 7 a la 6 y las separa;
+  - el dueño ve los códigos en QR y el riesgo en Mesas.
+- **Base desechable:** 167 de 167 de seguridad y 64 de 64 de navegador.
+- **Base de pruebas:** 151 de seguridad (más 16 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 3.4b: app instalable y aviso con el celular bloqueado ✅
 **Qué es:** el comensal puede pedir que le avisen cuando su pedido esté listo y el aviso le llega aunque tenga el celular bloqueado. Además, Tablio se instala en el celular sin pasar por la tienda de apps.
 - Usa el estándar de los navegadores (Web Push). No requiere cuentas externas ni costo.

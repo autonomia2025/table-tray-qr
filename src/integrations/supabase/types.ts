@@ -229,12 +229,14 @@ export type Database = {
           created_at: string | null
           id: string
           is_open: boolean | null
+          limite_cuenta_persona: number
           name: string
           objetivo_llamado_min: number
           objetivo_pedido_min: number
           objetivo_retiro_min: number
           opening_hours: Json | null
           payment_mode: string
+          pedir_codigo: string
           phone: string | null
           restaurant_id: string
           tenant_id: string
@@ -246,12 +248,14 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_open?: boolean | null
+          limite_cuenta_persona?: number
           name: string
           objetivo_llamado_min?: number
           objetivo_pedido_min?: number
           objetivo_retiro_min?: number
           opening_hours?: Json | null
           payment_mode?: string
+          pedir_codigo?: string
           phone?: string | null
           restaurant_id: string
           tenant_id: string
@@ -263,12 +267,14 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_open?: boolean | null
+          limite_cuenta_persona?: number
           name?: string
           objetivo_llamado_min?: number
           objetivo_pedido_min?: number
           objetivo_retiro_min?: number
           opening_hours?: Json | null
           payment_mode?: string
+          pedir_codigo?: string
           phone?: string | null
           restaurant_id?: string
           tenant_id?: string
@@ -360,12 +366,61 @@ export type Database = {
           },
         ]
       }
+      codigos_mesa: {
+        Row: {
+          branch_id: string
+          cambiado_at: string
+          codigo: string
+          table_id: string
+          tenant_id: string
+        }
+        Insert: {
+          branch_id: string
+          cambiado_at?: string
+          codigo?: string
+          table_id: string
+          tenant_id: string
+        }
+        Update: {
+          branch_id?: string
+          cambiado_at?: string
+          codigo?: string
+          table_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "codigos_mesa_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "codigos_mesa_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: true
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "codigos_mesa_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comensales_mesa: {
         Row: {
           alias: string | null
           branch_id: string
+          codigo_bloqueado_hasta: string | null
           created_at: string
           id: string
+          intentos_codigo: number
+          presencia_ok_at: string | null
           session_id: string
           table_id: string
           tenant_id: string
@@ -374,8 +429,11 @@ export type Database = {
         Insert: {
           alias?: string | null
           branch_id: string
+          codigo_bloqueado_hasta?: string | null
           created_at?: string
           id?: string
+          intentos_codigo?: number
+          presencia_ok_at?: string | null
           session_id: string
           table_id: string
           tenant_id: string
@@ -384,8 +442,11 @@ export type Database = {
         Update: {
           alias?: string | null
           branch_id?: string
+          codigo_bloqueado_hasta?: string | null
           created_at?: string
           id?: string
+          intentos_codigo?: number
+          presencia_ok_at?: string | null
           session_id?: string
           table_id?: string
           tenant_id?: string
@@ -1398,6 +1459,7 @@ export type Database = {
           order_number: number
           paid_at: string | null
           payment_status: string
+          perdido_at: string | null
           ready_at: string | null
           session_id: string
           source: string | null
@@ -1421,6 +1483,7 @@ export type Database = {
           order_number: number
           paid_at?: string | null
           payment_status?: string
+          perdido_at?: string | null
           ready_at?: string | null
           session_id: string
           source?: string | null
@@ -1444,6 +1507,7 @@ export type Database = {
           order_number?: number
           paid_at?: string | null
           payment_status?: string
+          perdido_at?: string | null
           ready_at?: string | null
           session_id?: string
           source?: string | null
@@ -2310,6 +2374,7 @@ export type Database = {
           qr_token: string
           status: string
           tenant_id: string
+          unida_a: string | null
           zone: string | null
         }
         Insert: {
@@ -2325,6 +2390,7 @@ export type Database = {
           qr_token?: string
           status?: string
           tenant_id: string
+          unida_a?: string | null
           zone?: string | null
         }
         Update: {
@@ -2340,6 +2406,7 @@ export type Database = {
           qr_token?: string
           status?: string
           tenant_id?: string
+          unida_a?: string | null
           zone?: string | null
         }
         Relationships: [
@@ -2362,6 +2429,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tables_unida_a_fkey"
+            columns: ["unida_a"]
+            isOneToOne: false
+            referencedRelation: "tables"
             referencedColumns: ["id"]
           },
         ]
@@ -2655,6 +2729,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _codigo_presencia: { Args: never; Returns: string }
       _comensal_en_mesa: {
         Args: { _qr_token: string }
         Returns: Record<string, unknown>
@@ -2672,6 +2747,7 @@ export type Database = {
         }
         Returns: Json
       }
+      _mesa_del_qr: { Args: { _qr_token: string }; Returns: string }
       _mesa_y_actor: {
         Args: { _table_id: string }
         Returns: Record<string, unknown>
@@ -2696,6 +2772,10 @@ export type Database = {
         }
       }
       _minutos_plato: { Args: { _menu_item_id: string }; Returns: number }
+      _presente: {
+        Args: { _session_id: string; _user_id: string }
+        Returns: boolean
+      }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _turno_abierto: { Args: { _staff_id: string }; Returns: string }
@@ -2739,6 +2819,7 @@ export type Database = {
         Args: { _estrellas: number; _qr_token: string }
         Returns: undefined
       }
+      cambiar_codigos_mesa: { Args: { _branch_id: string }; Returns: number }
       cambiar_estado_pedido: {
         Args: {
           _estado: string
@@ -2779,6 +2860,10 @@ export type Database = {
         }
         Returns: Json
       }
+      confirmar_presencia: {
+        Args: { _codigo: string; _qr_token: string }
+        Returns: Json
+      }
       confirmar_reembolso: {
         Args: { _ok: boolean; _referencia?: string; _refund_id: string }
         Returns: Json
@@ -2816,6 +2901,7 @@ export type Database = {
       }
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
+      estado_presencia: { Args: { _qr_token: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
       guardar_suscripcion_push: {
         Args: {
@@ -2914,10 +3000,12 @@ export type Database = {
         Args: { _branch_id: string; _dia?: string }
         Returns: Json
       }
+      riesgo_cuenta_abierta: { Args: { _branch_id: string }; Returns: Json }
       sa_activar_local: {
         Args: { _activo: boolean; _tenant_id: string }
         Returns: undefined
       }
+      separar_mesa: { Args: { _secundaria: string }; Returns: Json }
       siguiente_numero_pedido: { Args: { _branch_id: string }; Returns: number }
       tenants_privado: {
         Args: never
@@ -2959,6 +3047,10 @@ export type Database = {
       }
       turnos_sucursal: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
+        Returns: Json
+      }
+      unir_mesas: {
+        Args: { _principal: string; _secundaria: string }
         Returns: Json
       }
       unirse_a_mesa: {

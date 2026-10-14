@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { cambiarEstadoPedido, registrarCobroMozo } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
-import { atenderLlamado, cerrarMesa, tomarMesa, transferirMesa } from "@/lib/mesa";
+import { atenderLlamado, cerrarMesa, separarMesa, tomarMesa, transferirMesa, unirMesas } from "@/lib/mesa";
 import { formatCLP } from '@/lib/format';
 import { abrirTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -21,6 +21,8 @@ interface TableData {
   status: string | null;
   capacity: number | null;
   assigned_waiter_id: string | null;
+  /** Si está unida a otra mesa (grupo grande), la principal (fase 3.5). */
+  unida_a: string | null;
   hasNewOrder: boolean;
   hasReadyFood: boolean;
   hasBillRequest: boolean;
@@ -173,6 +175,8 @@ export default function MozoMesasPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [otherWaiters, setOtherWaiters] = useState<{ id: string; name: string }[]>([]);
+  const [codigos, setCodigos] = useState<Record<string, string>>({});
+  const [unirOpen, setUnirOpen] = useState(false);
   const [confirmBillTable, setConfirmBillTable] = useState<TableData | null>(null);
   // Cobro en la mesa (fase 2.B): efectivo o POS
   const [cobro, setCobro] = useState<{ metodo: 'cash' | 'pos'; propina: string; recibido: string } | null>(null);
@@ -190,11 +194,14 @@ export default function MozoMesasPage() {
   const fetchTables = useCallback(async () => {
     const { data: tablesData } = await supabase
       .from('tables')
-      .select('id, number, name, status, capacity, assigned_waiter_id')
+      .select('id, number, name, status, capacity, assigned_waiter_id, unida_a')
       .eq('branch_id', branchId)
       .order('number');
 
     if (!tablesData) return;
+    // Código de presencia de cada mesa (el mozo se lo dice al cliente que no lo encuentra)
+    const { data: cods } = await supabase.from('codigos_mesa').select('table_id, codigo').eq('branch_id', branchId);
+    setCodigos(Object.fromEntries((cods ?? []).map(c => [c.table_id, c.codigo])));
     const { data: sucursal } = await supabase.from('branches').select('payment_mode').eq('id', branchId).maybeSingle();
     const prepago = sucursal?.payment_mode === 'prepaid';
 
@@ -596,6 +603,12 @@ export default function MozoMesasPage() {
                     {t.listoParcial ? ' · lo demás sigue en preparación' : ''}
                   </p>
                 )}
+                {t.unida_a && (
+                  <p className="text-xs font-semibold text-muted-foreground">🔗 Unida a la mesa {tables.find(x => x.id === t.unida_a)?.number}</p>
+                )}
+                {tables.some(x => x.unida_a === t.id) && (
+                  <p className="text-xs font-semibold text-foreground">🔗 Con mesa {tables.filter(x => x.unida_a === t.id).map(x => x.number).join(' y ')}</p>
+                )}
                 {min !== null && est.cronometro && (
                   <p className={`text-xs tabular-nums ${colorCronometro(e, min, objetivos)}`}>⏱ {est.cronometro} {textoMinutos(min)}</p>
                 )}
@@ -667,6 +680,11 @@ export default function MozoMesasPage() {
                 <span className="text-muted-foreground font-normal">· {selectedTable.name}</span>
               )}
               {selectedTable?.hasBillRequest && <Badge variant="destructive" className="text-[10px]">🧾 Cuenta pedida</Badge>}
+              {selectedTable && codigos[selectedTable.id] && (
+                <span className="ml-auto rounded-lg bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground" title="Código de presencia: el cliente lo ingresa para pedir sin pagar">
+                  Código {codigos[selectedTable.id]}
+                </span>
+              )}
             </SheetTitle>
           </SheetHeader>
 
@@ -789,6 +807,29 @@ export default function MozoMesasPage() {
               </button>
             )}
 
+            {/* Grupos grandes: unir mesas o separarlas (fase 3.5) */}
+            {selectedTable && selectedTable.unida_a && (
+              <button
+                onClick={async () => {
+                  const r = await separarMesa(selectedTable.id);
+                  fetchTables();
+                  if (r.ok === false) toast({ title: 'No se pudo separar', description: r.error, variant: 'destructive' });
+                  else { setSheetOpen(false); toast({ title: `Mesa ${selectedTable.number} separada` }); }
+                }}
+                className="w-full py-3 rounded-xl text-sm font-semibold border border-border text-foreground"
+              >
+                ✂️ Separar de la mesa {tables.find(x => x.id === selectedTable.unida_a)?.number}
+              </button>
+            )}
+            {selectedTable && !selectedTable.unida_a && puedoCerrar(selectedTable) && (
+              <button
+                onClick={() => setUnirOpen(true)}
+                className="w-full py-3 rounded-xl text-sm font-semibold border border-border text-foreground"
+              >
+                🔗 Unir con otra mesa
+              </button>
+            )}
+
             {/* Respaldo: para quien prefiere pedir "a la antigua" (lo principal es que pidan y paguen con el QR) */}
             {selectedTable && puedoCerrar(selectedTable) && (
               <div className="pt-3 mt-1 border-t border-border">
@@ -889,6 +930,37 @@ export default function MozoMesasPage() {
                 </button>
               ))
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unir mesas: la elegida se suma a esta (sus clientes, pedidos y pagos pasan a esta mesa) */}
+      <Dialog open={unirOpen} onOpenChange={setUnirOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unir con la mesa {selectedTable?.number}</DialogTitle>
+            <DialogDescription>Para grupos grandes. La mesa que elijas pasa a ser parte de la {selectedTable?.number}: quien escanee su QR entra a esta mesa. Cada persona sigue pagando lo suyo.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {selectedTable && tables
+              .filter(x => x.id !== selectedTable.id && !x.unida_a && !tables.some(y => y.unida_a === x.id)
+                && (!x.assigned_waiter_id || x.assigned_waiter_id === staffId))
+              .map(x => (
+                <button
+                  key={x.id}
+                  onClick={async () => {
+                    const r = await unirMesas(selectedTable.id, x.id);
+                    setUnirOpen(false);
+                    fetchTables();
+                    if (r.ok === false) toast({ title: 'No se pudo unir', description: r.error, variant: 'destructive' });
+                    else { setSheetOpen(false); toast({ title: `Mesas ${r.datos.principal} y ${r.datos.secundaria} unidas` }); }
+                  }}
+                  aria-label={`Unir la mesa ${x.number}`}
+                  className="rounded-xl border border-border py-3 text-lg font-bold text-foreground hover:bg-accent"
+                >
+                  {x.number}
+                </button>
+              ))}
           </div>
         </DialogContent>
       </Dialog>

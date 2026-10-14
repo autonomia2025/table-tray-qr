@@ -202,14 +202,14 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | Cotización con precio congelado y vencimiento | ❌ No existe (se recalcula al cobrar) |
 | Idempotencia reservada antes de cobrar | ❌ (problema 8) |
 | Cambios de estado por el servidor | ❌ (problema 6) |
-| Código de presencia de 4 dígitos en la mesa | ❌ No existe |
+| Código de presencia de 4 dígitos en la mesa | ✅ Fase 3.5 (`codigos_mesa`, `confirmar_presencia`) |
 | Rol cajero separado | ❌ No existe (la caja está en el panel del dueño) |
 | Cierre de turno bloqueado | ✅ El cierre de caja del día queda bloqueado (fase 2.D); los turnos de mozo llegan en la fase 3 |
 | KDS separado por estación (barra / cocina) | ❌ No hay concepto de estación en la base |
 | Estado del pedido por estación para el comensal | ❌ |
 | Prepago como modo por defecto | ❌ El valor por defecto es `open_tab` |
 | "Pagar con el mozo" con aviso de que no está pagado | ❌ No existe para el comensal |
-| Riesgo de cuenta abierta visible para el dueño | ❌ No existe |
+| Riesgo de cuenta abierta visible para el dueño | ✅ Fase 3.5 (`riesgo_cuenta_abierta`, pérdidas registradas) |
 | Registrar el pago cuando el mozo cierra una mesa en cuenta abierta | ❌ (problema 6) |
 | El KDS muestra si está conectado y la hora de la última actualización | ❌ [verificar en pantalla] |
 

@@ -1,5 +1,5 @@
 import { test, expect, devices } from "@playwright/test";
-import { cuenta, entrar, foto, linkMesa } from "./apoyo/recorrido";
+import { cuenta, entrar, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
 
 // Fase 2.B — "Pagar al mozo": el comensal pide sin pagar en la app, el mozo cobra en efectivo
 // (con vuelto) y recién entonces el pedido llega a la cocina. Tres pantallas a la vez.
@@ -17,6 +17,8 @@ test("pagar al mozo en efectivo: el pedido pasa a cocina recién al registrar el
   await expect(page.getByText("🔒 Precio asegurado por 10 minutos")).toBeVisible({ timeout: 20_000 });
   await foto(page, "40-comensal-opciones-de-pago");
   await page.getByRole("button", { name: /Prefiero pagarle al mozo/ }).click();
+  // Para pedir sin pagar, la app pide el código impreso en la mesa (fase 3.5)
+  await ingresarCodigo(page, 9);
   await expect(page.getByText("¡Pedido enviado!")).toBeVisible({ timeout: 20_000 });
   await foto(page, "41-comensal-pedido-enviado");
   await page.getByRole("button", { name: "Ver estado de mi pedido" }).click();

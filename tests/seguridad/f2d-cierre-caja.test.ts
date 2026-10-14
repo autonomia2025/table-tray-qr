@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { execFileSync } from "node:child_process";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO } from "./entorno";
+import { anonimo, conSesion, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO, confirmarPresencia } from "./entorno";
 
 // Fase 2.D — Día de negocio y cierre de caja con conciliación automática.
 
@@ -55,6 +55,7 @@ describe.skipIf(!hayCredenciales)("cierre de caja", () => {
     await liberar(mesa);
     const c = await invitado();
     await c.rpc("unirse_a_mesa", { _qr_token: qrMesa(mesa)! });
+    await confirmarPresencia(c, mesa);
     const pedido = (await c.rpc("pedir_sin_pagar", { _qr_token: qrMesa(mesa)!, _items: linea("Agua mineral"), _forma: "mozo" })).data as { order_id: string; total: number };
     const cobro = await caja.rpc("registrar_cobro_mozo", { _order_ids: [pedido.order_id], _metodo: metodo, _propina: propina });
     expect(cobro.error).toBeNull();

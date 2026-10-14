@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Plus, Users } from "lucide-react";
+import RiesgoCuentaAbierta from "@/components/admin/RiesgoCuentaAbierta";
 
 interface TableRow {
   id: string;
@@ -143,6 +144,8 @@ export default function MesasPage() {
           Nueva mesa
         </Button>
       </div>
+
+      <RiesgoCuentaAbierta branchId={branchId} />
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
