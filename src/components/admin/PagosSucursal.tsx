@@ -50,7 +50,7 @@ export default function PagosSucursal({ branchId }: { branchId: string }) {
       toast({ title: "No se pudo desconectar", description: r.error, variant: "destructive" });
       return;
     }
-    toast({ title: "Pasarela desconectada", description: "Desde ahora no se cobra con la app en esta sucursal." });
+    toast({ title: "Pasarela desconectada", description: "Desde ahora no se cobra con la app en esta sucursal. La clave se guarda cifrada 120 días solo para devoluciones; después se borra." });
     cargar();
   };
 

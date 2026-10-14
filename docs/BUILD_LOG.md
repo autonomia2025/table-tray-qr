@@ -4,6 +4,45 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 4.4: pagos que no vuelven y conciliación con Transbank ✅
+**Lo que se comprobó** en el ambiente de pruebas de Transbank: si el cliente paga en Webpay y no vuelve a Tablio (cerró el celular), nadie confirma el pago y Transbank lo anula al poco rato ("Transaction has an invalid finished state: aborted"). No se cobra, pero el intento quedaba "reservado" para siempre, y la auditoría de la plata lo marca a la hora.
+
+**Revisión automática** (`20261015020000_revision_pagos.sql`, función `revisar-pagos`):
+- **Qué revisa:** el reloj de la base (pg_cron, cada 5 minutos) busca intentos a medio camino (salieron a la pasarela hace más de 3 minutos, o nunca alcanzaron a salir) y le pregunta a la pasarela.
+- **Qué hace con cada uno:**
+  - si se pudo confirmar, se registra igual que si el cliente hubiera vuelto;
+  - si Transbank ya lo anuló, queda rechazado y sin cobro;
+  - si no se puede saber, queda pendiente; no se inventa nada.
+- **Quién la puede pedir:**
+  - el reloj, con una clave que se genera en la bóveda (nadie la escribe);
+  - el dueño, el administrador, el encargado o la caja, para su sucursal.
+- **Configuración por ambiente:** la dirección de las funciones de cada ambiente va en la bóveda (`url_funciones`): en producción se configura una vez y en las pruebas locales la pone `pruebas-base-local.sh`.
+
+**Conciliación con la pasarela al cerrar la caja** (función `conciliar-pasarela`; decisión del fundador del 13 de octubre):
+- **Qué compara:** "Verificar con Transbank" en Caja → Cierre de caja revisa cada pago con Webpay del día contra lo que dice Transbank:
+  - autorizado por el mismo monto (consumo más propina);
+  - si se devolvió, anulado por lo devuelto.
+- **Resultado:** muestra "N pagos verificados: todo calza" o la lista de lo que no calza, y queda en la auditoría.
+
+**pg_net en producción** (`20261015040000_pg_net.sql`):
+- **El problema:** el reloj llama a la función con pg_net, que en Supabase local viene activada pero en el proyecto real no. Sin ella, el reloj habría fallado en silencio.
+- **Cómo se detectó:** probando el reloj en producción antes de darlo por listo.
+- **Comprobado en producción:** la base llama a `revisar-pagos` con su clave y responde 200.
+
+**Claves guardadas 120 días** (`20261015030000_claves_retencion.sql`):
+- **Antes:** al desconectar se borraba la clave al instante. Un pago en curso no se podía resolver, y un pago de ayer no se podía devolver por la pasarela.
+- **Ahora:** al desconectar, la clave deja de cobrar pero se guarda cifrada 120 días, solo para revisiones y devoluciones. El reloj la borra después.
+
+**Pruebas:**
+- `tests/seguridad/f4-4-revision-pagos.test.ts`:
+  - quién puede pedir la revisión, y que una clave de reloj inventada no sirve;
+  - un pago que salió a Webpay y no volvió se cierra sin cobro, aunque el dueño haya desconectado en el intertanto;
+  - el reloj está programado;
+  - la conciliación es solo para quien ve la plata.
+- `e2e/webpay.spec.ts`: después del pago, "Verificar con Transbank" da "todo calza", y sigue calzando después de devolverlo.
+
+---
+
 ## 2026-10-15 — Fase 4.1: pasarelas por local, con Webpay (Transbank) completo ✅
 **Decisión del fundador:** cada local conecta la pasarela que quiera, la plata va directo a su cuenta y Tablio nunca la toca (regla 9).
 

@@ -3029,6 +3029,17 @@ export type Database = {
         Args: { _orden: string; _token: string }
         Returns: Json
       }
+      _intentos_por_revisar: {
+        Args: { _branch_id?: string }
+        Returns: {
+          conexion_id: string
+          id: string
+          propina: number
+          proveedor: string
+          token: string
+        }[]
+      }
+      _llamar_revisar_pagos: { Args: never; Returns: undefined }
       _mas_dias_habiles: {
         Args: { _desde: string; _dias: number }
         Returns: string
@@ -3058,6 +3069,21 @@ export type Database = {
         }
       }
       _minutos_plato: { Args: { _menu_item_id: string }; Returns: number }
+      _pagos_pasarela_dia: {
+        Args: { _branch_id: string; _dia: string }
+        Returns: {
+          conexion_id: string
+          created_at: string
+          estado: string
+          id: string
+          monto: number
+          propina: number
+          proveedor: string
+          reembolsado: number
+          referencia: string
+          token: string
+        }[]
+      }
       _pasarela_sucursal: { Args: { _branch_id: string }; Returns: Json }
       _presente: {
         Args: { _session_id: string; _user_id: string }
@@ -3100,6 +3126,11 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      _puede_ver_plata: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
+      _purgar_claves_pasarela: { Args: never; Returns: number }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _sellos_pago: {
         Args: {
@@ -3128,6 +3159,7 @@ export type Database = {
           ventas: number
         }[]
       }
+      _verificar_cron: { Args: { _clave: string }; Returns: boolean }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       abrir_turno: { Args: { _branch_id: string }; Returns: Json }
       activar_personal: {

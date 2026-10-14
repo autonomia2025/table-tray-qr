@@ -20,6 +20,8 @@ python3 scripts/demo/crear_demo.py --salida "$DIR" --local-ajeno >/dev/null
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$DIR/demo_seed.sql" >/dev/null
 # 4 semanas de ventas de ejemplo (lo mismo que deja reiniciar_demo en la base real)
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -c "SELECT public._sembrar_historia_demo(); SELECT public._sembrar_cliente_demo(); SELECT public._sembrar_propinas_pagadas_demo();" >/dev/null
+# El reloj de revisión de pagos (fase 4.4) llama a las funciones por la red interna de Supabase local
+psql "$DB_URL" -v ON_ERROR_STOP=1 -q -c "SELECT vault.create_secret('http://kong:8000/functions/v1', 'url_funciones', 'Funciones (local)') WHERE NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'url_funciones')" >/dev/null
 echo "▶ Demo y Local Ajeno cargados"
 
 export VITE_SUPABASE_URL="$API_URL"

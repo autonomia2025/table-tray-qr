@@ -1,5 +1,5 @@
 import { test, expect, devices, type Page } from "@playwright/test";
-import { cuenta, entrar, foto, linkMesa, reembolsarUltimoPagoWebpay } from "./apoyo/recorrido";
+import { conciliarHoyConTransbank, cuenta, entrar, foto, linkMesa, reembolsarUltimoPagoWebpay } from "./apoyo/recorrido";
 
 // Fase 4.1 — Webpay de punta a punta contra el ambiente de pruebas de Transbank: el dueño conecta su
 // pasarela, el cliente paga en Webpay con la tarjeta de prueba y vuelve a Tablio con su pedido pagado.
@@ -69,9 +69,21 @@ test("el dueño conecta Webpay; el cliente paga en Webpay y vuelve con su pedido
     await foto(cliente, "142-cliente-pago-listo-webpay");
     await celCtx.close();
 
-    // El dueño devuelve ese pago: la plata vuelve por Transbank (no en el local)
+    // La caja verifica el día con Transbank desde el cierre: todo calza
+    await dueno.goto("/admin/demo-tablio/caja");
+    await dueno.getByRole("tab", { name: "Cierre de caja" }).click();
+    const verificacion = dueno.getByTestId("conciliacion-pasarela");
+    await verificacion.getByRole("button", { name: "Verificar con Transbank" }).click();
+    await expect(verificacion.getByText(/todo calza/)).toBeVisible({ timeout: 30_000 });
+    await foto(dueno, "143-caja-verificada-con-transbank");
+    const antes = await conciliarHoyConTransbank();
+    expect(antes.pagos).toBeGreaterThanOrEqual(1);
+    expect(antes.diferencias).toBe(0);
+
+    // El dueño devuelve ese pago: la plata vuelve por Transbank (no en el local), y sigue calzando
     const devolucion = await reembolsarUltimoPagoWebpay();
     expect(devolucion).toEqual({ status: 200, estado: "refunded" });
+    expect((await conciliarHoyConTransbank()).diferencias).toBe(0);
   } finally {
     await dueno.goto("/admin/demo-tablio/sucursal");
     const desconectar = dueno.getByTestId("pagos-sucursal").getByRole("button", { name: "Desconectar" });

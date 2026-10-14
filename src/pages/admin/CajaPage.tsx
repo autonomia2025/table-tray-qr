@@ -19,6 +19,7 @@ import { exportToCSV } from "@/lib/export-utils";
 import { cerrarCaja, resumenCaja, type ResumenCaja } from "@/lib/caja";
 import { textoPago } from "@/lib/estados";
 import PropinasPorPagar from "@/components/admin/PropinasPorPagar";
+import ConciliacionPasarela from "@/components/admin/ConciliacionPasarela";
 
 interface PaymentRow {
   id: string;
@@ -382,6 +383,8 @@ export default function CajaPage() {
 
         {/* ---------- CIERRE DE CAJA ---------- */}
         <TabsContent value="conciliacion">
+          {/* Conciliación con la pasarela (fase 4.4) */}
+          {branchId && date && <ConciliacionPasarela branchId={branchId} dia={date} />}
           {resumen && (
             <>
               {diaCerrado && resumen.cierre && (

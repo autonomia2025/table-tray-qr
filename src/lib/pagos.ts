@@ -116,3 +116,20 @@ export async function desconectarPago(conexion: string): Promise<Resultado<null>
   if (error) return { ok: false, error: mensajeError(error) };
   return { ok: true, dato: null };
 }
+
+export interface Conciliacion {
+  dia: string;
+  pagos: number;
+  diferencias: number;
+  detalle: { pago_id: string; referencia: string | null; monto: number; calza: boolean; detalle: string }[];
+}
+
+/** Compara cada pago con Webpay del día con lo que dice Transbank (fase 4.4). */
+export async function conciliarPasarela(sucursal: string, dia: string): Promise<Resultado<Conciliacion>> {
+  const { data, error } = await supabase.functions.invoke("conciliar-pasarela", { body: { branch_id: sucursal, dia } });
+  if (error) {
+    const cuerpo = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    return { ok: false, error: mensajeError({ message: cuerpo?.error }, "No se pudo verificar con la pasarela. Intenta de nuevo.") };
+  }
+  return { ok: true, dato: data as Conciliacion };
+}

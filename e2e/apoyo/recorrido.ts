@@ -102,3 +102,19 @@ export async function reembolsarUltimoPagoWebpay(): Promise<{ status: number; es
   const { data: despues } = await dueno.from("payments").select("status").eq("id", pago!.id).single();
   return { status: r.status, estado: despues?.status ?? null };
 }
+
+/** Conciliación con Transbank del día de negocio de hoy (fase 4.4), como el botón de la caja. */
+export async function conciliarHoyConTransbank(): Promise<{ pagos: number; diferencias: number }> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = baseDeDatos();
+  const dueno = createClient(url, clave, { auth: { persistSession: false } });
+  const c = cuenta("owner")!;
+  const { data: sesion } = await dueno.auth.signInWithPassword({ email: c.correo, password: c.clave });
+  const dia = new Date(Date.now() - 6 * 3_600_000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+  const r = await fetch(`${url}/functions/v1/conciliar-pasarela`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: clave, Authorization: `Bearer ${sesion.session!.access_token}` },
+    body: JSON.stringify({ branch_id: SUCURSAL_DEMO, dia }),
+  });
+  return await r.json();
+}

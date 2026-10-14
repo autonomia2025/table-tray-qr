@@ -77,6 +77,7 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - desde una mesa, "Pagar con Webpay" → Tarjetas → `4051 8856 0044 6623`, vencimiento cualquier fecha futura, CVV `123` → Pagar;
     - en el banco de prueba, RUT `11.111.111-1` y clave `123` → Aceptar → vuelves a Tablio con "¡Pago listo!" y el comprobante TBK;
     - es el ambiente de pruebas de Transbank: no se cobra plata real;
+    - en Caja → Cierre de caja, "Verificar con Transbank" compara cada pago con Webpay del día con Transbank;
     - al terminar, "Desconectar" (el demo vuelve a pagos simulados). Reiniciar el demo también lo desconecta.
 
 ## Experiencia del comensal (invitado o cliente)
