@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Loader2, LogOut, Timer } from 'lucide-react';
 import { NOMBRE_ROL } from '@/lib/roles';
 import { formatCLP } from '@/lib/format';
 import { abrirTurno, cerrarTurno, duracion, useMiTurno } from '@/lib/turnos';
+import { CLASE_SEMAFORO, NOMBRE_PERIODO, NOMBRE_TIPO, minutos, miDesempeno, semaforo, type Desempeno, type MetaAvance, type Objetivos } from '@/lib/equipo';
+import { Target } from 'lucide-react';
 
 export default function MozoPerfilPage() {
   const { staffName, role, logout, branchId } = useWaiters();
@@ -17,6 +19,12 @@ export default function MozoPerfilPage() {
   const { turno, cargando, recargar } = useMiTurno(branchId);
   const [confirmar, setConfirmar] = useState(false);
   const [trabajando, setTrabajando] = useState(false);
+  const [desempeno, setDesempeno] = useState<{ objetivos: Objetivos; hoy: Desempeno; metas: MetaAvance[] } | null>(null);
+
+  useEffect(() => {
+    if (!branchId) return;
+    miDesempeno(branchId).then((r) => { if (r.ok) setDesempeno(r.dato); });
+  }, [branchId, turno?.propinas]);
 
   const handleLogout = async () => {
     await logout();
@@ -91,6 +99,58 @@ export default function MozoPerfilPage() {
           </>
         )}
       </div>
+
+      {/* Mis metas y cómo voy hoy (fase 3.3) */}
+      {desempeno && (
+        <div className="mt-4 w-full max-w-sm rounded-2xl border bg-card p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Target className="h-5 w-5 text-muted-foreground" />
+            <h3 className="font-bold text-foreground">Mis metas</h3>
+          </div>
+          {desempeno.metas.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Tu encargado todavía no define metas.</p>
+          ) : (
+            <ul className="space-y-3">
+              {desempeno.metas.map((m) => {
+                const pct = Math.min(100, Math.round((m.avance / m.objetivo) * 100));
+                const formato = (n: number) => (m.tipo === 'ventas' ? formatCLP(n) : `${n} mesas`);
+                return (
+                  <li key={`${m.tipo}-${m.periodo}`}>
+                    <div className="mb-1 flex items-baseline justify-between text-sm">
+                      <span className="text-foreground">{NOMBRE_TIPO[m.tipo]} {NOMBRE_PERIODO[m.periodo]}</span>
+                      <span className="text-xs text-muted-foreground">{formato(m.avance)} de {formato(m.objetivo)}</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                      <div className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    {pct >= 100 && <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">¡Meta cumplida! 🎉</p>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-3 text-center">
+            {([
+              ['Respondes', desempeno.hoy.llamado_promedio_min, desempeno.objetivos.llamado],
+              ['Llevas lo listo', desempeno.hoy.retiro_promedio_min, desempeno.objetivos.retiro],
+            ] as const).map(([texto, valor, objetivo]) => {
+              const color = semaforo(valor, objetivo);
+              return (
+                <div key={texto}>
+                  <p className="text-[11px] text-muted-foreground">{texto}</p>
+                  <p className={`text-sm font-bold ${color ? CLASE_SEMAFORO[color] : 'text-muted-foreground'}`}>{minutos(valor)}</p>
+                  <p className="text-[10px] text-muted-foreground">meta {objetivo} min</p>
+                </div>
+              );
+            })}
+            <div>
+              <p className="text-[11px] text-muted-foreground">Calificación</p>
+              <p className="text-sm font-bold text-foreground">{desempeno.hoy.calificacion_promedio !== null ? `⭐ ${String(desempeno.hoy.calificacion_promedio).replace('.', ',')}` : '—'}</p>
+              <p className="text-[10px] text-muted-foreground">hoy</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Button variant="destructive" className="mt-10 w-full max-w-sm h-12" onClick={handleLogout}>
         <LogOut className="w-5 h-5 mr-2" />

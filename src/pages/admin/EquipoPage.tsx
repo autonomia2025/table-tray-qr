@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Pencil, Loader2, Users, Link2, Copy, Check, Mail } from "lucide-react";
 import TurnosEquipo from "@/components/admin/TurnosEquipo";
+import DesempenoEquipo from "@/components/admin/DesempenoEquipo";
 
 interface StaffRow {
   id: string;
@@ -225,6 +226,8 @@ export default function EquipoPage() {
           </table>
         </div>
       )}
+
+      <DesempenoEquipo branchId={branchId} tenantId={tenantId} />
 
       <TurnosEquipo branchId={branchId} />
 

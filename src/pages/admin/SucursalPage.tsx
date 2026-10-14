@@ -27,7 +27,8 @@ export default function SucursalPage() {
   const { toast } = useToast();
 
   const [tenantForm, setTenantForm] = useState({ name: "", primary_color: "#E8531D", logo_url: "", cover_image_url: "", welcome_message: "" });
-  const [branchForm, setBranchForm] = useState({ name: "", is_open: true, payment_mode: "open_tab" });
+  const [branchForm, setBranchForm] = useState({ name: "", is_open: true, payment_mode: "open_tab",
+    objetivo_llamado_min: 2, objetivo_retiro_min: 5, objetivo_pedido_min: 20 });
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,7 +42,7 @@ export default function SucursalPage() {
     async function load() {
       const [{ data: tenant }, { data: branch }, { data: tabs }] = await Promise.all([
         supabase.from("tenants").select("name, primary_color, logo_url, cover_image_url, welcome_message").eq("id", tenantId).single(),
-        supabase.from("branches").select("name, is_open, payment_mode").eq("id", branchId).single(),
+        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min").eq("id", branchId).single(),
         supabase.from("tables").select("id, number, name, capacity").eq("branch_id", branchId).order("number"),
       ]);
       if (tenant) setTenantForm({
@@ -49,7 +50,8 @@ export default function SucursalPage() {
         logo_url: tenant.logo_url ?? "", cover_image_url: tenant.cover_image_url ?? "",
         welcome_message: tenant.welcome_message ?? "",
       });
-      if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true, payment_mode: branch.payment_mode ?? "open_tab" });
+      if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true, payment_mode: branch.payment_mode ?? "open_tab",
+        objetivo_llamado_min: branch.objetivo_llamado_min, objetivo_retiro_min: branch.objetivo_retiro_min, objetivo_pedido_min: branch.objetivo_pedido_min });
       setTables(tabs ?? []);
       setLoading(false);
     }
@@ -66,6 +68,8 @@ export default function SucursalPage() {
       }).eq("id", tenantId),
       supabase.from("branches").update({
         name: branchForm.name, is_open: branchForm.is_open, payment_mode: branchForm.payment_mode,
+        objetivo_llamado_min: branchForm.objetivo_llamado_min, objetivo_retiro_min: branchForm.objetivo_retiro_min,
+        objetivo_pedido_min: branchForm.objetivo_pedido_min,
       }).eq("id", branchId),
 
     ]);
@@ -172,6 +176,35 @@ export default function SucursalPage() {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Tiempos objetivo (fase 3.3): el semáforo del mozo y el ranking del equipo usan estos minutos */}
+          <div>
+            <Label>Tiempos objetivo</Label>
+            <p className="mb-2 text-xs text-muted-foreground">En verde mientras se cumplen, en ámbar al pasarse y en rojo al doble. También miden al equipo.</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([
+                ["objetivo_llamado_min", "Responder un llamado", 1, 60],
+                ["objetivo_retiro_min", "Llevar a la mesa lo que está listo", 1, 60],
+                ["objetivo_pedido_min", "Pedido completo (de pagado a entregado)", 5, 180],
+              ] as const).map(([campo, texto, min, max]) => (
+                <div key={campo} className="rounded-xl border p-3">
+                  <Label htmlFor={campo} className="text-xs font-normal text-muted-foreground">{texto}</Label>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Input
+                      id={campo}
+                      type="number"
+                      min={min}
+                      max={max}
+                      value={branchForm[campo]}
+                      onChange={(e) => setBranchForm((p) => ({ ...p, [campo]: Math.min(max, Math.max(min, parseInt(e.target.value) || min)) }))}
+                      className="h-9 w-20"
+                    />
+                    <span className="text-sm text-muted-foreground">min</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>

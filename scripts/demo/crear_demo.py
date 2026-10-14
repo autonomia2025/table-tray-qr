@@ -243,6 +243,8 @@ def main() -> None:
     # Estaciones: "Cocina" la crea sola la base (predeterminada); las bebidas van a "Barra" (fase 3.2)
     BARRA = uid("station-barra")
     sql.append(ins("public.stations", {"id": BARRA, "tenant_id": TENANT, "branch_id": BRANCH, "name": "Barra", "sort_order": 1}))
+    # Meta general de ejemplo para los mozos (fase 3.3)
+    sql.append(ins("public.metas_mozo", {"id": uid("meta-ventas-dia"), "tenant_id": TENANT, "branch_id": BRANCH, "tipo": "ventas", "periodo": "dia", "objetivo": 150000}))
 
     # Carta
     for ci, (cat, emoji, platos) in enumerate(CARTA):

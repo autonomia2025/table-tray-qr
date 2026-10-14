@@ -20,6 +20,7 @@ interface KDSOrderItem {
   /** Estado de este producto en su estación (fase 1.4) y la estación que lo prepara (fase 3.2). */
   status: string;
   station_id: string | null;
+  ready_at: string | null;
 }
 
 interface Estacion {
@@ -49,6 +50,8 @@ interface KDSOrder {
 
 interface BranchInfo {
   id: string;
+  /** Minutos para llevar a la mesa lo que está listo (fase 3.3). */
+  objetivo_retiro_min: number;
   name: string;
   restaurant_name: string;
   tenant_name: string;
@@ -99,7 +102,7 @@ async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, menu_item_name, quantity, selected_modifiers, item_notes, status, station_id")
+    .select("id, menu_item_name, quantity, selected_modifiers, item_notes, status, station_id, ready_at")
     .eq("order_id", o.id);
 
   return {
@@ -158,6 +161,23 @@ function OrderTimer({ confirmedAt }: { confirmedAt: string | null }) {
   );
 }
 
+/* --- Lo listo que nadie lleva (fase 3.3) --- */
+function EsperaRetiro({ desde, objetivo }: { desde: string | null; objetivo: number }) {
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  if (!desde) return null;
+  const min = Math.floor((ahora - new Date(desde).getTime()) / 60_000);
+  if (min < objetivo) return null;
+  return (
+    <div className="mx-4 mb-3 rounded-lg px-3 py-2" style={{ backgroundColor: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.6)" }}>
+      <p className="text-sm font-bold" style={{ color: "#FCA5A5" }}>⚠ Listo hace {min} min y nadie lo ha llevado</p>
+    </div>
+  );
+}
+
 /* --- Order Card --- */
 function OrderCard({
   order,
@@ -165,6 +185,7 @@ function OrderCard({
   onAction,
   onDisableItem,
   nombreEstacion,
+  objetivoRetiro,
 }: {
   order: KDSOrder;
   column: "new" | "kitchen" | "ready";
@@ -172,6 +193,7 @@ function OrderCard({
   onDisableItem?: (itemId: string, itemName: string) => void;
   /** En la vista "Todas", a qué estación va cada producto. */
   nombreEstacion?: (id: string | null) => string | null;
+  objetivoRetiro?: number;
 }) {
   const borderColor = column === "new" ? "#EF4444" : column === "kitchen" ? "#F59E0B" : "#22C55E";
 
@@ -269,6 +291,13 @@ function OrderCard({
         </>
       )}
 
+      {column === "ready" && objetivoRetiro && (
+        <EsperaRetiro
+          desde={order.items.map((i) => i.ready_at).filter(Boolean).sort()[0] ?? null}
+          objetivo={objetivoRetiro}
+        />
+      )}
+
       {/* Action buttons */}
       {column === "new" && (
         <div className="px-4 pb-3">
@@ -320,6 +349,7 @@ function KDSColumn({
   recentlyDelivered,
   groupedNewItems,
   nombreEstacion,
+  objetivoRetiro,
 }: {
   title: string;
   count: number;
@@ -332,6 +362,7 @@ function KDSColumn({
   recentlyDelivered?: RecentlyDeliveredEntry[];
   groupedNewItems?: { name: string; totalQty: number; tables: number[] }[];
   nombreEstacion?: (id: string | null) => string | null;
+  objetivoRetiro?: number;
 }) {
   return (
     <div className="flex flex-col min-h-0 flex-1">
@@ -375,7 +406,7 @@ function KDSColumn({
             </div>
           ) : (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} column={column} onAction={onAction} onDisableItem={onDisableItem} nombreEstacion={nombreEstacion} />
+              <OrderCard key={order.id} order={order} column={column} onAction={onAction} onDisableItem={onDisableItem} nombreEstacion={nombreEstacion} objetivoRetiro={objetivoRetiro} />
             ))
           )}
         </AnimatePresence>
@@ -543,7 +574,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("branches")
-        .select("id, name, restaurant_id, tenant_id, payment_mode")
+        .select("id, name, restaurant_id, tenant_id, payment_mode, objetivo_retiro_min")
         .eq("id", branchId)
         .maybeSingle();
       if (!data) return null;
@@ -567,6 +598,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
         tenant_name: tenant?.name || "",
         primary_color: tenant?.primary_color || "#E8531D",
         payment_mode: data.payment_mode || "open_tab",
+        objetivo_retiro_min: data.objetivo_retiro_min ?? 5,
       };
 
     },
@@ -628,7 +660,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
       const orderIds = data.map((o) => o.id);
       const { data: allItems } = await supabase
         .from("order_items")
-        .select("id, order_id, menu_item_name, quantity, selected_modifiers, item_notes, status, station_id")
+        .select("id, order_id, menu_item_name, quantity, selected_modifiers, item_notes, status, station_id, ready_at")
         .in("order_id", orderIds);
       const itemsByOrder = new Map<string, KDSOrderItem[]>();
       for (const item of allItems || []) {
@@ -743,9 +775,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "order_items" },
         (payload) => {
-          const it = payload.new as { id: string; order_id: string; status: string; station_id: string | null };
+          const it = payload.new as { id: string; order_id: string; status: string; station_id: string | null; ready_at: string | null };
           setOrders((prev) => prev.map((o) => o.id === it.order_id
-            ? { ...o, items: o.items.map((i) => (i.id === it.id ? { ...i, status: it.status, station_id: it.station_id } : i)) }
+            ? { ...o, items: o.items.map((i) => (i.id === it.id ? { ...i, status: it.status, station_id: it.station_id, ready_at: it.ready_at } : i)) }
             : o));
           marcarActualizado();
         },
@@ -801,7 +833,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
     setOrders((prev) => prev.map((o) => o.id !== orderId ? o : {
       ...o,
       items: o.items.map((i) => (estacionId === null || i.station_id === estacionId) && (RANGO[i.status] ?? 9) < RANGO[newStatus]
-        ? { ...i, status: newStatus }
+        ? { ...i, status: newStatus, ready_at: newStatus === "ready" ? new Date().toISOString() : i.ready_at }
         : i),
     }));
 
@@ -1009,6 +1041,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           onAction={handleAction}
           recentlyDelivered={recentlyDelivered}
           nombreEstacion={nombreEstacion}
+          objetivoRetiro={branch?.objetivo_retiro_min}
         />
       </div>
     </div>

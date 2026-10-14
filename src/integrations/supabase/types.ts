@@ -230,6 +230,9 @@ export type Database = {
           id: string
           is_open: boolean | null
           name: string
+          objetivo_llamado_min: number
+          objetivo_pedido_min: number
+          objetivo_retiro_min: number
           opening_hours: Json | null
           payment_mode: string
           phone: string | null
@@ -244,6 +247,9 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           name: string
+          objetivo_llamado_min?: number
+          objetivo_pedido_min?: number
+          objetivo_retiro_min?: number
           opening_hours?: Json | null
           payment_mode?: string
           phone?: string | null
@@ -258,6 +264,9 @@ export type Database = {
           id?: string
           is_open?: boolean | null
           name?: string
+          objetivo_llamado_min?: number
+          objetivo_pedido_min?: number
+          objetivo_retiro_min?: number
           opening_hours?: Json | null
           payment_mode?: string
           phone?: string | null
@@ -1067,6 +1076,61 @@ export type Database = {
           },
         ]
       }
+      metas_mozo: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          objetivo: number
+          periodo: string
+          staff_id: string | null
+          tenant_id: string
+          tipo: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          objetivo: number
+          periodo: string
+          staff_id?: string | null
+          tenant_id: string
+          tipo: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          objetivo?: number
+          periodo?: string
+          staff_id?: string | null
+          tenant_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metas_mozo_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_mozo_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metas_mozo_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modifier_groups: {
         Row: {
           id: string
@@ -1231,6 +1295,7 @@ export type Database = {
         Row: {
           created_at: string | null
           delivered_at: string | null
+          delivered_by: string | null
           id: string
           item_notes: string | null
           menu_item_id: string
@@ -1249,6 +1314,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           delivered_at?: string | null
+          delivered_by?: string | null
           id?: string
           item_notes?: string | null
           menu_item_id: string
@@ -1267,6 +1333,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           delivered_at?: string | null
+          delivered_by?: string | null
           id?: string
           item_notes?: string | null
           menu_item_id?: string
@@ -2120,6 +2187,7 @@ export type Database = {
           opened_at: string | null
           paid_amount: number
           rating: number | null
+          staff_id: string | null
           table_id: string
           tenant_id: string
           tip_amount: number | null
@@ -2133,6 +2201,7 @@ export type Database = {
           opened_at?: string | null
           paid_amount?: number
           rating?: number | null
+          staff_id?: string | null
           table_id: string
           tenant_id: string
           tip_amount?: number | null
@@ -2146,6 +2215,7 @@ export type Database = {
           opened_at?: string | null
           paid_amount?: number
           rating?: number | null
+          staff_id?: string | null
           table_id?: string
           tenant_id?: string
           tip_amount?: number | null
@@ -2157,6 +2227,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_sessions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
             referencedColumns: ["id"]
           },
           {
@@ -2542,6 +2619,15 @@ export type Database = {
         Args: { _branch_id: string; _dia: string }
         Returns: Json
       }
+      _desempeno_mozo: {
+        Args: {
+          _branch_id: string
+          _desde: string
+          _hasta: string
+          _staff_id: string
+        }
+        Returns: Json
+      }
       _mesa_y_actor: {
         Args: { _table_id: string }
         Returns: Record<string, unknown>
@@ -2568,6 +2654,10 @@ export type Database = {
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _turno_abierto: { Args: { _staff_id: string }; Returns: string }
+      _ventana_dias: {
+        Args: { _branch_id: string; _desde: string; _hasta: string }
+        Returns: Record<string, unknown>
+      }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       abrir_turno: { Args: { _branch_id: string }; Returns: Json }
       activar_personal: {
@@ -2700,6 +2790,7 @@ export type Database = {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined
       }
+      mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
@@ -2722,6 +2813,10 @@ export type Database = {
       }
       puede_editar_fotos: { Args: { _carpeta: string }; Returns: boolean }
       rango_estado: { Args: { _estado: string }; Returns: number }
+      ranking_equipo: {
+        Args: { _branch_id: string; _desde: string; _hasta: string }
+        Returns: Json
+      }
       registrar_acceso_soporte: {
         Args: { _id: string; _tipo: string }
         Returns: undefined

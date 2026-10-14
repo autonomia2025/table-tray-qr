@@ -4,6 +4,37 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.3: control del equipo ✅
+**Antes:** el dueño no sabía quién hacía qué ni cuánto tardaban. El semáforo del mozo tenía minutos fijos en el código, y nadie avisaba si un plato listo se quedaba enfriándose.
+
+**Ahora (migración `20261014080000_control_equipo.sql`):**
+- **Tiempos objetivo por sucursal**, que el dueño edita en Sucursal: responder un llamado (2 min), llevar lo listo (5 min) y el pedido completo (20 min). El semáforo del mozo los usa: verde dentro del objetivo, ámbar al pasarse, rojo al doble.
+- **Alerta de abandono:** si algo listo de sus mesas pasa el objetivo, el mozo ve "Hay pedidos listos esperando · Mesa 4: listo hace 6 min", la tarjeta se marca en rojo y suena una vez. En la cocina, la tarjeta dice "Listo hace 6 min y nadie lo ha llevado".
+- **Quién hizo qué:**
+  - cada producto guarda quién lo entregó (`delivered_by`);
+  - cada visita guarda el mozo a cargo al cerrarla (`table_sessions.staff_id`), y **la calificación del cliente es de ese mozo**. Si un encargado cierra la mesa, igual cuenta para el mozo que la atendía.
+- **`ranking_equipo`** (dueño, administrador y encargado), por hoy, 7 o 30 días: mesas cerradas, entregas, ventas, ticket promedio, propinas, tiempo para responder llamados y para llevar lo listo (promedio y % a tiempo, con semáforo) y calificación. Los tres primeros en ventas llevan medalla.
+- **Metas** (`metas_mozo`): de ventas o de mesas cerradas, por día, semana o mes, para un mozo o para todos (la propia gana a la general).
+  - El mozo ve en su Perfil la barra de avance ("¡Meta cumplida! 🎉") y cómo va hoy en tiempos y calificación (`mi_desempeno`).
+  - El demo trae una meta general de $150.000 diarios. Las metas son configuración: reiniciar el demo no las borra.
+
+**Pruebas:**
+- `tests/seguridad/f3-3-equipo.test.ts`: 5 pruebas.
+  - Queda anotado quién entregó, quién atendía y la calificación; el ranking y el perfil lo muestran con la meta.
+  - Solo el dueño o el encargado ven el ranking, con un período razonable.
+  - Metas: las pone el dueño; cada mozo ve la suya y la general, no la de otro; no se duplican.
+  - Los tiempos objetivo los cambia el dueño, dentro de rangos (el mozo no).
+  - El dueño de otro local no ve el ranking ni pone metas.
+- `e2e/equipo-desempeno.spec.ts`:
+  - el dueño baja el objetivo a 1 minuto;
+  - un plato listo espera y aparecen las alertas en el mozo y en la cocina;
+  - el dueño ve el desempeño y le pone una meta a Camila, y ella la ve en su perfil;
+  - el objetivo vuelve a 5 minutos.
+- **Base desechable:** 153 de 153 de seguridad y 60 de 60 de navegador.
+- **Base de pruebas:** 137 de seguridad (más 16 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 3.2: cocina y barra por separado, y KDS robusto ✅
 **Antes:**
 - La base ya separaba estaciones y estado por producto (fase 1.4), pero la pantalla de cocina mostraba todo junto.

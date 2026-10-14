@@ -119,9 +119,21 @@ function textoMinutos(min: number): string {
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
 }
 
+/** Tiempos objetivo del local (fase 3.3): Sucursal → Tiempos objetivo. */
+interface Objetivos { llamado: number; retiro: number; pedido: number }
+const OBJETIVOS_POR_DEFECTO: Objetivos = { llamado: 2, retiro: 5, pedido: 20 };
+
+/** Semáforo: ámbar al pasar el objetivo del local, rojo al doble. */
+function umbral(e: EstadoMesa, o: Objetivos): [number, number] | null {
+  if (e === 'llamando') return [o.llamado, o.llamado * 2];
+  if (e === 'listo') return [o.retiro, o.retiro * 2];
+  if (e === 'cocina') return [o.pedido, Math.round(o.pedido * 1.5)];
+  return ESTADOS[e].umbral;
+}
+
 /** Amarillo y luego rojo cuando una mesa espera demasiado. */
-function colorCronometro(e: EstadoMesa, min: number | null): string {
-  const u = ESTADOS[e].umbral;
+function colorCronometro(e: EstadoMesa, min: number | null, o: Objetivos): string {
+  const u = umbral(e, o);
   if (!u || min === null) return 'text-muted-foreground';
   if (min >= u[1]) return 'text-red-600 dark:text-red-400 font-bold';
   if (min >= u[0]) return 'text-amber-600 dark:text-amber-400 font-semibold';
@@ -165,6 +177,15 @@ export default function MozoMesasPage() {
   // Cobro en la mesa (fase 2.B): efectivo o POS
   const [cobro, setCobro] = useState<{ metodo: 'cash' | 'pos'; propina: string; recibido: string } | null>(null);
   const prevUrgentRef = useRef(0);
+  const [objetivos, setObjetivos] = useState<Objetivos>(OBJETIVOS_POR_DEFECTO);
+  const prevOlvidadasRef = useRef(0);
+  useEffect(() => {
+    if (!branchId) return;
+    supabase.from('branches').select('objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min').eq('id', branchId).maybeSingle()
+      .then(({ data }) => {
+        if (data) setObjetivos({ llamado: data.objetivo_llamado_min, retiro: data.objetivo_retiro_min, pedido: data.objetivo_pedido_min });
+      });
+  }, [branchId]);
 
   const fetchTables = useCallback(async () => {
     const { data: tablesData } = await supabase
@@ -328,6 +349,15 @@ export default function MozoMesasPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Suena otra vez cuando algo listo pasa el tiempo objetivo sin que nadie lo lleve (fase 3.3)
+  useEffect(() => {
+    const n = tables.filter(t => estadoMesa(t) === 'listo'
+      && (!t.assigned_waiter_id || t.assigned_waiter_id === staffId)
+      && (minutosDesde(inicioCronometro(t, 'listo'), ahora) ?? -1) >= objetivos.retiro).length;
+    if (n > prevOlvidadasRef.current) playAlert();
+    prevOlvidadasRef.current = n;
+  }, [tables, ahora, objetivos, staffId]);
+
   // --- Action handlers ---
   const handleTakeTable = async (tableId: string) => {
     setActionLoading(tableId);
@@ -465,6 +495,9 @@ export default function MozoMesasPage() {
     || (b.min ?? -1) - (a.min ?? -1)
     || a.t.number - b.t.number);
   const cuenta = (e: EstadoMesa) => conEstado.filter(x => x.e === e).length;
+  // Alerta de abandono: algo listo de mis mesas (o sin mozo) que nadie lleva hace más del objetivo
+  const olvidadas = conEstado.filter(x => x.e === 'listo' && x.min !== null && x.min >= objetivos.retiro
+    && (!x.t.assigned_waiter_id || x.t.assigned_waiter_id === staffId));
   const estadoSeleccionado = selectedTable ? estadoMesa(selectedTable) : 'libre';
   const puedoCerrar = (t: TableData) => !t.assigned_waiter_id || t.assigned_waiter_id === staffId;
 
@@ -506,6 +539,16 @@ export default function MozoMesasPage() {
         </div>
       ))}
 
+      {/* Alerta de abandono: lo listo no puede esperar */}
+      {olvidadas.length > 0 && (
+        <div role="alert" className="mb-3 rounded-2xl border border-destructive/50 bg-destructive/10 p-3">
+          <p className="text-sm font-bold text-destructive">⚠ Hay pedidos listos esperando</p>
+          {olvidadas.slice(0, 3).map(({ t, min }) => (
+            <p key={t.id} className="text-sm text-foreground">Mesa {t.number}: listo hace {textoMinutos(min)} (objetivo {objetivos.retiro} min)</p>
+          ))}
+        </div>
+      )}
+
       {/* Resumen por color: también sirve de leyenda */}
       <div className="flex flex-wrap gap-1.5 mb-4" aria-label="Resumen de mesas">
         {(Object.keys(ESTADOS) as EstadoMesa[]).filter(e => cuenta(e) > 0).map(e => (
@@ -531,7 +574,7 @@ export default function MozoMesasPage() {
               aria-label={`Mesa ${t.number}: ${est.etiqueta}`}
               onClick={() => openSheet(t)}
               onKeyDown={(ev) => { if (ev.key === 'Enter') openSheet(t); }}
-              className={`rounded-xl p-3.5 transition-all relative min-h-[140px] flex flex-col cursor-pointer active:scale-[0.97] ${est.tarjeta}`}
+              className={`rounded-xl p-3.5 transition-all relative min-h-[140px] flex flex-col cursor-pointer active:scale-[0.97] ${est.tarjeta} ${olvidadas.some(x => x.t.id === t.id) ? 'ring-2 ring-destructive' : ''}`}
             >
               {/* Número y marcas */}
               <div className="flex items-start justify-between">
@@ -554,7 +597,7 @@ export default function MozoMesasPage() {
                   </p>
                 )}
                 {min !== null && est.cronometro && (
-                  <p className={`text-xs tabular-nums ${colorCronometro(e, min)}`}>⏱ {est.cronometro} {textoMinutos(min)}</p>
+                  <p className={`text-xs tabular-nums ${colorCronometro(e, min, objetivos)}`}>⏱ {est.cronometro} {textoMinutos(min)}</p>
                 )}
                 {pidio !== null && e !== 'cocina' && e !== 'por_cobrar' && (
                   <p className="text-[11px] text-muted-foreground tabular-nums">

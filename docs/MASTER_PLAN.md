@@ -74,7 +74,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 |---|---|---|
 | 3.1 | Turnos de mozo (abrir y cerrar, con duración) y **propina para el mozo que tomó la mesa** (decisión del fundador del 14 de octubre: el cliente no elige; si nadie la había tomado al pagar, va al primero que la tome); propinas por mozo y por turno | ✅ |
 | 3.2 | Estaciones en pantalla (cocina y barra por separado) y KDS robusto: recupera todo al volver internet, muestra conexión y última actualización; el mozo lleva lo listo de una estación sin esperar a las demás | ✅ |
-| 3.3 | Control del equipo: ranking por período, tiempos objetivo con semáforo, alertas de pedido listo sin entregar, calificación atribuida al mozo que cerró la mesa, metas por mozo | ⏳ |
+| 3.3 | Control del equipo: ranking por período, tiempos objetivo con semáforo, alertas de pedido listo sin entregar, calificación atribuida al mozo que cerró la mesa, metas por mozo | ✅ |
 | 3.4 | La mesa en vivo (comensal): quién está, tu pedido por estación, "otra ronda", "lo de siempre", tiempo estimado y aviso al celular | ⏳ |
 | 3.5 | Código de presencia en las tarjetas de mesa, cuenta abierta controlada y unir mesas | ⏳ |
 | 3.6 | Reportes calculados por el servidor; inicio del dueño que cuenta una historia; productividad de cocina y mapa de calor de horas | ⏳ |
