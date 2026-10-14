@@ -9,13 +9,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { textoPedidoPlural } from "@/lib/estados";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
   id: string;
   menu_item_name: string;
   quantity: number;
-  selected_modifiers: any;
+  selected_modifiers: unknown;
   item_notes: string | null;
   /** Estado de este producto en su estación (fase 1.4) y la estación que lo prepara (fase 3.2). */
   status: string;
@@ -197,10 +198,10 @@ function OrderCard({
 }) {
   const borderColor = column === "new" ? "#EF4444" : column === "kitchen" ? "#F59E0B" : "#22C55E";
 
-  const modifiers = (mods: any): string[] => {
-    if (!mods) return [];
-    if (Array.isArray(mods)) return mods.map((m: any) => m.modifierName || m.name || String(m));
-    return [];
+  const modifiers = (mods: unknown): string[] => {
+    if (!Array.isArray(mods)) return [];
+    return mods.map((m: { modifierName?: string; name?: string } | string) =>
+      typeof m === "string" ? m : m.modifierName || m.name || "");
   };
 
   return (
@@ -742,8 +743,8 @@ function KDSBoard({ branchId }: { branchId: string }) {
         { event: "UPDATE", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` },
         (payload) => {
           marcarActualizado();
-          const updated = payload.new as any;
-          const prevRow = payload.old as any;
+          const updated = payload.new as KDSOrder;
+          const prevRow = payload.old as Partial<KDSOrder> | undefined;
           if (["delivered", "cancelled"].includes(updated.status)) {
             setOrders((prev) => prev.filter((o) => o.id !== updated.id));
           } else {
@@ -1009,7 +1010,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
       {/* COLUMNS */}
       <div className="flex flex-1 min-h-0 divide-x divide-gray-800">
         <KDSColumn
-          title="NUEVOS"
+          title={textoPedidoPlural("confirmed").toUpperCase()}
           count={newOrders.length}
           color="#EF4444"
           bgColor="rgba(239,68,68,0.12)"
@@ -1021,7 +1022,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           nombreEstacion={nombreEstacion}
         />
         <KDSColumn
-          title="EN COCINA"
+          title={textoPedidoPlural("in_kitchen").toUpperCase()}
           count={kitchenOrders.length}
           color="#F59E0B"
           bgColor="rgba(245,158,11,0.12)"
@@ -1032,7 +1033,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           nombreEstacion={nombreEstacion}
         />
         <KDSColumn
-          title="LISTOS PARA ENTREGAR"
+          title={`${textoPedidoPlural("ready").toUpperCase()} PARA ENTREGAR`}
           count={readyOrders.length}
           color="#22C55E"
           bgColor="rgba(34,197,94,0.12)"

@@ -233,7 +233,7 @@ export default function JVEquipoPage() {
                   <div>
                     <h3 className="text-sm font-semibold mb-2">Leads recientes</h3>
                     <div className="space-y-1 max-h-60 overflow-auto">
-                      {sellerLeads.slice(0, 15).map((l: any) => (
+                      {sellerLeads.slice(0, 15).map((l) => (
                         <div key={l.id} className="flex justify-between text-sm py-1 border-b border-border/30">
                           <span className="text-foreground">{l.restaurant_name || l.id.slice(0, 8)}</span>
                           <Badge variant="outline" className="text-[10px]">{l.stage}</Badge>

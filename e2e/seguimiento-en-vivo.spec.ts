@@ -41,7 +41,7 @@ test("el comensal ve su pedido pasar de Recibido a En cocina, Listo y Entregado 
   await expect(comensal.getByText("En cocina 🍳").first()).toBeVisible({ timeout: 15_000 });
 
   await tarjeta("LISTO").getByRole("button", { name: "LISTO" }).click();
-  await expect(comensal.getByText("¡Listo para entregar! 🔔").first()).toBeVisible({ timeout: 15_000 });
+  await expect(comensal.getByText("¡Listo! 🔔").first()).toBeVisible({ timeout: 15_000 });
 
   await tarjeta(/ENTREGADO/).getByRole("button", { name: /ENTREGADO/ }).click();
   await expect(comensal.getByText("Entregado ✓").first()).toBeVisible({ timeout: 15_000 });

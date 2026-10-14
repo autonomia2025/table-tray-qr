@@ -4,6 +4,43 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Pista P: calidad que no toca la base ✅
+**Una sola capa de traducción de estados** (`src/lib/estados.ts`). La base guarda los estados en inglés (decisión del 1 de octubre) y ahora todo lo que ve una persona pasa por aquí.
+- **Dos voces:** la del personal ("Nuevo", "En cocina", "Listo"…) y la del cliente ("Recibido", "En cocina", "¡Listo!"…), con plurales para las columnas.
+- **También cubre** mesas, pagos y llamados.
+- **Antes:** había 7 mapas sueltos, en el seguimiento, Mesas, Pedidos, el KDS, la pantalla del mozo, sus avisos y la Caja.
+  - Cada uno decía distinto el mismo estado ("Preparando" y "En cocina", "Listo para entregar" y "Listo").
+  - Los avisos del mozo podían mostrar el estado en inglés si no lo conocían.
+- **Ahora:** un estado desconocido se muestra como "En proceso".
+- **Prueba:** `src/lib/estados.test.ts` exige un texto en español para cada estado que acepta la base.
+- **Cambio visible:** el seguimiento del cliente dice "¡Listo! 🔔" en vez de "¡Listo para entregar!", que es lenguaje del personal.
+
+**Nunca un error técnico ni en inglés (regla 10)** (`src/lib/errores.ts`, `mensajeError`):
+- **Qué hace con cada mensaje:**
+  - los nuestros (en español) pasan tal cual;
+  - los técnicos o en inglés se traducen: sin conexión, sesión cerrada, sin permiso, ya existe, archivo muy grande;
+  - si no hay traducción, se reemplazan por un texto claro.
+- `mensajeAmigable` ahora usa el mismo traductor.
+- **23 lugares mostraban el error crudo de la base:** carta, pago, mesas, soporte, superadmin y backoffice. Ya no lo hacen.
+- **Guardia:** `src/lib/errores.test.ts` recorre todas las pantallas y falla si alguna vuelve a mostrar `error.message` en un aviso.
+- **La página de "no encontrado" estaba en inglés** ("Oops! Page not found"). Ahora está en español, con el estilo de la app y con una indicación para quien llega desde un QR.
+- **Otros textos en inglés:** "Click para subir imagen" y "Dashboard", entre otros, quedaron en español.
+
+**Limpieza de código sin uso** (revisado con `knip`):
+- **Se borraron 7 archivos** que ninguna ruta usa: páginas viejas de Lovable (`Index`, `AdminGlobalPage`, tres del backoffice), `NavLink` y `App.css`.
+- **Se quitaron las herramientas de Lovable** de la compilación (`lovable-tagger` y dos plugins) y dos dependencias sin uso (`@tailwindcss/typography`, `@testing-library/react`).
+- **Se quedan:** los componentes de `components/ui` (la biblioteca de diseño acordada) y las funciones del servidor (las carga Supabase).
+
+**Prueba frágil corregida (de la 3.8):** el descuadre a propósito de "mesa unida" suponía que la mesa 4 estaba libre; si otra prueba la ocupaba, no se detectaba. Ahora arma una cadena de mesas unidas, que es incoherente siempre.
+
+**Estilo:** el tope bajó de 91 a 33 errores.
+- Se quitaron los "any" que el sistema de tipos deduce solo.
+- Se tiparon los de las pantallas de cliente y operación.
+- Se corrigieron bloques vacíos y `let` que debían ser `const`.
+- Lo que queda es del backoffice y de la lectura de reportes de la plataforma.
+
+---
+
 ## 2026-10-14 — Fase 3.8: compuerta de la fase 3 ✅ (fase 3 terminada)
 **Auditoría de la operación** (`auditoria_operacion()`, solo superadmin). Es igual que la de la plata y revisa que la operación calce en toda la base:
 - **Turnos y propinas:** la propina es de un mozo del mismo local, y el turno del pago es de ese mozo.

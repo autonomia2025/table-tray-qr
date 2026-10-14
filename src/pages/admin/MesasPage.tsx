@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Plus, Users } from "lucide-react";
 import RiesgoCuentaAbierta from "@/components/admin/RiesgoCuentaAbierta";
+import { textoMesa } from "@/lib/estados";
+import { mensajeError } from "@/lib/errores";
 
 interface TableRow {
   id: string;
@@ -23,10 +25,9 @@ interface TableRow {
 }
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
-  free: { label: "Libre", bg: "bg-[#E8F5EE]", text: "text-[#1A6B45]" },
-  occupied: { label: "Ocupada", bg: "bg-accent", text: "text-accent-foreground" },
-  waiting_bill: { label: "Esperando cuenta", bg: "bg-[#FDE8E8]", text: "text-[#C0280F]" },
-  reserved: { label: "Reservada", bg: "bg-muted", text: "text-muted-foreground" },
+  free: { label: textoMesa("free"), bg: "bg-[#E8F5EE]", text: "text-[#1A6B45]" },
+  occupied: { label: textoMesa("occupied"), bg: "bg-accent", text: "text-accent-foreground" },
+  waiting_bill: { label: textoMesa("waiting_bill"), bg: "bg-[#FDE8E8]", text: "text-[#C0280F]" },
 };
 
 function minutesSince(dateStr: string) {
@@ -55,7 +56,7 @@ export default function MesasPage() {
     if (error || !data) return;
 
     const occupiedIds = data.filter((t) => t.status === "occupied" || t.status === "waiting_bill").map((t) => t.id);
-    let sessionMap: Record<string, { total: number; opened: string }> = {};
+    const sessionMap: Record<string, { total: number; opened: string }> = {};
     if (occupiedIds.length) {
       const { data: sessions } = await supabase
         .from("table_sessions")
@@ -113,8 +114,8 @@ export default function MesasPage() {
       setNewName("");
       setNewCapacity("4");
       fetchTables();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message || "No se pudo crear la mesa", variant: "destructive" });
+    } catch (e) {
+      toast({ title: "Error", description: mensajeError(e, "No se pudo crear la mesa"), variant: "destructive" });
     } finally {
       setCreating(false);
     }

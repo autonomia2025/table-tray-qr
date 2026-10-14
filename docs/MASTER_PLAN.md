@@ -93,7 +93,7 @@ Detalle de las ideas:
   - aviso al celular "tu pedido está listo" aunque la pantalla esté bloqueada (la app se instala sin tienda de apps).
 - **Sellos que se sienten:** tarjeta animada en la que el sello "cae" al pagar.
 
-## Pista P — Calidad que no toca la base (intercalada) ⏳
+## Pista P — Calidad que no toca la base (intercalada) ✅
 
 Una sola capa de traducción de estados (inglés en la base, español en pantalla) · ningún error técnico ni en inglés frente al comensal (bloqueante, regla 10) · limpieza de código sin uso · tope de estilo bajando.
 

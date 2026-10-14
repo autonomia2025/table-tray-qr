@@ -23,6 +23,7 @@ import { Repeat, Users } from "lucide-react";
 import AvisosCelular from "@/components/comensal/AvisosCelular";
 import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { manifiestoDelLocal } from "@/lib/push";
+import { textoPedido } from "@/lib/estados";
 
 /* ---------- types ---------- */
 interface OrderItem {
@@ -47,14 +48,14 @@ interface Order {
 }
 
 const STATUS_MAP: Record<string, { label: string; sublabel: string; color: string; step: number }> = {
-  confirmed: { label: "Recibido ✓", sublabel: "El cocinero lo verá en un momento", color: "text-muted-foreground", step: 0 },
-  in_kitchen: { label: "En cocina 🍳", sublabel: "Listo en aprox. 10-15 min", color: "text-primary", step: 1 },
-  ready: { label: "¡Listo para entregar! 🔔", sublabel: "El mozo lo trae ahora", color: "text-[#1A6B45]", step: 2 },
-  delivered: { label: "Entregado ✓", sublabel: "", color: "text-[#1A6B45]", step: 3 },
-  cancelled: { label: "Cancelado", sublabel: "", color: "text-destructive", step: -1 },
+  confirmed: { label: `${textoPedido("confirmed", "comensal")} ✓`, sublabel: "El cocinero lo verá en un momento", color: "text-muted-foreground", step: 0 },
+  in_kitchen: { label: `${textoPedido("in_kitchen", "comensal")} 🍳`, sublabel: "Listo en aprox. 10-15 min", color: "text-primary", step: 1 },
+  ready: { label: `${textoPedido("ready", "comensal")} 🔔`, sublabel: "El mozo lo trae ahora", color: "text-[#1A6B45]", step: 2 },
+  delivered: { label: `${textoPedido("delivered", "comensal")} ✓`, sublabel: "", color: "text-[#1A6B45]", step: 3 },
+  cancelled: { label: textoPedido("cancelled", "comensal"), sublabel: "", color: "text-destructive", step: -1 },
 };
 
-const STEPS = ["Recibido", "En cocina", "Listo", "Entregado"];
+const STEPS = (["confirmed", "in_kitchen", "ready", "delivered"] as const).map((e) => textoPedido(e, "comensal").replace(/[¡!]/g, ""));
 
 const WAITER_REASONS = [
   { key: "help", label: "Necesito ayuda" },
@@ -406,7 +407,7 @@ export default function TrackingPage() {
   useEffect(() => {
     if (currentOrder?.status === "ready" && !readyFired) {
       setReadyFired(true);
-      try { navigator.vibrate?.([200, 100, 200]); } catch {}
+      try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración en este celular */ }
       spawnConfetti(primaryColor);
     }
     if (currentOrder?.status !== "ready") setReadyFired(false);
@@ -426,7 +427,7 @@ export default function TrackingPage() {
   const toggleExpand = (id: string) => {
     setExpandedOrders((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -532,10 +533,10 @@ export default function TrackingPage() {
     ? `Listo en aprox. ${pedidoVivo.faltan_min} min · según cada plato y lo cargada que está la cocina`
     : currentStatusInfo.sublabel;
   const ESTADO_ITEM: Record<string, { texto: string; clase: string }> = {
-    confirmed: { texto: "Recibido", clase: "text-muted-foreground" },
-    in_kitchen: { texto: "Preparando", clase: "text-primary" },
-    ready: { texto: "¡Listo!", clase: "text-[#1A6B45] font-bold" },
-    delivered: { texto: "Entregado", clase: "text-[#1A6B45]" },
+    confirmed: { texto: textoPedido("confirmed", "comensal"), clase: "text-muted-foreground" },
+    in_kitchen: { texto: textoPedido("in_kitchen", "comensal"), clase: "text-primary" },
+    ready: { texto: textoPedido("ready", "comensal"), clase: "text-[#1A6B45] font-bold" },
+    delivered: { texto: textoPedido("delivered", "comensal"), clase: "text-[#1A6B45]" },
   };
   const otros = (enVivo?.personas ?? []).filter((x) => !x.yo);
   const yo = enVivo?.personas.find((x) => x.yo);

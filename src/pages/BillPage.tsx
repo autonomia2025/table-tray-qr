@@ -22,7 +22,7 @@ interface OrderWithItems {
     quantity: number;
     unit_price: number;
     subtotal: number;
-    selected_modifiers: any;
+    selected_modifiers: unknown;
   }[];
 }
 

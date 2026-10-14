@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 import GlobalSearch from '@/components/GlobalSearch';
+import { mensajeError } from "@/lib/errores";
 
 const NAV_ITEMS = [
   { path: '/superadmin/tenants', icon: Building2, label: 'Tenants' },
@@ -29,7 +30,7 @@ function SuperAdminLogin() {
     setLoading(true);
     setError('');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
+    if (error) setError(mensajeError(error));
     setLoading(false);
   };
 

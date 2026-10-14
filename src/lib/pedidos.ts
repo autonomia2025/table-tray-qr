@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { mensajeError } from "@/lib/errores";
 
 /**
  * Cambios de estado de pedidos: siempre por el servidor (fase 1.4).
@@ -34,10 +35,9 @@ export async function marcarAgotado(productoId: string, agotado = true) {
 }
 
 // Los mensajes de la base ya vienen en español; si llega algo técnico, se reemplaza.
+/** Mensaje para la pantalla a partir del error de la base (ver mensajeError en lib/errores). */
 export function mensajeAmigable(mensaje: string) {
-  return /[a-z]{3,}_[a-z]{3,}|violates|permission denied|JWT/i.test(mensaje)
-    ? "No se pudo hacer el cambio. Intenta de nuevo."
-    : mensaje;
+  return mensajeError({ message: mensaje });
 }
 
 /** Una línea del pedido tal como la manda la pantalla: el precio lo pone el servidor. */

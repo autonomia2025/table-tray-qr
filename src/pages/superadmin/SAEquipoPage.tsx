@@ -14,6 +14,7 @@ import { useSuperAdmin } from '@/contexts/SuperAdminContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Users, Eye, Shield, DollarSign, HeartPulse, Megaphone, UserCheck, Plus, Pencil, History, Loader2, Trophy, Copy } from 'lucide-react';
+import { mensajeError } from "@/lib/errores";
 
 interface Member {
   id: string;
@@ -86,7 +87,7 @@ export default function SAEquipoPage() {
     const { data, error } = await supabase.from('backoffice_members').select('*').order('role');
     if (error) {
       console.error('Error fetching members:', error.message);
-      toast({ title: 'Error cargando equipo', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error cargando equipo', description: mensajeError(error), variant: 'destructive' });
     }
     setMembers((data || []) as Member[]);
     setLoading(false);
@@ -184,7 +185,7 @@ export default function SAEquipoPage() {
       });
 
       if (memberError) {
-        toast({ title: 'Error al crear miembro', description: memberError.message, variant: 'destructive' });
+        toast({ title: 'Error al crear miembro', description: mensajeError(memberError), variant: 'destructive' });
         setCreating(false);
         return;
       }

@@ -181,6 +181,9 @@ describe.skipIf(!hayCredenciales)("compuerta de la fase 3", () => {
       UPDATE table_sessions SET closed_at = now() WHERE id = (SELECT session_id FROM orders WHERE id = '${order.id}');
       UPDATE tables SET status = 'free' WHERE id = (SELECT table_id FROM orders WHERE id = '${order.id}');
       DELETE FROM codigos_mesa WHERE table_id = (SELECT id FROM tables WHERE branch_id = '${DEMO.sucursal}' AND number = 2);
+      -- Una cadena (la 5 unida a la 4, que a su vez está unida a la 3): incoherente esté como esté cada mesa
+      UPDATE tables SET unida_a = (SELECT id FROM tables WHERE branch_id = '${DEMO.sucursal}' AND number = 3)
+       WHERE branch_id = '${DEMO.sucursal}' AND number = 4;
       UPDATE tables SET unida_a = (SELECT id FROM tables WHERE branch_id = '${DEMO.sucursal}' AND number = 4), status = 'occupied'
        WHERE branch_id = '${DEMO.sucursal}' AND number = 5;
       UPDATE loyalty_customers SET visits = visits + 3 WHERE user_id = (SELECT user_id FROM payments WHERE id = '${payment.id}');

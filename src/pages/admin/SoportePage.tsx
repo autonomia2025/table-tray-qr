@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Phone, MessageCircle, Ticket, Bot, Loader2 } from "lucide-react";
+import { mensajeError } from "@/lib/errores";
 
 /* ─── Types ─── */
 type Msg = { role: "user" | "assistant"; content: string };
@@ -98,15 +99,15 @@ export default function SoportePage() {
       return;
     }
     setSending(true);
-    const { error } = await supabase.from("support_tickets" as any).insert({
+    const { error } = await supabase.from("support_tickets").insert({
       tenant_id: tenantId,
       subject: subject.trim(),
       message: message.trim(),
       priority,
-    } as any);
+    });
     setSending(false);
     if (error) {
-      toast({ title: "Error al enviar ticket", description: error.message, variant: "destructive" });
+      toast({ title: "Error al enviar ticket", description: mensajeError(error), variant: "destructive" });
     } else {
       toast({ title: "✅ Ticket enviado", description: "Te contactaremos pronto." });
       setSubject("");

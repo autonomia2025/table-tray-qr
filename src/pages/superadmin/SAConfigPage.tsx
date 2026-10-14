@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, AlertTriangle, Copy, UserPlus, MapPin, Target, DollarSign, Bell, Plus, Trash2, Save } from 'lucide-react';
+import { mensajeError } from "@/lib/errores";
 
 // ─── Zones Config ───
 function ZonesSection() {
@@ -70,7 +71,7 @@ function GoalsSection() {
       seller_id: selectedSeller, period,
       visits_goal: visits, demos_goal: demos, pilots_goal: pilots, closes_goal: closes, commission_per_close: commission,
     }, { onConflict: 'seller_id,period' });
-    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    if (error) toast({ title: 'Error', description: mensajeError(error), variant: 'destructive' });
     else toast({ title: 'Metas guardadas' });
     setSaving(false);
   };

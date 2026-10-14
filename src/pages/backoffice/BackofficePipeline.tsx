@@ -13,6 +13,7 @@ import { Plus, Phone, Mail, MapPin, Calendar, Clock, MessageSquare, Filter, X } 
 import { toast } from 'sonner';
 import { DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent, useDroppable, useDraggable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { mensajeError } from "@/lib/errores";
 
 const STAGES = [
   { key: 'contactado', label: 'Contactado', color: 'hsl(16,80%,51%)' },
@@ -212,7 +213,7 @@ export default function BackofficePipeline() {
       notes: newLead.notes || null,
       monthly_value: newLead.monthly_value,
     });
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(mensajeError(error));
     toast.success('Lead creado');
     setCreateOpen(false);
     setNewLead({ restaurant_name: '', owner_name: '', phone: '', email: '', zone: '', stage: 'contactado', source: 'terreno', assigned_seller_id: '', temperature: 'tibio', notes: '', monthly_value: 299 });

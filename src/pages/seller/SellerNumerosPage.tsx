@@ -41,17 +41,17 @@ export default function SellerNumerosPage() {
       const wa = weekAct.data || [];
       const ma = monthAct.data || [];
       const leads = leadsRes.data || [];
-      const paying = leads.filter((l: any) => l.stage === 'pagando').length;
+      const paying = leads.filter((l) => l.stage === 'pagando').length;
 
       setStats({
-        weekVisits: wa.filter((a: any) => a.type === 'visita').length,
-        monthVisits: ma.filter((a: any) => a.type === 'visita').length,
-        weekDemos: wa.filter((a: any) => a.type === 'demo').length,
-        monthDemos: ma.filter((a: any) => a.type === 'demo').length,
-        weekPilots: wa.filter((a: any) => a.type === 'piloto').length,
-        monthPilots: ma.filter((a: any) => a.type === 'piloto').length,
-        weekCloses: wa.filter((a: any) => a.type === 'cierre').length,
-        monthCloses: ma.filter((a: any) => a.type === 'cierre').length,
+        weekVisits: wa.filter((a) => a.type === 'visita').length,
+        monthVisits: ma.filter((a) => a.type === 'visita').length,
+        weekDemos: wa.filter((a) => a.type === 'demo').length,
+        monthDemos: ma.filter((a) => a.type === 'demo').length,
+        weekPilots: wa.filter((a) => a.type === 'piloto').length,
+        monthPilots: ma.filter((a) => a.type === 'piloto').length,
+        weekCloses: wa.filter((a) => a.type === 'cierre').length,
+        monthCloses: ma.filter((a) => a.type === 'cierre').length,
         totalLeads: leads.length,
         conversionRate: leads.length > 0 ? Math.round((paying / leads.length) * 100) : 0,
       });

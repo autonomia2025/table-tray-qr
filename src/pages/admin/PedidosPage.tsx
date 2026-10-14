@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Clock, ChefHat, Check, Truck, XCircle, AlertTriangle, Receipt } from "lucide-react";
+import { textoPedido, textoPedidoPlural } from "@/lib/estados";
 
 interface OrderRow {
   id: string;
@@ -36,7 +37,7 @@ interface OrderItem {
   unit_price: number;
   subtotal: number;
   item_notes: string | null;
-  selected_modifiers: any;
+  selected_modifiers: unknown;
 }
 
 interface TableMap {
@@ -44,12 +45,12 @@ interface TableMap {
 }
 
 const COLUMNS = [
-  { key: "confirmed", label: "Nuevos", icon: AlertTriangle, color: "text-[#B87C10] bg-[#FEF0E8] border-[#DEDDD8]" },
-  { key: "in_kitchen", label: "En cocina", icon: ChefHat, color: "text-accent-foreground bg-accent border-[#DEDDD8]" },
-  { key: "ready", label: "Listos", icon: Check, color: "text-[#1A6B45] bg-[#E8F5EE] border-[#DEDDD8]" },
-  { key: "delivered", label: "Entregados", icon: Truck, color: "text-muted-foreground bg-muted/50 border-border" },
+  { key: "confirmed", label: textoPedidoPlural("confirmed"), icon: AlertTriangle, color: "text-[#B87C10] bg-[#FEF0E8] border-[#DEDDD8]" },
+  { key: "in_kitchen", label: textoPedidoPlural("in_kitchen"), icon: ChefHat, color: "text-accent-foreground bg-accent border-[#DEDDD8]" },
+  { key: "ready", label: textoPedidoPlural("ready"), icon: Check, color: "text-[#1A6B45] bg-[#E8F5EE] border-[#DEDDD8]" },
+  { key: "delivered", label: textoPedidoPlural("delivered"), icon: Truck, color: "text-muted-foreground bg-muted/50 border-border" },
   { key: "paid", label: "Pagados", icon: Receipt, color: "text-[#1A6B45] bg-[#E8F5EE] border-[#DEDDD8]" },
-  { key: "cancelled", label: "Cancelados", icon: XCircle, color: "text-[#C0280F] bg-[#FDE8E8] border-[#DEDDD8]" },
+  { key: "cancelled", label: textoPedidoPlural("cancelled"), icon: XCircle, color: "text-[#C0280F] bg-[#FDE8E8] border-[#DEDDD8]" },
 ];
 
 function timeAgo(dateStr: string | null) {
@@ -85,12 +86,6 @@ function ElapsedBadge({ confirmedAt }: { confirmedAt: string | null }) {
   );
 }
 
-const ESTADO_TEXTO: Record<EstadoPedido, string> = {
-  in_kitchen: "en cocina",
-  ready: "listo",
-  delivered: "entregado",
-  cancelled: "cancelado",
-};
 
 /** Opciones elegidas de un producto ("Pisco 40° premium · Ginger ale"). */
 function textoOpciones(opciones: unknown): string {
@@ -229,7 +224,7 @@ export default function PedidosPage() {
     // El servidor valida el rol y la regla de prepago, y deja registro (fase 1.4).
     const r = await cambiarEstadoPedido(order.id, estado);
     if (r.ok === false) toast({ title: "No se pudo actualizar", description: r.error, variant: "destructive" });
-    else toast({ title: `Pedido #${order.order_number} → ${ESTADO_TEXTO[estado]}` });
+    else toast({ title: `Pedido #${order.order_number} → ${textoPedido(estado).toLowerCase()}` });
     setActionLoading(false);
     setSelectedOrder(null);
   };

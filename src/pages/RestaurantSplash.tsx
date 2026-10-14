@@ -30,7 +30,7 @@ const fetchTenantBySlug = async (slug: string): Promise<TenantData | null> => {
 
   if (error || !data) return null;
 
-  const restaurants = data.restaurants as any[];
+  const restaurants = data.restaurants as unknown as { branches?: { id: string; is_open?: boolean | null }[] }[];
   const branch = restaurants?.[0]?.branches?.[0];
   if (!branch) return null;
 

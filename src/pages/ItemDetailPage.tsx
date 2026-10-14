@@ -97,7 +97,7 @@ async function fetchItemDetail(id: string): Promise<ItemData | null> {
       .order("sort_order");
 
     const modsByGroup = new Map<string, Modifier[]>();
-    (mods || []).forEach((m: any) => {
+    (mods || []).forEach((m) => {
       const list = modsByGroup.get(m.group_id) || [];
       list.push({ id: m.id, name: m.name, extra_price: m.extra_price || 0 });
       modsByGroup.set(m.group_id, list);

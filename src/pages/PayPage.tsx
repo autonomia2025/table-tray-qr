@@ -12,6 +12,7 @@ import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
 import { detectWallets, requestWalletPayment, type WalletKind } from "@/lib/walletPayment";
 import { useToast } from "@/hooks/use-toast";
+import { mensajeError } from "@/lib/errores";
 
 const TIP_OPTIONS = [0, 5, 10, 15];
 
@@ -132,7 +133,7 @@ export default function PayPage() {
       });
 
       if (error) {
-        const detail = await (error as any)?.context?.text?.().catch(() => null);
+        const detail = await (error as { context?: Response })?.context?.text?.().catch(() => null);
         console.error("process-payment failed:", detail || error.message);
         throw new Error("No pudimos procesar el pago. Intenta nuevamente.");
       }
@@ -145,9 +146,9 @@ export default function PayPage() {
         reference: data.payment.external_reference,
       });
       refetch();
-    } catch (err: any) {
-      setErrorMsg(err.message || "Error procesando el pago");
-      toast({ title: "Pago no completado", description: err.message, variant: "destructive" });
+    } catch (err) {
+      setErrorMsg(mensajeError(err, "Error procesando el pago"));
+      toast({ title: "Pago no completado", description: mensajeError(err), variant: "destructive" });
     } finally {
       setPaying(false);
     }

@@ -46,17 +46,17 @@ export default function GlobalSearch() {
         supabase.from('backoffice_members').select('id, name, role, zone').ilike('name', `%${q}%`).limit(5),
       ]);
       const r: SearchResult[] = [
-        ...(tenantsRes.data || []).map((t: any) => ({
+        ...(tenantsRes.data || []).map((t) => ({
           type: 'tenant' as const, id: t.id,
           title: t.name, subtitle: t.slug,
           badge: t.plan_status,
         })),
-        ...(leadsRes.data || []).map((l: any) => ({
+        ...(leadsRes.data || []).map((l) => ({
           type: 'lead' as const, id: l.id,
           title: l.restaurant_name, subtitle: `${l.stage} · ${l.zone || ''}`,
           badge: l.stage,
         })),
-        ...(membersRes.data || []).map((m: any) => ({
+        ...(membersRes.data || []).map((m) => ({
           type: 'member' as const, id: m.id,
           title: m.name, subtitle: `${m.role} · ${m.zone || ''}`,
           badge: m.role,

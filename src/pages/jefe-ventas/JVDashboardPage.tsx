@@ -113,7 +113,7 @@ export default function JVDashboardPage() {
     <div className="p-6 space-y-6 max-w-7xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-foreground">Resumen</h1>
           <p className="text-sm text-muted-foreground">Vista ejecutiva — Tablio Ventas</p>
         </div>
         <Badge className={`text-sm px-3 py-1 ${d.isPhase0 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
@@ -187,7 +187,7 @@ export default function JVDashboardPage() {
               <span className="text-sm font-semibold text-destructive">{d.staleLeads.length} leads sin actualizar +48h</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {d.staleLeads.slice(0, 5).map((l: any) => (
+              {d.staleLeads.slice(0, 5).map((l) => (
                 <Badge key={l.id} variant="outline" className="text-xs border-destructive/30 text-destructive">
                   {l.restaurant_name || l.id.slice(0, 8)}
                 </Badge>

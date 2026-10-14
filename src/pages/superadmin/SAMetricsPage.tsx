@@ -66,7 +66,7 @@ export default function SAMetricsPage() {
       const totalRevenueMonth = monthOrders.reduce((s: number, o: any) => s + (o.total_amount ?? 0), 0);
       const prevRevenueMonth = prevMonth.reduce((s: number, o: any) => s + (o.total_amount ?? 0), 0);
 
-      const tenantsWithOrders = new Set(monthOrders.map((o: any) => o.tenant_id));
+      const tenantsWithOrders = new Set(monthOrders.map((o) => o.tenant_id));
       const inactiveTenants = tenants.filter(t => t.is_active && !tenantsWithOrders.has(t.id));
 
       const onTrial = tenants.filter(t => t.plan_status === "trial" && t.is_active);
@@ -105,8 +105,8 @@ export default function SAMetricsPage() {
       const sellers = members.filter(m => m.role === 'vendedor');
       const sellerPerf = sellers.map(s => {
         const myLeads = leads.filter(l => l.assigned_seller_id === s.id);
-        const myActivities = activities.filter((a: any) => myLeads.some(l => l.id === a.lead_id));
-        const visits = myActivities.filter((a: any) => a.type === 'visita').length;
+        const myActivities = activities.filter((a) => myLeads.some(l => l.id === a.lead_id));
+        const visits = myActivities.filter((a) => a.type === 'visita').length;
         const demos = myLeads.filter(l => ['demo_hecha', 'piloto', 'negociacion', 'cerrado'].includes(l.stage)).length;
         const pilots = myLeads.filter(l => ['piloto', 'negociacion', 'cerrado'].includes(l.stage)).length;
         const closes = myLeads.filter(l => l.stage === 'cerrado').length;
@@ -147,7 +147,7 @@ export default function SAMetricsPage() {
         const d = new Date(); d.setDate(d.getDate() - i);
         dayMap[d.toISOString().split("T")[0]] = 0;
       }
-      (weekOrders as any[]).forEach((o: any) => {
+      (weekOrders as any[]).forEach((o) => {
         const key = o.confirmed_at?.split("T")[0];
         if (key && dayMap[key] !== undefined) dayMap[key]++;
       });
@@ -158,7 +158,7 @@ export default function SAMetricsPage() {
       // Top tenants
       const tenantOrders: Record<string, { name: string; count: number; revenue: number }> = {};
       tenants.forEach(t => { tenantOrders[t.id] = { name: t.name, count: 0, revenue: 0 }; });
-      monthOrders.forEach((o: any) => {
+      monthOrders.forEach((o) => {
         if (tenantOrders[o.tenant_id]) {
           tenantOrders[o.tenant_id].count++;
           tenantOrders[o.tenant_id].revenue += o.total_amount ?? 0;
@@ -172,10 +172,10 @@ export default function SAMetricsPage() {
       const tablesAll = tablesData.data ?? [];
       const tenantsWithStaff = new Set(staffData.filter(s => s.role === "waiter").map(s => s.tenant_id)).size;
       const tenantsWithQR = new Set(tablesAll.map(t => t.tenant_id)).size;
-      const kdsUsage = monthOrders.filter((o: any) => o.status === "delivered" || o.status === "ready").length;
+      const kdsUsage = monthOrders.filter((o) => o.status === "delivered" || o.status === "ready").length;
       const waiterCallCount = waiterCallsMonth.data?.length ?? 0;
       const billRequestCount = billRequestsMonth.data?.length ?? 0;
-      const manualOrders = monthOrders.filter((o: any) => o.source === "manual_waiter").length;
+      const manualOrders = monthOrders.filter((o) => o.source === "manual_waiter").length;
 
       setData({
         activeTenantCount, totalTenants: tenants.length, ordersToday: ordersToday.count ?? 0,
@@ -281,7 +281,7 @@ export default function SAMetricsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1 max-h-40 overflow-auto">
-                    {d.staleLeads.slice(0, 15).map((l: any) => (
+                    {d.staleLeads.slice(0, 15).map((l) => (
                       <div key={l.id} className="flex justify-between text-sm">
                         <span className="text-foreground">{l.restaurant_name}</span>
                         <span className="text-xs text-muted-foreground">{l.stage} · {l.zone || 'sin zona'}</span>
@@ -361,7 +361,7 @@ export default function SAMetricsPage() {
               <CardHeader><CardTitle className="text-sm">Conversión por zona</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {d.zonePerf.map((z: any) => (
+                  {d.zonePerf.map((z) => (
                     <div key={z.zone} className="flex items-center gap-3">
                       <span className="text-sm w-28 truncate">{z.zone}</span>
                       <div className="flex-1">
@@ -426,7 +426,7 @@ export default function SAMetricsPage() {
                       <th className="text-right py-2 text-muted-foreground font-medium">Revenue</th>
                     </tr></thead>
                     <tbody className="divide-y divide-border">
-                      {d.topTenants.map((t: any) => (
+                      {d.topTenants.map((t) => (
                         <tr key={t.name}>
                           <td className="py-2 font-medium text-foreground">{t.name}</td>
                           <td className="py-2 text-right">{t.count}</td>
@@ -492,7 +492,7 @@ export default function SAMetricsPage() {
                 <CardHeader><CardTitle className="text-sm text-amber-600">Tenants sin pedidos este mes ({d.inactiveTenants.length})</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-1">
-                    {d.inactiveTenants.slice(0, 15).map((t: any) => (
+                    {d.inactiveTenants.slice(0, 15).map((t) => (
                       <p key={t.id} className="text-sm text-muted-foreground">{t.name}</p>
                     ))}
                   </div>
@@ -537,7 +537,7 @@ export default function SAMetricsPage() {
                 <CardHeader><CardTitle className="text-sm">Resumen del sistema</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total staff registrado</span><span className="font-semibold">{d.totalStaff}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Personas del equipo registradas</span><span className="font-semibold">{d.totalStaff}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Total mesas</span><span className="font-semibold">{d.totalTables}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Tenants totales</span><span className="font-semibold">{d.totalTenants}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Pedidos totales (mes)</span><span className="font-semibold">{d.totalOrdersMonth}</span></div>

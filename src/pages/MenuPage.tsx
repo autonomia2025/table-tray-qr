@@ -84,7 +84,7 @@ async function fetchMenuData(branchId: string): Promise<Category[]> {
     .order("sort_order");
 
   const itemsByCategory = new Map<string, MenuItem[]>();
-  (items || []).forEach((mi: any) => {
+  (items || []).forEach((mi) => {
     const list = itemsByCategory.get(mi.category_id) || [];
     list.push(mi);
     itemsByCategory.set(mi.category_id, list);
@@ -142,7 +142,7 @@ export default function MenuPage() {
         .eq("is_active", true)
         .maybeSingle();
       if (!data) return null;
-      const branch = (data.restaurants as any[])?.[0]?.branches?.[0];
+      const branch = (data.restaurants as unknown as { branches: { id: string }[] }[])?.[0]?.branches?.[0];
       return { tenantId: data.id, branchId: branch?.id as string };
     },
     enabled: !!slug && (!tenantIdFromState || !branchIdFromState),

@@ -8,6 +8,7 @@ import { formatCLP } from '@/lib/format';
 import { abrirTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import PremiosMesa from '@/components/mozo/PremiosMesa';
+import { textoPedido } from '@/lib/estados';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -728,10 +729,7 @@ export default function MozoMesasPage() {
                       o.status === 'delivered' ? 'outline' :
                       'secondary'
                     } className="text-[10px]">
-                      {o.status === 'confirmed' ? 'Nuevo' :
-                       o.status === 'in_kitchen' ? 'En cocina' :
-                       o.status === 'ready' ? '✓ Listo' :
-                       '✓ Entregado'}
+                      {['ready', 'delivered'].includes(o.status) ? `✓ ${textoPedido(o.status)}` : textoPedido(o.status)}
                     </Badge>
                   </div>
                   {o.items.map((it, idx) => (

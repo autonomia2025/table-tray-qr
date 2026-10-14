@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Upload, X } from "lucide-react";
+import { mensajeError } from "@/lib/errores";
 
 interface ImageUploadFieldProps {
   label: string;
@@ -38,7 +39,7 @@ export default function ImageUploadField({ label, value, tenantId, bucket = "men
     const { data, error } = await supabase.storage.from(bucket).upload(filename, file, { cacheControl: "3600", upsert: false });
 
     if (error) {
-      toast({ title: "Error al subir imagen", description: error.message, variant: "destructive" });
+      toast({ title: "Error al subir imagen", description: mensajeError(error), variant: "destructive" });
       setUploading(false);
       return;
     }

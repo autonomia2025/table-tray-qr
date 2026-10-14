@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, ArrowUp, ArrowDown, Pencil, Trash2, Upload, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { mensajeError } from "@/lib/errores";
 
 interface Category {
   id: string;
@@ -149,13 +150,13 @@ export default function MenuAdminPage() {
       const { error } = await supabase.from("categories").update({
         name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible, station_id: catForm.station_id || null,
       }).eq("id", editCat.id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
+      if (error) { toast({ title: "Error", description: mensajeError(error), variant: "destructive" }); setSaving(false); return; }
     } else if (menuId) {
       const { error } = await supabase.from("categories").insert({
         name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible, station_id: catForm.station_id || null,
         menu_id: menuId, tenant_id: tenantId, sort_order: categories.length,
       });
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
+      if (error) { toast({ title: "Error", description: mensajeError(error), variant: "destructive" }); setSaving(false); return; }
     }
     setCatModal(false);
     setSaving(false);
@@ -231,7 +232,7 @@ export default function MenuAdminPage() {
       .upload(filename, file, { cacheControl: '3600', upsert: false });
 
     if (error) {
-      toast({ title: "Error al subir imagen", description: error.message, variant: "destructive" });
+      toast({ title: "Error al subir imagen", description: mensajeError(error), variant: "destructive" });
       setUploading(false);
       return;
     }
@@ -270,10 +271,10 @@ export default function MenuAdminPage() {
     };
     if (editItem) {
       const { error } = await supabase.from("menu_items").update(payload).eq("id", editItem.id);
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
+      if (error) { toast({ title: "Error", description: mensajeError(error), variant: "destructive" }); setSaving(false); return; }
     } else {
       const { error } = await supabase.from("menu_items").insert({ ...payload, sort_order: items.length });
-      if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
+      if (error) { toast({ title: "Error", description: mensajeError(error), variant: "destructive" }); setSaving(false); return; }
     }
     setItemSheet(false);
     setSaving(false);
@@ -516,7 +517,7 @@ export default function MenuAdminPage() {
                   ) : (
                     <>
                       <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                      <span className="text-sm text-muted-foreground">Click para subir imagen</span>
+                      <span className="text-sm text-muted-foreground">Toca para subir una imagen</span>
                       <span className="text-xs text-muted-foreground">JPG, PNG, WEBP, GIF (máx. 5MB)</span>
                     </>
                   )}

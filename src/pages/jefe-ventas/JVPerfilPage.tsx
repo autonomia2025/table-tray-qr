@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useJefeVentas } from '@/contexts/JefeVentasContext';
 import { toast } from 'sonner';
 import { Loader2, Save, KeyRound } from 'lucide-react';
+import { mensajeError } from "@/lib/errores";
 
 export default function JVPerfilPage() {
   const { profile } = useJefeVentas();
@@ -23,7 +24,7 @@ export default function JVPerfilPage() {
     if (!profile) return;
     setSaving(true);
     const { error } = await supabase.from('backoffice_members').update({ name, phone: phone || null }).eq('id', profile.id);
-    if (error) toast.error(error.message);
+    if (error) toast.error(mensajeError(error));
     else toast.success('Perfil actualizado');
     setSaving(false);
   };
@@ -33,7 +34,7 @@ export default function JVPerfilPage() {
     if (newPass !== confirmPass) { toast.error('Las contraseñas no coinciden'); return; }
     setChangingPass(true);
     const { error } = await supabase.auth.updateUser({ password: newPass });
-    if (error) toast.error(error.message);
+    if (error) toast.error(mensajeError(error));
     else {
       toast.success('Contraseña actualizada');
       setCurrentPass(''); setNewPass(''); setConfirmPass('');

@@ -87,9 +87,9 @@ export default function SellerMiDiaPage() {
       // Weekly stats from activities
       const activities = activitiesRes.data || [];
       setWeeklyStats({
-        visits: activities.filter((a: any) => a.type === 'visita').length,
-        demos: activities.filter((a: any) => a.type === 'demo').length,
-        pilots: activities.filter((a: any) => a.type === 'piloto').length,
+        visits: activities.filter((a) => a.type === 'visita').length,
+        demos: activities.filter((a) => a.type === 'demo').length,
+        pilots: activities.filter((a) => a.type === 'piloto').length,
       });
 
       setLoading(false);

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2, CheckCircle } from "lucide-react";
+import { mensajeError } from "@/lib/errores";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -70,7 +71,7 @@ export default function ResetPasswordPage() {
     });
 
     if (updateError) {
-      setError(updateError.message);
+      setError(mensajeError(updateError));
       setSubmitting(false);
       return;
     }

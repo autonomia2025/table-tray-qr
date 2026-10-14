@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Bell, Receipt, ChefHat, Loader2, UtensilsCrossed, CheckCircle2, Truck } from 'lucide-react';
 import { formatCLP } from '@/lib/format';
 import { motion, AnimatePresence } from 'framer-motion';
+import { textoPedido } from '@/lib/estados';
 
 interface TableGroup {
   tableId: string;
@@ -63,7 +64,7 @@ function playSound() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
     osc.start(ctx.currentTime);
     osc.stop(ctx.currentTime + 0.4);
-  } catch {}
+  } catch { /* sin sonido en este equipo */ }
 }
 
 async function getMyTableIds(branchId: string, staffId: string): Promise<string[]> {
@@ -77,12 +78,6 @@ async function getMyTableIds(branchId: string, staffId: string): Promise<string[
     .map(t => t.id);
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  confirmed: 'Nuevo',
-  in_kitchen: 'En cocina',
-  ready: 'Listo para entregar',
-  delivered: 'Entregado',
-};
 
 const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-red-100 text-red-700 border-red-200',
@@ -139,7 +134,7 @@ export default function MozoNotificacionesPage() {
     ]);
 
     // Get order items
-    let orderItemsMap: Record<string, { menu_item_name: string; quantity: number }[]> = {};
+    const orderItemsMap: Record<string, { menu_item_name: string; quantity: number }[]> = {};
     if (ordersData && ordersData.length > 0) {
       const { data: items } = await supabase
         .from('order_items')
@@ -419,7 +414,7 @@ export default function MozoNotificacionesPage() {
                             <span className="text-sm font-bold">Pedido #{order.orderNumber}</span>
                           </div>
                           <Badge variant="outline" className="text-[10px] border-current">
-                            {STATUS_LABELS[order.status] ?? order.status}
+                            {textoPedido(order.status)}
                           </Badge>
                         </div>
                         <div className="text-xs space-y-0.5 mb-2">

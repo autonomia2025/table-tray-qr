@@ -17,6 +17,7 @@ import { AlertTriangle, CheckCircle2, Download, Lock, RefreshCw, Undo2, Loader2 
 import { formatCLP } from "@/lib/format";
 import { exportToCSV } from "@/lib/export-utils";
 import { cerrarCaja, resumenCaja, type ResumenCaja } from "@/lib/caja";
+import { textoPago } from "@/lib/estados";
 
 interface PaymentRow {
   id: string;
@@ -61,13 +62,6 @@ const METHOD_LABELS: Record<string, string> = {
   pos: "POS",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  approved: "Aprobado",
-  pending: "Pendiente",
-  failed: "Rechazado",
-  refunded: "Reembolsado",
-  partially_refunded: "Reemb. parcial",
-};
 
 // Monto escrito por la caja (solo dígitos; vacío = no anotado).
 const leerMonto = (texto: string) => (texto.trim() === "" ? null : parseInt(texto.replace(/\D/g, ""), 10) || 0);
@@ -263,7 +257,7 @@ export default function CajaPage() {
         Consumo: p.amount,
         Propina: p.tip_amount,
         Reembolsado: p.refunded_amount,
-        Estado: STATUS_LABELS[p.status] ?? p.status,
+        Estado: textoPago(p.status),
         Comprobante: p.external_reference ?? "",
         Email: p.customer_email ?? "",
       })),
@@ -365,7 +359,7 @@ export default function CajaPage() {
                   <TableCell className="text-right">{formatCLP(p.tip_amount)}</TableCell>
                   <TableCell>
                     <Badge variant={p.status === "approved" ? "default" : p.status === "failed" ? "destructive" : "secondary"}>
-                      {STATUS_LABELS[p.status] ?? p.status}
+                      {textoPago(p.status)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">

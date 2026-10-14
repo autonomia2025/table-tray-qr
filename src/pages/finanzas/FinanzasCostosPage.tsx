@@ -62,14 +62,14 @@ export default function FinanzasCostosPage() {
         supabase.rpc('tenants_privado').select('plan_id, plan_status, is_active, created_at'),
         supabase.from('leads').select('id, source, stage'),
       ]);
-      const tenants = (t.data || []).sort((a: any, b: any) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
-      const paying = tenants.filter((x: any) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
+      const tenants = (t.data || []).sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
+      const paying = tenants.filter((x) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
       setTenantCount(paying.length);
       setMrr(paying.reduce((s: number, _: any, i: number) => s + (i < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE), 0));
       setLeadCount((l.data || []).length);
 
       // Calculate commission costs
-      const closedLeads = (l.data || []).filter((x: any) => x.stage === 'cliente_pagando').length;
+      const closedLeads = (l.data || []).filter((x) => x.stage === 'cliente_pagando').length;
       const commissionCosts = closedLeads * CLOSE_COMMISSION + paying.reduce((s: number, _: any, i: number) =>
         s + (i < PILOT_THRESHOLD ? PILOT_ACTIVE_COMMISSION : COMMERCIAL_ACTIVE_COMMISSION), 0);
 
