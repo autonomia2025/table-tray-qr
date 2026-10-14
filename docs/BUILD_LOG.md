@@ -4,6 +4,49 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.8: compuerta de la fase 3 ✅ (fase 3 terminada)
+**Auditoría de la operación** (`auditoria_operacion()`, solo superadmin). Es igual que la de la plata y revisa que la operación calce en toda la base:
+- **Turnos y propinas:** la propina es de un mozo del mismo local, y el turno del pago es de ese mozo.
+- **Estaciones:** una sola estación principal activa por sucursal, y cada producto en una estación de su sucursal.
+- **Pedidos:** cada pedido está en el estado de su producto más atrasado, y lo listo o entregado tiene sus horas.
+- **Mesas:**
+  - las sesiones abiertas no tienen cierre;
+  - una mesa con pedidos no figura libre;
+  - las mesas unidas apuntan a una principal válida;
+  - cada mesa tiene su código de presencia;
+  - cada comensal está en una mesa de su local.
+- **Sellos:**
+  - las visitas de cada ficha son exactamente los sellos vigentes;
+  - no queda un sello vigente de un pago devuelto entero;
+  - cada premio por entregar tiene código y un sello vigente.
+- **Lo que queda fuera:** los pedidos de antes del estado por producto y las fichas de antes del libro de sellos vienen de reglas anteriores, y la auditoría no los revisa.
+
+**Pruebas** (`tests/seguridad/f3-8-compuerta.test.ts`):
+- **Mesas unidas de punta a punta:**
+  - la mozo toma la 6 (el turno se abre solo) y le une la 7;
+  - un cliente paga desde el QR de la 7 con propina: el pago cae en la 6, con la propina y el turno de la mozo;
+  - la barra deja lista el agua, la mozo la lleva y el pedido sigue en preparación hasta que la cocina termina;
+  - el cliente suma su sello;
+  - la mozo no termina el turno con la mesa a cargo; al cerrar la principal, la 7 se libera y se separa.
+- **Al mismo tiempo:** dos personas toman la misma mesa (queda una), y la cocina marca listo mientras el dueño cancela. El pedido queda coherente con sus productos.
+- **Aislamiento:** las 10 tablas de la fase 3 y 8 funciones nuevas, contra un comensal, alguien sin sesión y el dueño de otro local.
+- **Las tres auditorías vacías:** operación, plata y seguridad.
+- **Un descuadre a propósito** (en una transacción que se deshace) que la auditoría tiene que detectar en sus 11 tipos. Para los que ya bloquea la base, como desactivar la estación principal o dejar vigente el sello de un pago devuelto, los resguardos se apagan solo dentro de esa prueba.
+
+**Asesor de Supabase** (seguridad y rendimiento, base real):
+- **Seguridad:** no hay nada nuevo que corregir. Lo que marca son decisiones a propósito:
+  - invitados sin registrarse;
+  - funciones que validan el rol por dentro;
+  - `ver_mesa` y `ver_invitacion_mozo`, abiertas a propósito;
+  - dos tablas que solo usa el servidor.
+  - "Protección de contraseñas filtradas" pide el plan pagado de Supabase y queda para la fase 5.
+- **Rendimiento:**
+  - 18 reglas de acceso calculaban `auth.uid()` una vez por fila; ahora es una vez por consulta (misma regla, mismo resultado).
+  - 28 índices nuevos en las tablas de las pantallas en vivo: productos del pedido, pedidos por sesión, mesa y sucursal, pagos, mesas, llamados, comensales, carta y sellos.
+  - Quedan sin índice llaves de tablas chicas, y quedan "varias reglas permitidas" (solo rendimiento, sin riesgo): se ordenan cuando haya volumen real.
+
+---
+
 ## 2026-10-14 — Fase 3.7: sellos que se sienten ✅
 **Lo que había mal con los sellos** (revisando el código antes de animarlos). Los sumaba `process-payment` leyendo y escribiendo por separado, y eso traía cinco problemas:
 - Daba un sello por cada **pago**: tres rondas, tres sellos.

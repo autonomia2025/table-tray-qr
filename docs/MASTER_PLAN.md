@@ -68,7 +68,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 - La cotización admite productos para otras personas: deja listo "invitar una ronda" y "dividir un plato" (fase 7).
 - Sellos retroactivos: si un invitado paga y después guarda su cuenta, recibe los sellos de esa visita (hecho en la 3.7).
 
-## Fase 3 — Operación de sala y experiencia del comensal 🔨
+## Fase 3 — Operación de sala y experiencia del comensal ✅
 
 | Paso | Qué | Estado |
 |---|---|---|
@@ -80,7 +80,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 | 3.5 | Código de presencia en las tarjetas de mesa, cuenta abierta controlada y unir mesas | ✅ |
 | 3.6 | Reportes calculados por el servidor; inicio del dueño que cuenta una historia; productividad de cocina y mapa de calor de horas | ✅ |
 | 3.7 | Sellos que se sienten (el sello "cae" al pagar) | ✅ |
-| 3.8 | Compuerta de la fase 3 | ⏳ |
+| 3.8 | Compuerta de la fase 3: casos que cruzan varias partes, aislamiento de todo lo nuevo, `auditoria_operacion()` (la integración continua exige que salga vacía y que detecte un descuadre hecho a propósito), asesor de Supabase (índices y reglas más rápidas) | ✅ |
 
 Detalle de las ideas:
 

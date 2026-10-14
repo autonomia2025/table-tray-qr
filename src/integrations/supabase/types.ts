@@ -2952,6 +2952,14 @@ export type Database = {
       }
       atender_cuenta: { Args: { _id: string }; Returns: undefined }
       atender_llamado: { Args: { _id: string }; Returns: undefined }
+      auditoria_operacion: {
+        Args: never
+        Returns: {
+          detalle: string
+          objeto: string
+          tipo: string
+        }[]
+      }
       auditoria_plata: {
         Args: never
         Returns: {
