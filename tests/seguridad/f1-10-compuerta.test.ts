@@ -81,16 +81,15 @@ describe.skipIf(!hayCredenciales)("compuerta de seguridad", () => {
 
   it("el cierre de caja: el mozo no puede; la caja sí; un día cerrado no se cambia (N10)", async () => {
     const fecha = `2001-${String(1 + Math.floor(Math.random() * 12)).padStart(2, "0")}-${String(1 + Math.floor(Math.random() * 28)).padStart(2, "0")}`;
-    const tokenMozo = (await conSesion("waiter")).token;
-    const tokenCaja = (await conSesion("cashier")).token;
-    const cuerpo = { branch_id: DEMO.sucursal, date: fecha };
+    const mozo = (await conSesion("waiter")).cliente;
+    const caja = (await conSesion("cashier")).cliente;
+    const cuerpo = { _branch_id: DEMO.sucursal, _dia: fecha, _efectivo_contado: 0 };
 
-    expect((await llamarFuncion("reconcile-payments", cuerpo, tokenMozo)).status).toBe(403);
-    expect((await llamarFuncion("reconcile-payments", { ...cuerpo, close: false }, tokenCaja)).status).toBe(200);
-    expect((await llamarFuncion("reconcile-payments", { ...cuerpo, close: true }, tokenCaja)).status).toBe(200);
-    const otraVez = await llamarFuncion("reconcile-payments", { ...cuerpo, close: true, notes: "reescribir" }, tokenCaja);
-    expect(otraVez.status).toBe(409);
-    expect(JSON.parse(otraVez.cuerpo).error).toContain("ya está cerrada");
+    expect((await mozo.rpc("cerrar_caja", cuerpo)).error).not.toBeNull();
+    expect((await caja.rpc("resumen_caja", { _branch_id: DEMO.sucursal, _dia: fecha })).error).toBeNull();
+    expect((await caja.rpc("cerrar_caja", cuerpo)).error).toBeNull();
+    const otraVez = await caja.rpc("cerrar_caja", { ...cuerpo, _notas: "reescribir" });
+    expect(otraVez.error?.message).toContain("ya está cerrada");
   });
 
   it("las funciones antiguas ya no se pueden llamar desde afuera", async () => {

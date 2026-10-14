@@ -225,6 +225,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          corte_dia: string
           created_at: string | null
           id: string
           is_open: boolean | null
@@ -238,6 +239,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          corte_dia?: string
           created_at?: string | null
           id?: string
           is_open?: boolean | null
@@ -251,6 +253,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          corte_dia?: string
           created_at?: string | null
           id?: string
           is_open?: boolean | null
@@ -1416,51 +1419,78 @@ export type Database = {
           branch_id: string
           closed_at: string | null
           closed_by: string | null
+          closed_by_name: string | null
           created_at: string
+          detalle: Json
+          diferencia_efectivo: number | null
+          diferencia_pos: number | null
           difference: number
+          efectivo_contado: number | null
+          efectivo_esperado: number
           expected_amount: number
           id: string
           notes: string | null
           payments_count: number
+          pos_contado: number | null
+          pos_esperado: number
           provider: string
           settled_amount: number
           settlement_date: string
           status: string
           tenant_id: string
+          total_neto: number
           updated_at: string
         }
         Insert: {
           branch_id: string
           closed_at?: string | null
           closed_by?: string | null
+          closed_by_name?: string | null
           created_at?: string
+          detalle?: Json
+          diferencia_efectivo?: number | null
+          diferencia_pos?: number | null
           difference?: number
+          efectivo_contado?: number | null
+          efectivo_esperado?: number
           expected_amount?: number
           id?: string
           notes?: string | null
           payments_count?: number
+          pos_contado?: number | null
+          pos_esperado?: number
           provider?: string
           settled_amount?: number
           settlement_date: string
           status?: string
           tenant_id: string
+          total_neto?: number
           updated_at?: string
         }
         Update: {
           branch_id?: string
           closed_at?: string | null
           closed_by?: string | null
+          closed_by_name?: string | null
           created_at?: string
+          detalle?: Json
+          diferencia_efectivo?: number | null
+          diferencia_pos?: number | null
           difference?: number
+          efectivo_contado?: number | null
+          efectivo_esperado?: number
           expected_amount?: number
           id?: string
           notes?: string | null
           payments_count?: number
+          pos_contado?: number | null
+          pos_esperado?: number
           provider?: string
           settled_amount?: number
           settlement_date?: string
           status?: string
           tenant_id?: string
+          total_neto?: number
           updated_at?: string
         }
         Relationships: [
@@ -1486,6 +1516,7 @@ export type Database = {
           branch_id: string
           created_at: string
           customer_email: string | null
+          dia_negocio: string | null
           external_reference: string | null
           id: string
           idempotency_key: string | null
@@ -1511,6 +1542,7 @@ export type Database = {
           branch_id: string
           created_at?: string
           customer_email?: string | null
+          dia_negocio?: string | null
           external_reference?: string | null
           id?: string
           idempotency_key?: string | null
@@ -1536,6 +1568,7 @@ export type Database = {
           branch_id?: string
           created_at?: string
           customer_email?: string | null
+          dia_negocio?: string | null
           external_reference?: string | null
           id?: string
           idempotency_key?: string | null
@@ -1657,6 +1690,7 @@ export type Database = {
           authorized_role: string | null
           created_at: string
           devolucion: string | null
+          dia_negocio: string | null
           external_reference: string | null
           id: string
           payment_id: string
@@ -1672,6 +1706,7 @@ export type Database = {
           authorized_role?: string | null
           created_at?: string
           devolucion?: string | null
+          dia_negocio?: string | null
           external_reference?: string | null
           id?: string
           payment_id: string
@@ -1687,6 +1722,7 @@ export type Database = {
           authorized_role?: string | null
           created_at?: string
           devolucion?: string | null
+          dia_negocio?: string | null
           external_reference?: string | null
           id?: string
           payment_id?: string
@@ -2425,10 +2461,15 @@ export type Database = {
         Args: { _qr_token: string }
         Returns: Record<string, unknown>
       }
+      _conciliar_dia: {
+        Args: { _branch_id: string; _dia: string }
+        Returns: Json
+      }
       _mesa_y_actor: {
         Args: { _table_id: string }
         Returns: Record<string, unknown>
       }
+      _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       activar_personal: {
         Args: { _activo: boolean; _staff_id: string }
@@ -2466,6 +2507,16 @@ export type Database = {
         Returns: Json
       }
       cancelar_llamado: { Args: { _id: string }; Returns: undefined }
+      cerrar_caja: {
+        Args: {
+          _branch_id: string
+          _dia: string
+          _efectivo_contado: number
+          _notas?: string
+          _pos_contado?: number
+        }
+        Returns: Json
+      }
       cerrar_mesa: {
         Args: { _motivo?: string; _table_id: string }
         Returns: Json
@@ -2508,6 +2559,14 @@ export type Database = {
       crear_pedido_mozo: {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
+      }
+      dia_abierto: {
+        Args: { _branch_id: string; _dia: string }
+        Returns: string
+      }
+      dia_negocio: {
+        Args: { _branch_id: string; _ts: string }
+        Returns: string
       }
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
@@ -2586,6 +2645,10 @@ export type Database = {
           _payment_id: string
           _user_id: string
         }
+        Returns: Json
+      }
+      resumen_caja: {
+        Args: { _branch_id: string; _dia?: string }
         Returns: Json
       }
       sa_activar_local: {

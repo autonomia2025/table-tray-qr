@@ -47,7 +47,8 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 5. Cuando se van, el mozo abre la mesa y toca "Cerrar mesa". El comensal ve "¿Cómo estuvo tu experiencia?" y califica.
 6. La pantalla del mozo muestra cada mesa con su color y su cronómetro: rojo si llaman, verde si hay algo listo para llevar, ámbar si falta cobrar, azul si está en cocina. Como respaldo, dentro del detalle de una mesa está **"Tomar pedido a mano"**: elige una hamburguesa (el punto de la carne es obligatorio) con palta. El precio lo calcula el servidor. En prepago, el pedido queda "esperando pago" en la cocina hasta que se cobre (el cobro del mozo llega en la fase 2).
 7. **Pagar al mozo:** en el pago, el comensal toca "Prefiero pagarle al mozo". Su pedido queda "💳 Por pagar al mozo" y la cocina lo ve "esperando pago". El mozo abre la mesa, toca "💵 Efectivo" o "💳 POS", anota la propina y lo recibido (calcula el vuelto) y registra el cobro: el pedido pasa a cocina.
-8. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
+8. **Cierre de caja:** con la cuenta de la cajera, abre Caja → "Cierre de caja". Tablio ya sumó lo cobrado por la app, en efectivo y por POS, y restó los reembolsos. Anota el efectivo contado: si falta o sobra plata, lo marca en rojo y pide explicarlo en las notas antes de cerrar. Abajo están las propinas por mozo. Al cerrar, el día queda con candado y ya no se puede cambiar (lo que llegue después cuenta para el día siguiente). Para no cerrar el día del demo, prueba el cierre eligiendo un día pasado.
+9. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
 ## Experiencia del comensal (invitado o cliente)
 

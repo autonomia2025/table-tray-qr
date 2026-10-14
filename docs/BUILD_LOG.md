@@ -4,6 +4,46 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 2.D: día de negocio y cierre de caja con conciliación automática ✅
+**Antes:**
+- La función `reconcile-payments` contaba el día en UTC. En Chile eso es de 21:00 a 20:59, así que una noche de bar quedaba partida en dos.
+- Dejaba fuera el efectivo y no cuadraba nada contra lo contado en el cajón.
+
+**Ahora (migración `20261014040000_cierre_caja.sql`):**
+- **Día de negocio:** cada sucursal tiene una hora de corte (`corte_dia`, por defecto 06:00 de Chile). Lo que pasa entre las 06:00 y las 05:59 del día siguiente es un solo día, también con el cambio de horario de invierno. Cada pago y cada reembolso queda anotado en su día al ocurrir; el reembolso cuenta el día en que se devolvió la plata.
+- **`resumen_caja`:** la base calcula la conciliación en vivo:
+  - lo que se cobró por la app, en efectivo y por POS;
+  - los reembolsos de cada medio y los cobros que la app devolvió sola;
+  - lo que debería haber en cada medio y el total neto;
+  - las **propinas por mozo**, ya descontado lo reembolsado (cuánto fue en efectivo);
+  - avisos antes de cerrar: pedidos sin cobrar, pagos sin confirmar por la pasarela, pedidos con alerta y mesas abiertas.
+- **`cerrar_caja`:** la caja anota el efectivo contado (y el POS, si quiere). La base calcula la diferencia:
+  - si no cuadra, **exige una nota** que la explique;
+  - el cierre guarda todo lo que se cuadró y queda **bloqueado**: un disparador impide cambiarlo, y no se puede cerrar dos veces ni cerrar un día que no ha empezado;
+  - se registra en la auditoría;
+  - dos cierres al mismo tiempo dejan uno solo.
+- **Lo que llega después de cerrar** (un pago tardío, un reembolso) cae en el día siguiente, así que el cierre nunca cambia. Un candado sobre la sucursal ordena los pagos y el cierre.
+- La app contra la pasarela: con el proveedor simulado, la pasarela deposita lo mismo. La comparación real llega en la fase 4.
+- Se retiró la función `reconcile-payments`, de `config.toml` y de la base de pruebas.
+
+**Pantalla de Caja:**
+- El selector ahora es el "día de negocio".
+- La pestaña "Cierre de caja" muestra el cuadre por medio. La diferencia aparece al escribir lo contado (verde "Cuadra" o rojo "Faltan/Sobran $X"), con avisos, propinas por mozo, confirmación antes de cerrar e historial de cierres.
+
+**Pruebas:**
+- `tests/seguridad/f2d-cierre-caja.test.ts`: 7 pruebas.
+  - Cuadre exacto de app, efectivo, POS, reembolsos y propinas.
+  - Cierre con diferencia y nota, bloqueado, visible después y auditado.
+  - Dos cierres a la vez: uno solo.
+  - No se cierra un día futuro ni con montos negativos; mozo, cocina, comensal, anónimo y dueño ajeno no ven ni cierran; las funciones internas están cerradas.
+  - Lo que llega después del cierre cae al día siguiente.
+  - El corte de las 06:00, en verano y en invierno.
+- `f1-10` usa el cierre nuevo.
+- `e2e/caja.spec.ts`: un comensal paga con la app y otro en efectivo al mozo. La cajera ve el cuadre, anota $1.000 menos y le pide explicarlo; cierra un día pasado y queda con candado.
+- **Base desechable:** toda la batería. **Base de pruebas:** 118 de seguridad (más 10 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 2.C: reembolsos atómicos ✅
 **Antes:**
 - reembolsaban solo el dueño o el administrador;

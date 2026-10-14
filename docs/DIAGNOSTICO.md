@@ -50,7 +50,7 @@ Fecha: 1 de octubre de 2026 · Fase 1 del plan · Solo lectura: no se modificó 
 | Proveedor de pagos aislado en un archivo | ✅ Cumple (simulado) | `_shared/provider.ts` |
 | Precio guardado en el pedido (editar la carta no cambia pedidos hechos) | ✅ Cumple | `order_items.unit_price`, `menu_item_name` |
 | Reembolsos con motivo obligatorio, tope y quién lo hizo | ✅ Cumple en la base (sin plata real) | `refund-payment/index.ts:26,64,78` |
-| Conciliación diaria por sucursal | 🟡 Parcial: usa días UTC, no la hora de Chile; el cierre se puede reabrir | `reconcile-payments/index.ts:57-58,89` |
+| Conciliación diaria por sucursal | ✅ Fase 2.D: `resumen_caja` / `cerrar_caja`, día de negocio de Chile, cierre bloqueado | `20261014040000_cierre_caja.sql` |
 | Lealtad por email con consentimiento, sellos o puntos | 🟡 Parcial: sin límites contra abuso y sin verificar el email (ver sección 4) | `process-payment/index.ts:314-419` |
 | Un QR por mesa, sesión compartida, tiempo real | ✅ Cumple | `useTableSession.ts`, publicación realtime |
 | KDS con sonido, temporizadores, agotados | ✅ Cumple (sin separar por estación) | `KDSPage.tsx` |
@@ -165,7 +165,7 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | N6 | ✅ **Resuelto en la fase 1.9** (`calcular_precios` rechaza opciones inventadas, repetidas o faltantes). **Modificadores inventados:** si el navegador manda un modificador que no existe, se cobra $0 pero llega igual a cocina. Tampoco se validan los modificadores obligatorios | 🟠 Medio | `process-payment/index.ts:160-166` |
 | N7 | ✅ **Resuelto en la fase 1.9** (local activo, sucursal abierta, día y horario de cada categoría). El servidor no revisa si el local está activo, si la sucursal está abierta ni si la categoría está en su horario antes de cobrar | 🟠 Medio | `process-payment/index.ts:59-65` |
 | N8 | ✅ **Resuelto en las fases 1.4 a 1.7** (cada acción revisa el rol en la base; el mozo ya no cambia precios, modo de pago ni pagos). Los roles no se distinguen en la base: un mozo (miembro del local) puede cambiar precios, el modo de pago de la sucursal o marcar pedidos como pagados | 🟠 Medio | todas las políticas `*_staff_manage` |
-| N9 | El cierre de caja usa días en UTC: una noche de bar (20:00 a 03:00 de Chile) queda partida en dos días | 🟠 Medio | `reconcile-payments/index.ts:57-58` |
+| N9 | ✅ **Resuelto en la fase 2.D** (día de negocio por sucursal con corte a las 06:00 de Chile; la función vieja se retiró). El cierre de caja usa días en UTC: una noche de bar (20:00 a 03:00 de Chile) queda partida en dos días | 🟠 Medio | `reconcile-payments/index.ts:57-58` |
 | N10 | ✅ **Resuelto en la fase 1.10** (solo caja, encargado, administrador o dueño concilian, y un día cerrado no se reabre ni se sobrescribe; el cierre completo con conciliación automática llega en la fase 2). Un cierre de caja ya cerrado se puede reabrir y sobrescribir. Y cualquier miembro del local, incluido un mozo, puede cerrar caja | 🟠 Medio | `reconcile-payments/index.ts:53, 77-95` |
 | N11 | `get_tenant_id()` usa `LIMIT 1` sin orden: si un usuario pertenece a dos locales, el sistema elige uno al azar | 🟡 Bajo hoy | `20260309045023_...sql:12` |
 | N12 | Apple Pay y Google Pay: el navegador pide el pago, pero al servidor solo le llega el nombre del método, no el comprobante. Con pasarela real hay que rehacer esta parte | 🟡 Fase 9 | `CheckoutPage.tsx:164-179`, `src/lib/walletPayment.ts` |
@@ -203,7 +203,7 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | Cambios de estado por el servidor | ❌ (problema 6) |
 | Código de presencia de 4 dígitos en la mesa | ❌ No existe |
 | Rol cajero separado | ❌ No existe (la caja está en el panel del dueño) |
-| Cierre de turno bloqueado | ❌ Se puede reabrir (N10) |
+| Cierre de turno bloqueado | ✅ El cierre de caja del día queda bloqueado (fase 2.D); los turnos de mozo llegan en la fase 3 |
 | KDS separado por estación (barra / cocina) | ❌ No hay concepto de estación en la base |
 | Estado del pedido por estación para el comensal | ❌ |
 | Prepago como modo por defecto | ❌ El valor por defecto es `open_tab` |
