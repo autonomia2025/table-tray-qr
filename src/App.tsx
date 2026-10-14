@@ -15,6 +15,7 @@ import TrackingPage from "./pages/TrackingPage";
 import BillPage from "./pages/BillPage";
 import PayPage from "./pages/PayPage";
 import KDSPage from "./pages/KDSPage";
+import InicioPage from "./pages/admin/InicioPage";
 
 import { AdminProvider } from "./contexts/AdminContext";
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -89,7 +90,8 @@ const App = () => (
           {/* Admin with slug (protected) */}
           <Route path="/admin/:slug" element={<AdminProvider><AdminLayout /></AdminProvider>}>
             <Route element={<AdminGuard />}>
-              <Route index element={<Navigate to="mesas" replace />} />
+              <Route index element={<Navigate to="inicio" replace />} />
+              <Route path="inicio" element={<InicioPage />} />
               <Route path="mesas" element={<MesasPage />} />
               <Route path="menu" element={<MenuAdminPage />} />
               <Route path="equipo" element={<EquipoPage />} />

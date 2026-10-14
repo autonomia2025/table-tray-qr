@@ -95,7 +95,7 @@ describe("sellos solo con cuenta verificada (N4)", () => {
     const cuerpo = JSON.parse(r.cuerpo);
     expect(cuerpo.loyalty).toBeNull();
     const dueno = (await conSesion("owner")).cliente;
-    const { data: pedido } = await dueno.from("orders").select("user_id").eq("order_number", cuerpo.order.order_number).eq("tenant_id", DEMO.tenant).single();
+    const { data: pedido } = await dueno.from("orders").select("user_id").eq("id", cuerpo.order.id).single();
     expect(pedido!.user_id).toBe(yo);
   });
 });

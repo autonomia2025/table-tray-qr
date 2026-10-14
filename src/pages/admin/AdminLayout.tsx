@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift } from "lucide-react";
+import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { NOMBRE_ROL, puedeVer, type SeccionLocal } from "@/lib/roles";
@@ -13,6 +13,7 @@ export default function AdminLayout() {
   const effectiveSlug = urlSlug ?? slug;
 
   const NAV_ITEMS = [
+    { seccion: "inicio", path: `/admin/${effectiveSlug}/inicio`, label: "Inicio", icon: Home, external: false },
     { seccion: "mesas", path: `/admin/${effectiveSlug}/mesas`, label: "Mesas", icon: LayoutGrid, external: false },
     { seccion: "pedidos", path: `/admin/${effectiveSlug}/pedidos`, label: "Pedidos", icon: ClipboardList, external: false },
     { seccion: "menu", path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen, external: false },
@@ -96,7 +97,7 @@ export default function AdminLayout() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-card border-t border-border flex z-50">
-        {NAV_ITEMS.filter((i) => ["Mesas", "Pedidos", "Menú", "Caja", "Lealtad"].includes(i.label)).map((item) => {
+        {NAV_ITEMS.filter((i) => ["Inicio", "Mesas", "Pedidos", "Menú", "Caja"].includes(i.label)).map((item) => {
           const active = location.pathname.startsWith(item.path);
 
           return (

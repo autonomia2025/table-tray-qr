@@ -39,15 +39,15 @@ export const NOMBRE_ROL: Record<RolLocal, string> = {
 
 /** Secciones del panel del local (las rutas /admin/:slug/<seccion>). */
 export type SeccionLocal =
-  | "mesas" | "pedidos" | "menu" | "caja" | "lealtad" | "reportes"
+  | "inicio" | "mesas" | "pedidos" | "menu" | "caja" | "lealtad" | "reportes"
   | "equipo" | "qr" | "sucursal" | "soporte" | "kds";
 
-const TODAS: SeccionLocal[] = ["mesas", "pedidos", "menu", "caja", "lealtad", "reportes", "equipo", "qr", "sucursal", "soporte", "kds"];
+const TODAS: SeccionLocal[] = ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "reportes", "equipo", "qr", "sucursal", "soporte", "kds"];
 
 export const SECCIONES_POR_ROL: Record<RolLocal, SeccionLocal[]> = {
   owner: TODAS,
   admin: TODAS,
-  manager: ["mesas", "pedidos", "menu", "caja", "lealtad", "reportes", "qr", "soporte", "kds"],
+  manager: ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "reportes", "qr", "soporte", "kds"],
   cashier: ["caja", "pedidos", "mesas"],
   waiter: [],
   kitchen: ["kds"],
@@ -58,7 +58,7 @@ export const puedeVer = (rol: RolLocal | "superadmin", seccion: SeccionLocal) =>
 
 /** Primera sección del panel para cada rol. */
 export const inicioPanel = (rol: RolLocal | "superadmin"): SeccionLocal =>
-  rol === "cashier" ? "caja" : "mesas";
+  rol === "cashier" ? "caja" : "inicio";
 
 /** Roles que pueden abrir la pantalla de cocina (KDS). */
 export const ROLES_KDS: RolLocal[] = ["owner", "admin", "manager", "kitchen"];

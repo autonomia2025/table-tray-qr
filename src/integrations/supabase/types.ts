@@ -2777,11 +2777,22 @@ export type Database = {
         Returns: boolean
       }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
+      _sembrar_historia_demo: { Args: { _dias?: number }; Returns: number }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
+      _tenant_reportes: { Args: { _branch_id: string }; Returns: string }
       _turno_abierto: { Args: { _staff_id: string }; Returns: string }
       _ventana_dias: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
         Returns: Record<string, unknown>
+      }
+      _ventas_dias: {
+        Args: { _branch_id: string; _desde: string; _hasta: string }
+        Returns: {
+          pagos: number
+          propinas: number
+          reembolsado: number
+          ventas: number
+        }[]
       }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       abrir_turno: { Args: { _branch_id: string }; Returns: Json }
@@ -2920,6 +2931,7 @@ export type Database = {
         Args: { _role: string; _user_id: string }
         Returns: boolean
       }
+      historia_del_local: { Args: { _branch_id: string }; Returns: Json }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
       llamar_mozo: {
@@ -2977,6 +2989,10 @@ export type Database = {
         Returns: boolean
       }
       reiniciar_demo: { Args: never; Returns: Json }
+      reporte_local: {
+        Args: { _branch_id: string; _desde: string; _hasta: string }
+        Returns: Json
+      }
       reservar_intento_pago: {
         Args: {
           _cotizacion_id: string

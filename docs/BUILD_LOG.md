@@ -4,6 +4,57 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.6: reportes del servidor e inicio del dueño que cuenta una historia ✅
+**Antes:** los reportes traían todos los pedidos al navegador y los sumaban ahí.
+- Contaban como venta pedidos sin pagar.
+- Usaban días en UTC, que en Chile van de 21:00 a 20:59.
+- Se iban a poner lentos con el volumen.
+
+**Ahora los calcula la base** con `reporte_local(sucursal, desde, hasta)`:
+- Por **día de negocio**: hora de Chile, con el corte de las 06:00, igual que la caja.
+- **Ventas:** lo cobrado por consumo menos lo reembolsado, sin propinas. Se comparan con el período anterior.
+- Ventas por día, por canal (app, efectivo, POS), platos que más se venden y los que nadie pidió, y categorías.
+- **Productividad de cocina:** mediana y "9 de cada 10" de cada plato contra el tiempo de la carta, para ver qué traba.
+- **Mapa de calor** día × hora, zonas, mesas (ventas, visitas, duración), clientes que vuelven y calificación.
+- Período de hasta un año. Solo dueño, administrador, encargado y superadmin.
+
+**Inicio del dueño** (`/admin/<local>/inicio`, nueva sección; ahora es la entrada del dueño). Usa `historia_del_local` y, en vez de veinte gráficos, cuenta en palabras:
+- "Ayer vendiste $X en N pagos, 12% más que el lunes pasado", el plato estrella, la zona y la hora más fuertes, quién vendió más, el ticket, las propinas y la calificación.
+- Lo de hoy en vivo y los últimos 7 días contra la semana anterior.
+- Avisos: platos agotados, un plato que sale claramente más lento que lo que dice la carta, y lo perdido en mesas que se fueron sin pagar.
+
+**Pantalla de Reportes** reescrita sobre `reporte_local`:
+- Períodos: hoy, 7, 30 y 90 días.
+- Pestañas: Resumen, Platos, Cocina, Horas, Mesas y zonas, y Clientes.
+- Exporta a CSV.
+- Se borraron los 8 componentes viejos que calculaban en el navegador.
+
+**Historia de ejemplo en el demo** (`_sembrar_historia_demo`).
+- **Por qué:** al reiniciar el demo se borraba todo, y el inicio y los reportes quedaban vacíos, así que no servían para mostrar Tablio.
+- **Cuándo:** ahora `reiniciar_demo` siembra 4 semanas creíbles. Las pruebas locales y la integración continua también las siembran.
+- **Qué trae:**
+  - más gente el fin de semana y peaks de almuerzo y noche;
+  - platos estrella, propinas, pagos con app, efectivo y POS, y calificaciones;
+  - días cerrados y cuadrados en caja;
+  - una chorrillana que esta semana sale lenta, para que el inicio la avise.
+- **Límites:**
+  - solo toca el local de demo y solo días anteriores a hoy (hoy queda limpio para probar);
+  - cada pago calza con sus pedidos, así que `auditoria_plata()` sigue vacía.
+- **Lo que no tiene:** clientes registrados. Esos se ven cuando pagan personas reales.
+
+**Error encontrado y corregido:** la "hora más fuerte" del inicio agrupaba mal y fallaba apenas había ventas de días anteriores. Lo destapó la historia de ejemplo.
+
+**Pruebas:**
+- `tests/seguridad/f3-6-reportes.test.ts`:
+  - un pago nuevo aparece en ventas, canal, plato, hora e inicio;
+  - un pedido sin pagar no cuenta como venta;
+  - mozo, cocina, caja, comensal, anónimo y el dueño de otro local no ven nada;
+  - las funciones internas, incluida la siembra, no se llaman desde el navegador;
+  - el período tiene límite.
+- `e2e/reportes.spec.ts`: el dueño entra al inicio y ve la historia y el aviso de la chorrillana; recorre los reportes y mira el inicio en el celular. La caja no ve reportes.
+
+---
+
 ## 2026-10-14 — Fase 3.5: código de presencia, cuenta abierta controlada y unir mesas ✅
 **Código de presencia** (brief 5.1). Cada mesa tiene 4 números impresos que prueban que el cliente está ahí y no en su casa con una foto del QR.
 - **Dónde se guarda:** los códigos viven en `codigos_mesa`, que solo lee el personal. El comensal puede leer la fila de su mesa, así que ahí se lo saltaría.

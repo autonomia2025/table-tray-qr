@@ -65,7 +65,8 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - En Sucursal se elige cuándo pedirlo: solo para pedir sin pagar (recomendado), siempre o nunca.
 15. **Unir mesas:** con Camila, abre una mesa y toca "🔗 Unir con otra mesa". La otra aparece como "Unida a la mesa X" y su QR entra a la mesa principal. "✂️ Separar" las vuelve a dividir, y al cerrar la principal se liberan solas.
 16. **Cuenta abierta controlada:** en Mesas, el dueño ve "Lo que todavía no se paga": lo que arriesga ahora y lo perdido en 30 días, con el motivo de cada mesa que se fue sin pagar. En cuenta abierta, cada persona tiene un límite (Sucursal).
-17. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
+17. **Inicio del dueño:** al entrar, el dueño ve "Así le fue a Demo Tablio": cuánto vendió anoche comparado con el mismo día de la semana pasada, el plato estrella, la zona y la hora más fuertes, quién vendió más, las propinas y la calificación. Abajo aparecen los avisos; el demo trae la chorrillana saliendo lenta. El demo tiene 4 semanas de ventas de ejemplo (se vuelven a sembrar al reiniciarlo); hoy parte en cero.
+18. **Reportes:** con 30 días se ven las ventas por día, cómo te pagaron, los platos que más vendes, qué traba la cocina, el mapa de calor de horas y las zonas. Se exporta a CSV. Muestra también Caja: el pago que hiciste quedó registrado.
 
 ## Experiencia del comensal (invitado o cliente)
 
@@ -82,7 +83,7 @@ Antes de una demo de venta o de una ronda de pruebas:
 bun run demo:reiniciar
 ```
 
-Borra pedidos, pagos, sesiones, llamados, lealtad e invitaciones del demo, y deja las mesas libres y la carta disponible. No toca la carta, el equipo ni otros locales. Solo funciona con la cuenta superadmin del demo.
+Borra pedidos, pagos, sesiones, llamados, lealtad e invitaciones del demo, deja las mesas libres y la carta disponible, y vuelve a sembrar 4 semanas de ventas de ejemplo (días anteriores a hoy) para que el inicio y los reportes tengan qué mostrar. No toca la carta, el equipo ni otros locales. Solo funciona con la cuenta superadmin del demo.
 
 ## Pruebas automáticas
 

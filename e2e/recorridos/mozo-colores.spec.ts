@@ -56,7 +56,7 @@ test("recorrido: mesas del mozo en colores, con cronómetros", async ({ page }) 
   await entrar(page, "waiter");
   await expect(page).toHaveURL(/\/mozo\/mesas/, { timeout: 15_000 });
   await expect(page.getByText("✅ Listo para llevar").first()).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText(/listo hace 8 min/)).toBeVisible();
+  await expect(page.getByText(/listo hace 8 min/).first()).toBeVisible();
   await foto(page, "20-mozo-mesas-colores");
   await page.evaluate(() => window.scrollBy(0, 700));
   await foto(page, "21-mozo-mesas-colores-abajo");

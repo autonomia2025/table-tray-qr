@@ -12,8 +12,8 @@ const cuentas = Object.fromEntries(
 const mesa1 = texto.match(/^\| 1 \| \w+ \| `([^`]+)` \|$/m)?.[1];
 
 const destinos: Array<[rol: string, ruta: RegExp]> = [
-  ["owner", /\/admin\/demo-tablio\/mesas/],
-  ["admin", /\/admin\/demo-tablio\/mesas/],
+  ["owner", /\/admin\/demo-tablio\/inicio/],
+  ["admin", /\/admin\/demo-tablio\/inicio/],
   ["waiter", /\/mozo\/mesas/],
   ["kitchen", /\/kds\?branch=aebe7faa-0e29-5aa9-83c2-1e1b336f1554/],
   ["cashier", /\/admin\/demo-tablio\/caja/],
