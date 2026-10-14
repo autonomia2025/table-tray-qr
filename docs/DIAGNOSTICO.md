@@ -173,6 +173,7 @@ Ordenados por gravedad. Propongo sumarlos a la fase 3.
 | N14 | ✅ **Resuelto en la fase 1.8** (las reglas del equipo de Tablio usan funciones que no se consultan a sí mismas). La política `backoffice_members_jefe_update` consulta la misma tabla que protege. Puede dar el error de "recursión infinita" al editar | 🟡 Bajo | `20260327024211_...sql:12-19` |
 | N15 | El comensal ve `err.message` en la pantalla de pago (rompe la regla 10) | 🟡 Bajo | `PayPage.tsx:200-201` |
 | N16 | ✅ **Resuelto en la fase 1.2.** **El mozo tenía que entrar dos veces.** Al entrar por el login principal, `MozoLayout` muestra la redirección a `/mozo/login` en el primer dibujo de la pantalla, antes de que alcance a revisar la sesión. Detectado por Playwright al migrar | 🟡 Medio | `src/pages/mozo/MozoLayout.tsx:146-154` (el estado `autoLogging` parte en `false`) |
+| N17 | Datos del sistema anterior: el pedido 2 de "La parrillada" (mayo de 2026) figura pagado y no tiene pago (en Lovable el navegador podía marcarlo). No se corrige para no inventar datos; la auditoría de la plata (fase 2.E) revisa los pedidos desde el 1 de octubre de 2026 | 🟡 Bajo | pedido `ec488348-…` |
 
 ---
 

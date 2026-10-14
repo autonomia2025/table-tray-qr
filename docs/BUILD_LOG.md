@@ -4,6 +4,44 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 2.E: compuerta de la plata ✅ (fase 2 terminada)
+**Qué es:** igual que la compuerta de seguridad de la fase 1.10, pero para los montos. Es una revisión automática de que la plata calza en toda la base, y una batería con los casos difíciles que faltaban.
+
+**Error encontrado y corregido:**
+- Un pago con la app de varios pedidos pendientes (cuenta abierta) guardaba solo el primero. Si después se reembolsaba completo, solo ese pedido quedaba "reembolsado".
+- Ahora cada pago guarda todos sus pedidos (`payments.pedidos`, lo llena un disparador al guardar el pago y se completó para los pagos existentes), y `confirmar_reembolso` los marca todos.
+
+**`auditoria_plata()`** (migración `20261014050000_compuerta_plata.sql`, solo superadmin). Si sale vacía, todo calza. Revisa que:
+- lo reembolsado de cada pago sea la suma exacta de sus reembolsos, y que nunca supere lo cobrado;
+- el estado del pago corresponda a lo devuelto;
+- no queden reembolsos trabados ni intentos de pago sin resolver;
+- todo intento aprobado tenga su pago, y que no haya pagos duplicados;
+- todo pedido pagado tenga pago y ninguno esté cobrado dos veces;
+- lo cobrado sea igual al total de los pedidos;
+- en prepago, nada esté en cocina sin pagar;
+- cada pago tenga su día de negocio;
+- **ningún cierre de caja haya cambiado** después de cerrarse (se recalcula y se compara con lo guardado).
+
+Los pedidos de antes del 1 de octubre vienen del sistema anterior y no se revisan: hay uno pagado sin pago, anotado en el diagnóstico (N17).
+
+**Pruebas (`tests/seguridad/f2e-compuerta-plata.test.ts`, 9):**
+- El mozo cobra en efectivo mientras el comensal paga lo mismo con la app: se cobra una sola vez.
+- La misma clave de pago con otro carrito no cobra lo nuevo, y otra persona no puede usar esa clave.
+- Tres reembolsos parciales del 60% al mismo tiempo: pasa uno solo. El resto exacto sí se devuelve; un peso más, no.
+- Pagar varios pedidos juntos y reembolsar todo: todos quedan reembolsados (el error de arriba).
+- Un reembolso que la pasarela rechaza libera la reserva y se puede volver a intentar; confirmar dos veces no cambia nada.
+- Un reembolso al mismo tiempo que el cierre de caja: el cierre no cambia después.
+- **La auditoría sí detecta descuadres:** se descuadra a propósito, dentro de una transacción que después se deshace, de 7 maneras distintas, y tiene que encontrar las 7.
+- Después de todo, la auditoría sale vacía en toda la base.
+
+Con estas pruebas, los casos del plan quedan cubiertos entre las pruebas de f2a a f2e: pago repetido, pagos al mismo tiempo, pago tardío, reembolso doble y dos personas pagando lo último.
+
+**Resultados:**
+- Base desechable: 137 de 137 de seguridad y 57 de 57 de navegador.
+- Base de pruebas: 124 de seguridad (más 13 que solo corren en la desechable). La auditoría de la plata sale vacía.
+
+---
+
 ## 2026-10-14 — Fase 2.D: día de negocio y cierre de caja con conciliación automática ✅
 **Antes:**
 - La función `reconcile-payments` contaba el día en UTC. En Chile eso es de 21:00 a 20:59, así que una noche de bar quedaba partida en dos.

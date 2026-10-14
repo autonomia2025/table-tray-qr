@@ -50,7 +50,7 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | 1.9 | Precios por el servidor y pedido manual del mozo por el servidor (cierra la inserción provisoria de pedidos) | ✅ |
 | 1.10 | Compuerta de seguridad: barrido final de reglas y funciones, ataques del diagnóstico, asesor de Supabase; auditoría automática en cada cambio | ✅ |
 
-## Fase 2 — Núcleo de la plata 🔨
+## Fase 2 — Núcleo de la plata ✅
 
 | Paso | Qué | Estado |
 |---|---|---|
@@ -58,7 +58,7 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | 2.B | "Pagar al mozo" (efectivo o POS) y "Agregar a mi cuenta" en cuenta abierta | ✅ |
 | 2.C | Reembolsos atómicos (reserva antes de devolver, nunca más de lo cobrado, cajero con motivo; efectivo y POS se devuelven en el local) | ✅ |
 | 2.D | Día de negocio (corte 06:00 de Chile, por sucursal) y cierre de caja con conciliación automática (app, efectivo, POS, reembolsos, devoluciones automáticas); diferencias marcadas con nota obligatoria; cierre bloqueado; propinas por mozo calculadas por el servidor | ✅ |
-| 2.E | Compuerta de pruebas de plata | ⏳ |
+| 2.E | Compuerta de la plata: los casos difíciles que faltaban y `auditoria_plata()` (revisa que la plata calce en toda la base; la integración continua exige que salga vacía y que detecte un descuadre hecho a propósito) | ✅ |
 
 
 Cotización con precio congelado → intento de pago reservado antes de cobrar → confirmación atómica (`confirmar_pago`) → checkout → **"Pagar al mozo"** (efectivo o POS: el mozo cobra, lo registra y recién ahí va a cocina) → caja con permisos del cajero → reembolsos → día de negocio y **cierre de caja con conciliación automática** (al cerrar, el sistema cuadra solo lo cobrado en la app, el efectivo y el POS registrados y los reembolsos, y marca las diferencias; el cierre queda bloqueado) → compuerta de pruebas de plata (pago repetido, pagos simultáneos, pago tardío, reembolso doble, dos personas pagando lo último).
@@ -70,7 +70,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 
 ## Fase 3 — Operación de sala y experiencia del comensal ⏳
 
-- Estaciones en pantalla (cocina, barra) y KDS robusto · código de presencia para las tarjetas de mesa · mozo y administración pulidos · reportes en el servidor · cuenta abierta controlada · unir mesas.
+- **Turnos de mozo** (abrir y cerrar turno) y **propina elegida por el cliente** (a qué mozo va), para que cada propina del cierre de caja tenga dueño (brief 7) · estaciones en pantalla (cocina, barra) y KDS robusto · código de presencia para las tarjetas de mesa · mozo y administración pulidos · reportes en el servidor · cuenta abierta controlada · unir mesas.
 - **La mesa en vivo** (ideas de experiencia, elegidas por su impacto en ventas):
   - ver quién está en la mesa (alias o avatar) y el estado de **tu** pedido por estación ("tu cerveza está lista, la comida sigue en cocina");
   - **"Otra ronda"** con un toque: repite lo que pediste;
