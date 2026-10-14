@@ -4,6 +4,44 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Propinas: 10% sugerido y propinas por pagar al equipo ✅
+**Contexto:** conversación con el fundador sobre la plata (fase 4) e investigación de la ley chilena. El artículo 64 del Código del Trabajo dice cuatro cosas:
+- la cuenta debe sugerir al menos 10% de propina;
+- el cliente puede no darla;
+- la propina es íntegra del trabajador, sin descuentos;
+- con tarjeta, el local debe entregarla en 7 días hábiles.
+
+**Corrección:** el pago venía con **5% marcado**, bajo el mínimo legal. Ahora hay un solo selector (`SelectorPropina`, `src/lib/propina.ts`) en pagar, pagar la cuenta y pedir la cuenta:
+- **10% marcado** (decisión del fundador), 15%, 20% y otro monto;
+- **"Sin propina"** siempre a la vista, con la nota "Voluntaria · va íntegra al equipo";
+- en el cobro en efectivo o con POS, el mozo tiene botones de 10, 15 y 20% para anotar lo que el cliente decida.
+
+**Propinas por pagar** (`20261014150000_propinas_por_pagar.sql`). La plata de la propina queda en el local (app, POS o efectivo a la caja), y Tablio lleva la cuenta:
+- **`propinas_por_pagar`** (dueño, administrador, encargado y caja): cuánto se le debe a cada mozo, desde cuándo y cuándo vence el plazo. El plazo son 7 días hábiles de lunes a viernes; los feriados no se descuentan, así que el aviso llega antes y nunca tarde.
+- **`pagar_propinas`:** registra que se le pagó todo lo pendiente (efectivo, transferencia u otro, con nota).
+  - Se registra con el mozo bloqueado, así que dos personas al mismo tiempo pagan una sola vez.
+  - Queda en `audit_logs`.
+  - Tablio no mueve la plata.
+- **`mis_propinas_por_cobrar`:** el mozo ve cuánto le deben y lo que ya le pagaron. Cada mozo lee solo sus pagos.
+- **La auditoría de la operación** ahora también detecta una propina pagada dos veces o a otro mozo.
+- **Pantallas:**
+  - Caja → "Propinas del equipo";
+  - el Inicio del dueño avisa si hay propinas por pagar, y en rojo si están vencidas;
+  - el perfil del mozo muestra "Mis propinas".
+- **Demo:** `_sembrar_propinas_pagadas_demo` paga cada lunes las propinas de la semana anterior de la historia de ejemplo, y quedan pendientes los últimos días.
+
+**Pruebas:**
+- `tests/seguridad/p1-propinas-por-pagar.test.ts`:
+  - la propina pagada con la app queda como deuda con la mozo de la mesa;
+  - dos registros al mismo tiempo pagan una vez;
+  - la mozo no se paga sola y ve lo suyo;
+  - nadie inventa pagos desde el navegador;
+  - el dueño de otro local no ve nada;
+  - la auditoría sigue vacía.
+- `e2e/propinas.spec.ts`: 10% marcado, "sin propina" y otro monto; el dueño registra el pago en Caja; la mozo lo ve en su perfil.
+
+---
+
 ## 2026-10-14 — Pista P: calidad que no toca la base ✅
 **Una sola capa de traducción de estados** (`src/lib/estados.ts`). La base guarda los estados en inglés (decisión del 1 de octubre) y ahora todo lo que ve una persona pasa por aquí.
 - **Dos voces:** la del personal ("Nuevo", "En cocina", "Listo"…) y la del cliente ("Recibido", "En cocina", "¡Listo!"…), con plurales para las columnas.

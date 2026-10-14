@@ -8,7 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, AlertTriangle, Loader2, Receipt } from "lucide-react";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
-import { Input } from "@/components/ui/input";
+import SelectorPropina from "@/components/comensal/SelectorPropina";
+import { PROPINA_SUGERIDA, montoPropina, porcentajePropina, type Propina } from "@/lib/propina";
 
 interface OrderWithItems {
   id: string;
@@ -28,12 +29,6 @@ interface OrderWithItems {
 
 type PageState = "summary" | "processing" | "success" | "error";
 
-const TIP_OPTIONS = [
-  { label: "Sin propina", pct: 0 },
-  { label: "10%", pct: 10 },
-  { label: "15%", pct: 15 },
-  { label: "20%", pct: 20 },
-];
 
 /* ---------- component ---------- */
 export default function BillPage() {
@@ -48,8 +43,7 @@ export default function BillPage() {
 
   const [pageState, setPageState] = useState<PageState>("summary");
   const [errorMsg, setErrorMsg] = useState("");
-  const [selectedTipIdx, setSelectedTipIdx] = useState<number | null>(null);
-  const [customTip, setCustomTip] = useState("");
+  const [propina, setPropina] = useState<Propina>(PROPINA_SUGERIDA);
   const [showBackBtn, setShowBackBtn] = useState(false);
   const [finalTotal, setFinalTotal] = useState(0);
   const [finalTip, setFinalTip] = useState(0);
@@ -124,14 +118,9 @@ export default function BillPage() {
     .reduce((s, o) => s + o.total_amount, 0);
   const subtotal = orders.reduce((s, o) => s + o.total_amount, 0) - yaPagado;
 
-  /* ---- tip logic ---- */
-  const tipAmount = (() => {
-    if (customTip) return parseInt(customTip, 10) || 0;
-    if (selectedTipIdx !== null) return Math.round(subtotal * (TIP_OPTIONS[selectedTipIdx].pct / 100));
-    return 0;
-  })();
-
-  const tipPercentage = selectedTipIdx !== null && !customTip ? TIP_OPTIONS[selectedTipIdx].pct : 0;
+  /* ---- propina ---- */
+  const tipAmount = montoPropina(propina, subtotal);
+  const tipPercentage = porcentajePropina(propina);
   const total = subtotal + tipAmount;
 
   /* ---- pedir la cuenta: sin cámara, el total lo calcula la base (fase 1.6) ---- */
@@ -270,55 +259,8 @@ export default function BillPage() {
               </div>
             </div>
 
-            {/* Tip section */}
-            <div className="mb-4">
-              <p className="text-[15px] font-bold text-foreground mb-3">¿Quieres dejar propina?</p>
-
-              <div className="grid grid-cols-4 gap-2 mb-3">
-                {TIP_OPTIONS.map((opt, idx) => {
-                  const isSelected = selectedTipIdx === idx && !customTip;
-                  const tipVal = Math.round(subtotal * (opt.pct / 100));
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setSelectedTipIdx(idx);
-                        setCustomTip("");
-                      }}
-                      className="flex flex-col items-center rounded-xl border-2 py-2.5 px-1 text-center transition-colors"
-                      style={{
-                        borderColor: isSelected ? primaryColor : "hsl(var(--border))",
-                        backgroundColor: isSelected ? `${primaryColor}10` : "transparent",
-                      }}
-                    >
-                      <span
-                        className="text-sm font-semibold"
-                        style={{ color: isSelected ? primaryColor : "hsl(var(--foreground))" }}
-                      >
-                        {opt.label}
-                      </span>
-                      {opt.pct > 0 && (
-                        <span className="text-[11px] text-muted-foreground mt-0.5">{formatCLP(tipVal)}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Otro monto</label>
-                <Input
-                  type="number"
-                  placeholder="$0"
-                  value={customTip}
-                  onChange={(e) => {
-                    setCustomTip(e.target.value);
-                    if (e.target.value) setSelectedTipIdx(null);
-                  }}
-                  className="h-11"
-                />
-              </div>
-            </div>
+            {/* Propina: 10% sugerido (mínimo legal), 15%, 20%, otro monto o sin propina */}
+            <SelectorPropina subtotal={subtotal} color={primaryColor} valor={propina} onCambiar={setPropina} titulo="¿Quieres dejar propina?" />
 
             {/* Totals */}
             <div className="rounded-xl border border-border bg-card p-4 mb-4">

@@ -18,6 +18,7 @@ import { formatCLP } from "@/lib/format";
 import { exportToCSV } from "@/lib/export-utils";
 import { cerrarCaja, resumenCaja, type ResumenCaja } from "@/lib/caja";
 import { textoPago } from "@/lib/estados";
+import PropinasPorPagar from "@/components/admin/PropinasPorPagar";
 
 interface PaymentRow {
   id: string;
@@ -293,6 +294,7 @@ export default function CajaPage() {
           <TabsTrigger value="ingresos">Ingresos</TabsTrigger>
           <TabsTrigger value="conciliacion">Cierre de caja</TabsTrigger>
           <TabsTrigger value="reembolsos">Reembolsos</TabsTrigger>
+          <TabsTrigger value="propinas">Propinas del equipo</TabsTrigger>
         </TabsList>
 
         {/* ---------- INGRESOS ---------- */}
@@ -633,6 +635,11 @@ export default function CajaPage() {
               )}
             </TableBody>
           </Table>
+        </TabsContent>
+
+        {/* ---------- PROPINAS DEL EQUIPO ---------- */}
+        <TabsContent value="propinas">
+          {branchId && <PropinasPorPagar branchId={branchId} />}
         </TabsContent>
       </Tabs>
 

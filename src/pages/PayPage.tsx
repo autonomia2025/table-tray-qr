@@ -13,8 +13,9 @@ import { useCartStore } from "@/store/cartStore";
 import { detectWallets, requestWalletPayment, type WalletKind } from "@/lib/walletPayment";
 import { useToast } from "@/hooks/use-toast";
 import { mensajeError } from "@/lib/errores";
+import SelectorPropina from "@/components/comensal/SelectorPropina";
+import { PROPINA_SUGERIDA, montoPropina, type Propina } from "@/lib/propina";
 
-const TIP_OPTIONS = [0, 5, 10, 15];
 
 interface PaidResult {
   amount: number;
@@ -33,7 +34,7 @@ export default function PayPage() {
   useComensalEnMesa(tableToken);
   const { toast } = useToast();
 
-  const [tipIdx, setTipIdx] = useState(1);
+  const [propina, setPropina] = useState<Propina>(PROPINA_SUGERIDA);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [paid, setPaid] = useState<PaidResult | null>(null);
@@ -103,7 +104,7 @@ export default function PayPage() {
   });
 
   const subtotal = pending.reduce((s, o) => s + (o.total_amount || 0), 0);
-  const tipAmount = Math.round(subtotal * (TIP_OPTIONS[tipIdx] / 100));
+  const tipAmount = montoPropina(propina, subtotal);
   const total = subtotal + tipAmount;
 
   /* ---------- lealtad ---------- */
@@ -285,36 +286,8 @@ export default function PayPage() {
               </div>
             </div>
 
-            {/* Propina */}
-            <p className="text-[15px] font-bold text-foreground mb-2">Propina</p>
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {TIP_OPTIONS.map((pct, idx) => {
-                const active = tipIdx === idx;
-                return (
-                  <button
-                    key={pct}
-                    onClick={() => setTipIdx(idx)}
-                    className="flex flex-col items-center rounded-xl border-2 py-2.5 transition-colors"
-                    style={{
-                      borderColor: active ? primaryColor : "hsl(var(--border))",
-                      backgroundColor: active ? `${primaryColor}12` : "transparent",
-                    }}
-                  >
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: active ? primaryColor : "hsl(var(--foreground))" }}
-                    >
-                      {pct === 0 ? "Sin" : `${pct}%`}
-                    </span>
-                    {pct > 0 && (
-                      <span className="text-[11px] text-muted-foreground">
-                        {formatCLP(Math.round(subtotal * (pct / 100)))}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Propina: 10% sugerido (mínimo legal), 15%, 20%, otro monto o sin propina */}
+            <SelectorPropina subtotal={subtotal} color={primaryColor} valor={propina} onCambiar={setPropina} />
 
             {/* Sellos de fidelización: solo con cuenta verificada (fase 1.3) */}
             <BloqueSellos

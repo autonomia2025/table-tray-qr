@@ -10,7 +10,8 @@ import { NOMBRE_ROL } from '@/lib/roles';
 import { formatCLP } from '@/lib/format';
 import { abrirTurno, cerrarTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { CLASE_SEMAFORO, NOMBRE_PERIODO, NOMBRE_TIPO, minutos, miDesempeno, semaforo, type Desempeno, type MetaAvance, type Objetivos } from '@/lib/equipo';
-import { Target } from 'lucide-react';
+import { HandCoins, Target } from 'lucide-react';
+import { fechaLarga, misPropinasPorCobrar, type MisPropinas } from '@/lib/propinasEquipo';
 
 export default function MozoPerfilPage() {
   const { staffName, role, logout, branchId } = useWaiters();
@@ -20,10 +21,12 @@ export default function MozoPerfilPage() {
   const [confirmar, setConfirmar] = useState(false);
   const [trabajando, setTrabajando] = useState(false);
   const [desempeno, setDesempeno] = useState<{ objetivos: Objetivos; hoy: Desempeno; metas: MetaAvance[] } | null>(null);
+  const [misPropinas, setMisPropinas] = useState<MisPropinas | null>(null);
 
   useEffect(() => {
     if (!branchId) return;
     miDesempeno(branchId).then((r) => { if (r.ok) setDesempeno(r.dato); });
+    misPropinasPorCobrar(branchId).then(setMisPropinas);
   }, [branchId, turno?.propinas]);
 
   const handleLogout = async () => {
@@ -99,6 +102,31 @@ export default function MozoPerfilPage() {
           </>
         )}
       </div>
+
+      {/* Mis propinas: lo que el local me debe y lo que ya me pagó (art. 64: con tarjeta, en 7 días hábiles) */}
+      {misPropinas && (misPropinas.por_cobrar > 0 || misPropinas.pagadas.length > 0) && (
+        <div className="mt-4 w-full max-w-sm rounded-2xl border bg-card p-4" data-testid="mis-propinas">
+          <div className="mb-2 flex items-center gap-2">
+            <HandCoins className="h-5 w-5 text-muted-foreground" />
+            <h3 className="font-bold text-foreground">Mis propinas</h3>
+          </div>
+          {misPropinas.por_cobrar > 0 ? (
+            <p className="text-sm text-foreground">
+              El local te debe <strong>{formatCLP(misPropinas.por_cobrar)}</strong>
+              {misPropinas.vence && <> · plazo hasta el {fechaLarga(misPropinas.vence)}</>}.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Estás al día: no te deben propinas.</p>
+          )}
+          {misPropinas.pagadas.length > 0 && (
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {misPropinas.pagadas.slice(0, 3).map((l, i) => (
+                <li key={i}>Te pagaron {formatCLP(l.monto)} el {new Date(l.created_at).toLocaleDateString('es-CL')}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Mis metas y cómo voy hoy (fase 3.3) */}
       {desempeno && (

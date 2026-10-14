@@ -99,6 +99,16 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 
 ## Fase 4 — Dinero real ⏳
 
+**Decisiones del fundador (14 de octubre de 2026):**
+- **Pasarelas:** todas las posibles. Cada local conecta con un botón la que quiera, y Tablio nunca toca la plata. Se parte con Mercado Pago (conexión con su cuenta) y Transbank (código de comercio y clave), con un diseño de "enchufes" para sumar más.
+- **Cobro de Tablio:** mensualidad. No hay reparto en cada pago.
+- **Boleta:** el comprobante de un pago con tarjeta o en línea vale como boleta si el local lo declara en el SII. Para efectivo y transferencia hay que emitir boleta electrónica, a nombre de cada local, enviada por correo.
+- **Propinas:** adelantado el 14 de octubre (10% sugerido y propinas por pagar al equipo).
+- **Preguntas pendientes:**
+  - para el contador: la propina dentro del comprobante en línea, y el modelo de emisión en el SII;
+  - para el abogado: el rol de Tablio en la Ley 21.719.
+
+
 Pasarela real y su receptor de avisos (webhooks) · **conciliación automática contra lo que la pasarela deposita** (al cerrar la caja, decisión del fundador del 13 de octubre) · boleta electrónica (una por venta) · privacidad Ley 21.719 (consentimiento, borrado, retención; bloqueante: estará vigente al lanzar) · excepciones del cajero (pago sin pedido, monto que no calza, boleta fallida) · correos con Resend.
 
 ## Fase 5 — Producción y piloto ⏳

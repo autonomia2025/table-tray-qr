@@ -852,6 +852,70 @@ export type Database = {
           },
         ]
       }
+      liquidaciones_propina: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          medio: string
+          monto: number
+          nota: string | null
+          pagado_por: string | null
+          pagado_por_nombre: string | null
+          pagos: string[]
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          medio: string
+          monto: number
+          nota?: string | null
+          pagado_por?: string | null
+          pagado_por_nombre?: string | null
+          pagos: string[]
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          medio?: string
+          monto?: number
+          nota?: string | null
+          pagado_por?: string | null
+          pagado_por_nombre?: string | null
+          pagos?: string[]
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "liquidaciones_propina_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liquidaciones_propina_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "liquidaciones_propina_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_customers: {
         Row: {
           consent_at: string
@@ -2861,6 +2925,10 @@ export type Database = {
         }
         Returns: Json
       }
+      _mas_dias_habiles: {
+        Args: { _desde: string; _dias: number }
+        Returns: string
+      }
       _mesa_del_qr: { Args: { _qr_token: string }; Returns: string }
       _mesa_y_actor: {
         Args: { _table_id: string }
@@ -2913,6 +2981,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      _propinas_pendientes: {
+        Args: { _branch_id: string }
+        Returns: {
+          medio: string
+          pagada_at: string
+          pago_id: string
+          propina: number
+          staff_id: string
+        }[]
+      }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _sellos_pago: {
         Args: {
@@ -2924,6 +3002,7 @@ export type Database = {
       }
       _sembrar_cliente_demo: { Args: never; Returns: number }
       _sembrar_historia_demo: { Args: { _dias?: number }; Returns: number }
+      _sembrar_propinas_pagadas_demo: { Args: never; Returns: number }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _tenant_reportes: { Args: { _branch_id: string }; Returns: string }
       _turno_abierto: { Args: { _staff_id: string }; Returns: string }
@@ -3106,8 +3185,18 @@ export type Database = {
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
+      mis_propinas_por_cobrar: { Args: { _branch_id: string }; Returns: Json }
       mis_sellos: {
         Args: { _branch_id?: string; _tenant_id: string }
+        Returns: Json
+      }
+      pagar_propinas: {
+        Args: {
+          _branch_id: string
+          _medio: string
+          _nota?: string
+          _staff_id: string
+        }
         Returns: Json
       }
       pedir_cuenta: {
@@ -3125,6 +3214,7 @@ export type Database = {
       }
       premios_en_mesa: { Args: { _table_id: string }; Returns: Json }
       premios_por_entregar: { Args: { _tenant_id: string }; Returns: Json }
+      propinas_por_pagar: { Args: { _branch_id: string }; Returns: Json }
       puede_asignar_rol: {
         Args: { _rol: string; _tenant_id: string }
         Returns: boolean

@@ -70,6 +70,8 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 18. **Reportes:** con 30 días se ven las ventas por día, cómo te pagaron, los platos que más vendes, qué traba la cocina, el mapa de calor de horas y las zonas. Se exporta a CSV. Muestra también Caja: el pago que hiciste quedó registrado.
 19. **Sellos que se sienten:** paga desde una mesa con tu propio correo guardado (Sellos → Continuar con mi correo). En "¡Pago listo!" el sello cae en la tarjeta y vibra el celular; uno por día, desde $3.000. Si pagas como invitado, la tarjeta muestra el sello "fantasma": al guardar tu cuenta, ese sello cae. Al completar 5, aparece el premio con un código de 4 letras. Con Camila, abre la mesa: "Un premio para entregar"; escribe el código que muestra el cliente y queda entregado (el dueño lo ve en Lealtad).
 
+20. **Propinas:** al pagar, el 10% viene marcado; se puede elegir 15%, 20%, otro monto o "sin propina". En Caja → "Propinas del equipo", el dueño ve cuánto le debe a cada mozo y hasta cuándo tiene plazo (7 días hábiles), y registra el pago. La mozo lo ve en Perfil → "Mis propinas". El demo trae pagadas las semanas anteriores y pendientes los últimos días.
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.

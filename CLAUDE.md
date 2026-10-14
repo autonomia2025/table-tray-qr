@@ -105,6 +105,10 @@ supabase functions deploy <nombre>      # publicar una edge function
   - **Premios:** los entrega el personal con `entregar_premio(premio, código)`. El código lo muestra el cliente; las vistas del personal no lo muestran.
 - **Compuerta de la operación (fase 3.8):** `auditoria_operacion()` (solo superadmin) revisa turnos y propinas, estaciones, estado de pedidos contra sus productos, mesas, sesiones, mesas unidas, códigos de presencia y sellos. La prueba `f3-8-compuerta` exige que salga vacía y que detecte un descuadre hecho a propósito. Si una regla nueva cambia lo que es "coherente", se actualiza la auditoría en el mismo cambio.
 - **Reglas de acceso nuevas:** usar `(SELECT auth.uid())` y no `auth.uid()` suelto (se calcula una vez por consulta). Toda llave que usen las pantallas en vivo lleva índice.
+- **Propinas (art. 64 del Código del Trabajo; decisión del fundador del 14 de octubre de 2026):**
+  - **En el pago:** se sugiere al menos 10%. Hay un solo selector (`SelectorPropina`): 10% marcado, 15%, 20%, otro monto y "sin propina" a la vista.
+  - **Es del trabajador:** sin descuentos de ningún tipo. Con tarjeta, se entrega en 7 días hábiles.
+  - **Lo que hace Tablio:** lleva la cuenta (`propinas_por_pagar`, `pagar_propinas`, `mis_propinas_por_cobrar`, tabla `liquidaciones_propina`). Nunca mueve la plata.
 - **La plata** (pagos, reembolsos, cierres) la ven solo dueño, administrador, encargado y caja. El mozo usa `orders.paid_at` para sus cronómetros.
 - **Después de cada fase:** resumen para el fundador y recorrido con fotos de Playwright (`RECORRIDO=<carpeta>` activa `foto()` de `e2e/apoyo/recorrido.ts`), publicado como página para que lo vea.
 - **Acciones del comensal** (llamar al mozo, pedir la cuenta, calificar): solo con las funciones de `src/lib/mesa.ts`. El comensal debe estar registrado en la mesa (`useComensalEnMesa`, que avisa cuando terminó).

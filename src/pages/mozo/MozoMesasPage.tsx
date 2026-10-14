@@ -9,6 +9,7 @@ import { abrirTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import PremiosMesa from '@/components/mozo/PremiosMesa';
 import { textoPedido } from '@/lib/estados';
+import { PORCENTAJES_PROPINA, montoPropina } from '@/lib/propina';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -882,8 +883,19 @@ export default function MozoMesasPage() {
                 </DialogHeader>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs text-muted-foreground" htmlFor="cobro-propina">Propina (opcional)</label>
-                    <Input id="cobro-propina" type="number" inputMode="numeric" placeholder="$0" value={cobro.propina}
+                    <label className="text-xs text-muted-foreground" htmlFor="cobro-propina">Propina (la ley pide sugerir al menos 10%; el cliente decide)</label>
+                    <div className="mb-1.5 mt-1 flex gap-1.5">
+                      {PORCENTAJES_PROPINA.map((pct) => {
+                        const monto = montoPropina({ tipo: 'pct', pct }, totalPendiente);
+                        return (
+                          <button key={pct} type="button" onClick={() => setCobro({ ...cobro, propina: String(monto) })}
+                            className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold ${Number(cobro.propina) === monto ? 'border-primary bg-accent text-foreground' : 'border-border text-muted-foreground'}`}>
+                            {pct}% · {formatCLP(monto)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Input id="cobro-propina" type="number" inputMode="numeric" placeholder="$0 (sin propina)" value={cobro.propina}
                       onChange={(e) => setCobro({ ...cobro, propina: e.target.value })} />
                   </div>
                   {cobro.metodo === 'cash' && (

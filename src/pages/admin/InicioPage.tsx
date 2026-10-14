@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowRight, BarChart3, Loader2, Sparkles, Users, Wallet 
 import { useAdmin } from "@/contexts/AdminContext";
 import { formatCLP } from "@/lib/format";
 import { historiaDelLocal, nombreDia, variacion, type Historia } from "@/lib/reportes";
+import { fechaLarga, propinasPorPagar, type PropinasPorPagar } from "@/lib/propinasEquipo";
 
 // Inicio del dueño (fase 3.6, brief 5.5): cuenta en palabras simples cómo le fue al local, en vez de
 // mostrar veinte gráficos. Los datos los calcula la base (historia_del_local).
@@ -24,6 +25,7 @@ export default function InicioPage() {
   const { branchId, slug, tenantName } = useAdmin();
   const [h, setH] = useState<Historia | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [propinas, setPropinas] = useState<PropinasPorPagar | null>(null);
 
   useEffect(() => {
     if (!branchId) return;
@@ -31,6 +33,7 @@ export default function InicioPage() {
       if (r.ok === false) setError(r.error);
       else setH(r.dato);
     });
+    propinasPorPagar(branchId).then(setPropinas);
   }, [branchId]);
 
   if (error) return <p className="text-sm text-muted-foreground">{error}</p>;
@@ -52,6 +55,15 @@ export default function InicioPage() {
   const alertas: React.ReactNode[] = [];
   if (h.alertas?.agotados.length) alertas.push(<>Están agotados: <strong>{h.alertas.agotados.join(", ")}</strong>. Actívalos en Menú apenas vuelvan.</>);
   if (h.alertas?.plato_lento) alertas.push(<><strong>{h.alertas.plato_lento.nombre}</strong> está tardando {h.alertas.plato_lento.mediana_min} min en salir (la carta dice {h.alertas.plato_lento.objetivo_min}). Conviene revisar esa preparación.</>);
+  // Propinas que el local le debe al equipo (art. 64: con tarjeta, se entregan en 7 días hábiles)
+  const vencidas = propinas?.pendientes.filter((p) => p.vencida) ?? [];
+  const porPagar = propinas?.pendientes.reduce((t, p) => t + p.monto, 0) ?? 0;
+  if (vencidas.length) {
+    alertas.push(<>Tienes propinas <strong>vencidas</strong> por pagar: {vencidas.map((p) => `${p.nombre} ${formatCLP(p.monto)}`).join(", ")}. Regístralas en <Link className="underline" to={`/admin/${slug}/caja`}>Caja → Propinas del equipo</Link>.</>);
+  } else if (porPagar > 0 && propinas) {
+    const proximo = [...propinas.pendientes].sort((a, b) => a.vence.localeCompare(b.vence))[0];
+    alertas.push(<>Le debes <strong>{formatCLP(porPagar)}</strong> en propinas al equipo. El primer plazo vence el {fechaLarga(proximo.vence)} (<Link className="underline" to={`/admin/${slug}/caja`}>Caja → Propinas del equipo</Link>).</>);
+  }
   if (h.alertas && h.alertas.perdido_7_dias > 0) alertas.push(<>Esta semana perdiste <strong>{formatCLP(h.alertas.perdido_7_dias)}</strong> en mesas que se fueron sin pagar.</>);
 
   const accesos = [
