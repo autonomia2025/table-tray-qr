@@ -4,6 +4,33 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 4.5: privacidad del comensal (Ley 21.719) ✅
+La ley de datos entra en vigencia el 1 de diciembre de 2026. Lo que hace el comensal desde "Mi cuenta" en la carta:
+- **Promociones:** solo con un consentimiento aparte, desmarcado por defecto ("Quiero recibir novedades…") al guardar su cuenta, y cambiable cuando quiera (`guardar_consentimiento`, tabla `consentimientos_comensal`, con la versión de la política que aceptó). Si entra a una cuenta que ya tenía, se respeta lo que había elegido.
+- **Descargar mis datos:** `mis_datos` arma un archivo con todo lo que Tablio guarda de la persona: cuenta, preferencias, sellos y premios por local, pedidos, pagos, mesas y avisos.
+- **Borrar mi cuenta:** la función `borrar-mi-cuenta`, con una confirmación que explica qué se borra.
+  - **Se borra:** correo, sellos, premios y movimientos de todos los locales, avisos, preferencias, lo que escribió en sus pedidos y el correo de los pagos, y la cuenta misma.
+  - **Se conserva sin su nombre:** pedidos, pagos e intentos de pago, porque el local debe guardarlos por ley tributaria.
+  - **Las cuentas del equipo** no se borran por aquí.
+  - **Queda constancia** en la auditoría, sin datos de la persona.
+- **Invitados:** los que no vuelven en 90 días se borran solos (pg_cron diario).
+- **Política de privacidad** en lenguaje simple, en `/privacidad`, enlazada al guardar la cuenta y desde "Mi cuenta". **Falta la revisión de un abogado** (pregunta guardada).
+
+**Arreglo de fondo:** borrar a una persona borraba en cascada sus cotizaciones e intentos de pago, que son parte del registro de la plata. Ahora quedan, sin la persona (`ON DELETE SET NULL`).
+
+**Caja:** la fila "App (tarjeta, Apple y Google Pay)" pasa a "App (pagos con el QR)". Apple Pay y Google Pay todavía no existen con Webpay; quedan en el paso 4.2b (Klap).
+
+**Pruebas:**
+- `tests/seguridad/f4-5-privacidad.test.ts`:
+  - cada uno ve solo sus datos;
+  - el consentimiento es aparte y solo de la propia persona con cuenta;
+  - las cuentas del equipo no se borran y sin confirmar no pasa nada;
+  - al borrar se van los datos personales y la plata del local queda sin nombre (la auditoría de la plata sigue vacía);
+  - un invitado de más de 90 días se borra solo.
+- `e2e/privacidad.spec.ts`: "Mi cuenta" con promociones, descargar (llega el archivo), la confirmación de borrar y la política.
+
+---
+
 ## 2026-10-15 — Fase 4.4: pagos que no vuelven y conciliación con Transbank ✅
 **Lo que se comprobó** en el ambiente de pruebas de Transbank: si el cliente paga en Webpay y no vuelve a Tablio (cerró el celular), nadie confirma el pago y Transbank lo anula al poco rato ("Transaction has an invalid finished state: aborted"). No se cobra, pero el intento quedaba "reservado" para siempre, y la auditoría de la plata lo marca a la hora.
 

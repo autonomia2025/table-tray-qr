@@ -23,6 +23,9 @@ verify_jwt = false
 [functions.conciliar-pasarela]
 verify_jwt = false
 
+[functions.borrar-mi-cuenta]
+verify_jwt = false
+
 [functions.process-payment]
 verify_jwt = false
 

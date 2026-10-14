@@ -570,6 +570,27 @@ export type Database = {
         }
         Relationships: []
       }
+      consentimientos_comensal: {
+        Row: {
+          actualizado_at: string
+          politica_version: string
+          promociones: boolean
+          user_id: string
+        }
+        Insert: {
+          actualizado_at?: string
+          politica_version: string
+          promociones?: boolean
+          user_id: string
+        }
+        Update: {
+          actualizado_at?: string
+          politica_version?: string
+          promociones?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       contadores_pedidos: {
         Row: {
           branch_id: string
@@ -607,7 +628,7 @@ export type Database = {
           table_id: string
           tenant_id: string
           tipo: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           branch_id: string
@@ -622,7 +643,7 @@ export type Database = {
           table_id: string
           tenant_id: string
           tipo: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           branch_id?: string
@@ -637,7 +658,7 @@ export type Database = {
           table_id?: string
           tenant_id?: string
           tipo?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -735,7 +756,7 @@ export type Database = {
           resuelto_at: string | null
           tenant_id: string
           token_externo: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           conexion_id?: string | null
@@ -754,7 +775,7 @@ export type Database = {
           resuelto_at?: string | null
           tenant_id: string
           token_externo?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           conexion_id?: string | null
@@ -773,7 +794,7 @@ export type Database = {
           resuelto_at?: string | null
           tenant_id?: string
           token_externo?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -2994,6 +3015,7 @@ export type Database = {
         Returns: undefined
       }
       _anular_sellos_pago: { Args: { _payment_id: string }; Returns: undefined }
+      _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
       _codigo_premio: { Args: { _tenant_id: string }; Returns: string }
       _codigo_presencia: { Args: never; Returns: string }
       _comensal_en_mesa: {
@@ -3131,6 +3153,7 @@ export type Database = {
         Returns: boolean
       }
       _purgar_claves_pasarela: { Args: never; Returns: number }
+      _purgar_invitados: { Args: never; Returns: number }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _sellos_pago: {
         Args: {
@@ -3160,6 +3183,7 @@ export type Database = {
         }[]
       }
       _verificar_cron: { Args: { _clave: string }; Returns: boolean }
+      _version_politica: { Args: never; Returns: string }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       abrir_turno: { Args: { _branch_id: string }; Returns: Json }
       activar_personal: {
@@ -3293,6 +3317,7 @@ export type Database = {
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
+      guardar_consentimiento: { Args: { _promociones: boolean }; Returns: Json }
       guardar_suscripcion_push: {
         Args: {
           _auth: string
@@ -3327,6 +3352,7 @@ export type Database = {
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
+      mis_datos: { Args: never; Returns: Json }
       mis_propinas_por_cobrar: { Args: { _branch_id: string }; Returns: Json }
       mis_sellos: {
         Args: { _branch_id?: string; _tenant_id: string }

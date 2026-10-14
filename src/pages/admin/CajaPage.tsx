@@ -430,7 +430,7 @@ export default function CajaPage() {
                       </TableHeader>
                       <TableBody>
                         <TableRow>
-                          <TableCell className="font-medium">App (tarjeta, Apple y Google Pay)</TableCell>
+                          <TableCell className="font-medium">App (pagos con el QR)</TableCell>
                           <TableCell className="text-right tabular-nums">{formatCLP(resumen.app.cobrado)}</TableCell>
                           <TableCell className="text-right tabular-nums">{resumen.app.devuelto ? `−${formatCLP(resumen.app.devuelto)}` : "—"}</TableCell>
                           <TableCell className="text-right font-semibold tabular-nums">{formatCLP(resumen.app.esperado)}</TableCell>

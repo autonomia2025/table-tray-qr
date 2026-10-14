@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { Gift, Loader2, Mail, ArrowLeft, LogOut, CheckCircle2 } from "lucide-react";
+import { Gift, Loader2, Mail, ArrowLeft, LogOut, CheckCircle2, Download, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
+import { borrarMiCuenta, descargarMisDatos, guardarConsentimiento, miConsentimiento } from "@/lib/privacidad";
 import { supabase } from "@/integrations/supabase/client";
 import { useSesion } from "@/contexts/SesionContext";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -34,6 +37,51 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color 
   const [codigo, setCodigo] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  // Privacidad (fase 4.5): promociones solo con consentimiento aparte (desmarcado por defecto)
+  const [quierePromos, setQuierePromos] = useState(false);
+  const [promos, setPromos] = useState<boolean | null>(null);
+  const [borrando, setBorrando] = useState(false);
+  const [aviso, setAviso] = useState("");
+
+  // Al terminar de guardar una cuenta nueva, se guarda lo que eligió sobre promociones (si solo
+  // entró a una cuenta que ya tenía, se respeta lo que había elegido antes)
+  useEffect(() => {
+    if (paso !== "listo" || modo !== "guardar") return;
+    guardarConsentimiento(quierePromos).then(() => setPromos(quierePromos));
+  }, [paso, modo, quierePromos]);
+
+  // Ya registrado: su preferencia actual
+  useEffect(() => {
+    if (!abierto || !registrado) return;
+    miConsentimiento().then((c) => setPromos(c?.promociones ?? false));
+  }, [abierto, registrado]);
+
+  const cambiarPromos = async (v: boolean) => {
+    setPromos(v);
+    const r = await guardarConsentimiento(v);
+    if (r.ok === false) { setPromos(!v); setError(r.error); }
+  };
+
+  const descargar = async () => {
+    setError("");
+    const r = await descargarMisDatos();
+    if (r.ok === false) setError(r.error);
+  };
+
+  const borrarCuenta = async () => {
+    setError("");
+    setCargando(true);
+    const r = await borrarMiCuenta();
+    if (r.ok === false) { setCargando(false); setError(r.error); return; }
+    await supabase.auth.signOut();
+    // Sigue en la mesa como invitado nuevo
+    await supabase.auth.signInAnonymously();
+    await recargar();
+    setCargando(false);
+    setBorrando(false);
+    setPaso("inicio");
+    setAviso("Borramos tu cuenta y tus datos. Puedes seguir pidiendo como invitado.");
+  };
 
   // Si el comensal confirmó tocando el enlace del correo (en otra pestaña o app),
   // al volver a esta pantalla se actualiza su cuenta y se le muestra "¡Listo!".
@@ -150,7 +198,24 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color 
     <Drawer open={abierto} onOpenChange={cerrar}>
       <DrawerContent className="mx-auto max-w-md">
         <div className="px-5 pb-8 pt-2">
-          {registrado && paso !== "listo" ? (
+          {registrado && paso !== "listo" && borrando ? (
+            <>
+              <DrawerHeader className="px-0 text-left">
+                <DrawerTitle className="text-xl font-extrabold">¿Borrar tu cuenta?</DrawerTitle>
+                <DrawerDescription>
+                  Se borran tu correo, tus sellos y premios en todos los locales, y tus avisos. Tus pedidos y pagos
+                  quedan en los registros de cada local, sin tu nombre (los locales deben guardarlos por ley tributaria).
+                  Esto no se puede deshacer.
+                </DrawerDescription>
+              </DrawerHeader>
+              {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
+              <button onClick={borrarCuenta} disabled={cargando}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-destructive text-sm font-bold text-destructive-foreground disabled:opacity-60">
+                {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Sí, borrar mi cuenta
+              </button>
+              <button onClick={() => setBorrando(false)} className="mt-2 h-11 w-full text-sm font-semibold text-muted-foreground">Cancelar</button>
+            </>
+          ) : registrado && paso !== "listo" ? (
             <>
               <DrawerHeader className="px-0 text-left">
                 <DrawerTitle className="text-xl font-extrabold">Tu cuenta</DrawerTitle>
@@ -165,6 +230,21 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color 
                   <p className="text-xs text-muted-foreground">Sumas sellos en {nombreLocal} cada vez que pagas</p>
                 </div>
               </div>
+              {/* Privacidad (Ley 21.719) */}
+              <div className="mt-4 space-y-3 rounded-2xl border border-border p-4">
+                <label className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-foreground">Recibir novedades y promociones de los locales donde junto sellos</span>
+                  <Switch checked={!!promos} disabled={promos === null} onCheckedChange={cambiarPromos} aria-label="Recibir promociones" />
+                </label>
+                <button onClick={descargar} className="flex w-full items-center gap-2 text-sm font-semibold text-foreground">
+                  <Download className="h-4 w-4 text-muted-foreground" /> Descargar mis datos
+                </button>
+                <button onClick={() => { setError(""); setBorrando(true); }} className="flex w-full items-center gap-2 text-sm font-semibold text-destructive">
+                  <Trash2 className="h-4 w-4" /> Borrar mi cuenta
+                </button>
+                <Link to="/privacidad" className="block text-xs text-muted-foreground underline">Política de privacidad</Link>
+              </div>
+              {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
               <button
                 onClick={salir}
                 disabled={cargando}
@@ -213,9 +293,14 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color 
               </div>
 
               {error && <p className="mt-3 text-center text-xs text-destructive">{error}</p>}
-              <p className="mt-4 text-center text-[11px] leading-relaxed text-muted-foreground">
+              {aviso && <p className="mt-3 text-center text-xs font-semibold text-foreground">{aviso}</p>}
+              <label className="mt-4 flex items-start gap-2 text-left text-[12px] text-foreground">
+                <input type="checkbox" className="mt-0.5 h-4 w-4" checked={quierePromos} onChange={(e) => setQuierePromos(e.target.checked)} />
+                Quiero recibir novedades y promociones de los locales donde junte sellos (opcional).
+              </label>
+              <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
                 Al guardar tu cuenta aceptas que {nombreLocal} reconozca tus visitas para darte sellos y premios.
-                Puedes pedir que borremos tus datos cuando quieras.
+                Puedes descargar o borrar tus datos cuando quieras. <Link to="/privacidad" className="underline">Política de privacidad</Link>
               </p>
             </>
           ) : paso === "correo" ? (

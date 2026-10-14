@@ -115,7 +115,7 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 | 4.2b | **Apple Pay y Google Pay en la misma pantalla de pago** (prioridad del fundador, por fricción). Webpay no los muestra en línea; Klap Checkout Flex sí, sin salir del sitio. Necesita que el fundador pida a Klap la evaluación comercial y el acceso de prueba; después, un conector "Klap" igual al de Transbank | ⏳ |
 | 4.3 | Boleta electrónica para efectivo y transferencia, a nombre de cada local y enviada por correo (proveedor de boletas) | ⏳ |
 | 4.4 | Pagos que no vuelven (revisión automática cada 5 minutos) y conciliación al cerrar la caja contra la pasarela (cada pago con Webpay contra Transbank); claves guardadas 120 días tras desconectar, solo para revisiones y devoluciones | ✅ |
-| 4.5 | Privacidad (Ley 21.719): consentimiento, descarga y borrado de datos, retención | ⏳ |
+| 4.5 | Privacidad (Ley 21.719): consentimiento aparte para promociones, ver y descargar mis datos, borrar mi cuenta (la plata del local queda sin el nombre), invitados que no vuelven en 90 días se borran solos, política de privacidad. Falta la revisión de un abogado | ✅ |
 | 4.6 | Excepciones de la caja (pago sin pedido, monto que no calza, boleta fallida) y correos con Resend | ⏳ |
 | 4.7 | Compuerta de la fase 4 | ⏳ |
 

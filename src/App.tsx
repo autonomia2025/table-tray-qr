@@ -6,6 +6,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { SesionProvider } from "./contexts/SesionContext";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
+import PoliticaPrivacidad from "./pages/PoliticaPrivacidad";
 import RestaurantSplash from "./pages/RestaurantSplash";
 import MenuPage from "./pages/MenuPage";
 import ItemDetailPage from "./pages/ItemDetailPage";
@@ -84,6 +85,7 @@ const App = () => (
           <Route path="/" element={<UnifiedLoginPage />} />
           {/* Unified login */}
           <Route path="/login" element={<UnifiedLoginPage />} />
+          <Route path="/privacidad" element={<PoliticaPrivacidad />} />
           <Route path="/admin/login" element={<UnifiedLoginPage />} />
           <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
