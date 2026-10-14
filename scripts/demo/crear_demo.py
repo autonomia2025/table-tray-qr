@@ -69,6 +69,8 @@ CUENTAS = [
     ("jefe", f"jefe@{DOMINIO}", "Jefa de ventas Demo", "backoffice", "jefe_ventas"),
     ("vendedor", f"vendedor@{DOMINIO}", "Vendedor Demo", "backoffice", "vendedor"),
     ("finanzas", f"finanzas@{DOMINIO}", "Finanzas Demo", "backoffice", "finanzas"),
+    # Cliente con cuenta verificada: junta sellos (no es parte del equipo de ningún local)
+    ("cliente", f"cliente@{DOMINIO}", "Cliente Demo", "cliente", "cliente"),
 ]
 
 # (categoría, emoji, [(nombre, descripción, precio, alérgenos, etiquetas, minutos, modificadores)])
@@ -293,10 +295,11 @@ def main() -> None:
         if tipo == "backoffice":
             sql.append(ins("public.backoffice_members", {"id": uid(f"bo-{k}"), "user_id": u, "name": nombre, "email": correo, "role": rol, "zone": "Santiago Oriente", "is_active": True}))
 
-    # Lealtad: 5 visitas = un schop gratis
+    # Lealtad: 5 visitas = un schop gratis; cuenta una visita desde $3.000
     sql.append(ins("public.loyalty_programs", {
         "id": uid("loyalty"), "tenant_id": TENANT, "branch_id": None, "is_active": True, "type": "stamps",
         "goal_visits": 5, "points_per_thousand": 1, "points_goal": 100, "reward_description": "Un schop gratis",
+        "monto_minimo": 3000,
     }))
     if cfg.local_ajeno:
         local_ajeno(sql, claves)

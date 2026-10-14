@@ -11,9 +11,6 @@ verify_jwt = false
 [functions.list-tenant-users]
 verify_jwt = false
 
-[functions.loyalty-status]
-verify_jwt = false
-
 [functions.process-payment]
 verify_jwt = false
 

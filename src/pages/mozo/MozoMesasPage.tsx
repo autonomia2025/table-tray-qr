@@ -7,6 +7,7 @@ import { atenderLlamado, cerrarMesa, separarMesa, tomarMesa, transferirMesa, uni
 import { formatCLP } from '@/lib/format';
 import { abrirTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import PremiosMesa from '@/components/mozo/PremiosMesa';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -687,6 +688,9 @@ export default function MozoMesasPage() {
               )}
             </SheetTitle>
           </SheetHeader>
+
+          {/* Premios de lealtad de los clientes de la mesa (fase 3.7) */}
+          {selectedTable && sheetOpen && <PremiosMesa key={selectedTable.id} mesaId={selectedTable.id} />}
 
           {/* Session info */}
           {selectedTable?.sessionOpenedAt && (

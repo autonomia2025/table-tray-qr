@@ -65,36 +65,7 @@ Deno.serve(async (req) => {
     const { data: payment } = await admin.from("payments").select("*").eq("id", paymentId).single();
     const { data: refundRow } = await admin.from("refunds").select("*").eq("id", r.refund_id).single();
 
-    // Revertir lealtad
-    if (payment?.customer_email && fullyRefunded) {
-      const { data: customer } = await admin
-        .from("loyalty_customers")
-        .select("*")
-        .eq("tenant_id", payment.tenant_id)
-        .eq("email", payment.customer_email)
-        .maybeSingle();
-      if (customer && fullyRefunded) {
-        const { data: programs } = await admin
-          .from("loyalty_programs")
-          .select("*")
-          .eq("tenant_id", payment.tenant_id);
-        const program =
-          (programs ?? []).find((p) => p.branch_id === payment.branch_id) ??
-          (programs ?? []).find((p) => p.branch_id === null) ??
-          null;
-        const pointsBack = program
-          ? Math.floor((payment.amount || 0) / 1000) * (program.points_per_thousand || 1)
-          : 0;
-        await admin
-          .from("loyalty_customers")
-          .update({
-            visits: Math.max(0, (customer.visits || 0) - 1),
-            points: Math.max(0, (customer.points || 0) - pointsBack),
-            total_spent: Math.max(0, (customer.total_spent || 0) - (payment.amount || 0)),
-          })
-          .eq("id", customer.id);
-      }
-    }
+    // Los sellos de un pago reembolsado entero los anula la base (disparador anular_sellos, fase 3.7).
 
     return json({ refund: refundRow, fully_refunded: fullyRefunded, devolucion: r.devolucion, amount });
   } catch (err) {

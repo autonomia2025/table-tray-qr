@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
 import { calificarMesa, cancelarLlamado, llamarMozo, verMesa } from "@/lib/mesa";
@@ -21,6 +21,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { miMesaEnVivo, otraRonda, ponerAlias, resumenPorEstacion, type MesaEnVivo } from "@/lib/mesaEnVivo";
 import { Repeat, Users } from "lucide-react";
 import AvisosCelular from "@/components/comensal/AvisosCelular";
+import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { manifiestoDelLocal } from "@/lib/push";
 
 /* ---------- types ---------- */
@@ -105,6 +106,12 @@ export default function TrackingPage() {
   const unido = useComensalEnMesa(tableToken);
 
   const [orders, setOrders] = useState<Order[]>([]);
+  // Cuando un pedido pasa a pagado (por ejemplo, el mozo registró el cobro), la tarjeta de sellos se actualiza
+  const queryClient = useQueryClient();
+  const pagados = orders.filter((o) => o.payment_status === "paid").length;
+  useEffect(() => {
+    if (pagados > 0) queryClient.invalidateQueries({ queryKey: ["sellos"] });
+  }, [pagados, queryClient]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [waiterModalOpen, setWaiterModalOpen] = useState(false);
   const [waiterSending, setWaiterSending] = useState(false);
@@ -867,6 +874,16 @@ export default function TrackingPage() {
             </button>
           </div>
         )}
+
+        {/* ── SELLOS (fase 3.7): si el mozo cobra mientras mira, el sello cae aquí ── */}
+        <TarjetaSellos
+          className="mb-6"
+          tenantId={tenant?.id}
+          branchId={tableData?.branch_id}
+          nombreLocal={tenant?.name ?? "el local"}
+          color={primaryColor}
+          vigilar
+        />
 
         {/* ── SESSION HISTORY ── */}
         {orders.length > 1 && (

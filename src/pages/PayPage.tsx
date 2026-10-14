@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, CreditCard, ShieldCheck, AlertTriangle, Gift, Apple } from "lucide-react";
+import { ArrowLeft, Loader2, CreditCard, ShieldCheck, AlertTriangle, Apple } from "lucide-react";
 import BloqueSellos from "@/components/comensal/BloqueSellos";
+import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
 import { supabase } from "@/integrations/supabase/client";
 import { verMesa } from "@/lib/mesa";
@@ -19,15 +20,6 @@ interface PaidResult {
   tip: number;
   method: string;
   reference: string;
-  loyalty: {
-    type: string;
-    visits: number;
-    points: number;
-    goal_visits: number;
-    points_goal: number;
-    reward_description: string;
-    reward_earned: boolean;
-  } | null;
 }
 
 export default function PayPage() {
@@ -41,7 +33,6 @@ export default function PayPage() {
   const { toast } = useToast();
 
   const [tipIdx, setTipIdx] = useState(1);
-  const [redeemRewardId, setRedeemRewardId] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [paid, setPaid] = useState<PaidResult | null>(null);
@@ -137,7 +128,6 @@ export default function PayPage() {
           method,
           tip_amount: tipAmount,
           idempotency_key: `${idemRef.current}-${subtotal}-${tipAmount}`,
-          redeem_reward_id: redeemRewardId,
         },
       });
 
@@ -153,7 +143,6 @@ export default function PayPage() {
         tip: data.payment.tip_amount,
         method: data.payment.method,
         reference: data.payment.external_reference,
-        loyalty: data.loyalty ?? null,
       });
       refetch();
     } catch (err: any) {
@@ -218,30 +207,14 @@ export default function PayPage() {
             </p>
           </div>
 
-          {paid.loyalty && (
-            <div className="mt-4 rounded-2xl border border-border bg-card p-5 text-left">
-              <div className="flex items-center gap-2 mb-2">
-                <Gift className="h-4 w-4" style={{ color: primaryColor }} />
-                <span className="text-sm font-bold text-card-foreground">Tu programa de lealtad</span>
-              </div>
-              {paid.loyalty.reward_earned ? (
-                <p className="text-sm text-card-foreground">
-                  🎉 ¡Desbloqueaste tu recompensa! <strong>{paid.loyalty.reward_description}</strong>. Muéstrala en tu
-                  próxima visita.
-                </p>
-              ) : paid.loyalty.type === "stamps" ? (
-                <p className="text-sm text-card-foreground">
-                  {paid.loyalty.visits % paid.loyalty.goal_visits} de {paid.loyalty.goal_visits} visitas · te faltan{" "}
-                  {paid.loyalty.goal_visits - (paid.loyalty.visits % paid.loyalty.goal_visits)} para{" "}
-                  {paid.loyalty.reward_description}
-                </p>
-              ) : (
-                <p className="text-sm text-card-foreground">
-                  {paid.loyalty.points} de {paid.loyalty.points_goal} puntos para {paid.loyalty.reward_description}
-                </p>
-              )}
-            </div>
-          )}
+          {/* Sellos (fase 3.7): el sello de este pago "cae" en la tarjeta */}
+          <TarjetaSellos
+            className="mt-4"
+            tenantId={tenant?.id}
+            branchId={table?.branch_id}
+            nombreLocal={tenant?.name ?? "el local"}
+            color={primaryColor}
+          />
 
           <button
             onClick={() => navigate(`/${slug}/tracking${qs}`)}
@@ -348,8 +321,7 @@ export default function PayPage() {
               branchId={table?.branch_id}
               nombreLocal={tenant?.name ?? "el local"}
               color={primaryColor}
-              premioElegido={redeemRewardId}
-              onElegirPremio={setRedeemRewardId}
+              monto={subtotal}
             />
 
             {/* Total */}

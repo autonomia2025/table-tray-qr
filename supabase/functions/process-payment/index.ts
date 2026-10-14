@@ -61,7 +61,6 @@ Deno.serve(async (req) => {
       typeof body?.idempotency_key === "string" && body.idempotency_key.length >= 8 && body.idempotency_key.length <= 100
         ? body.idempotency_key
         : crypto.randomUUID();
-    const redeemRewardId = typeof body?.redeem_reward_id === "string" ? body.redeem_reward_id : null;
     const cartItems: CartItemIn[] = Array.isArray(body?.cart_items) ? body.cart_items.slice(0, 50) : [];
     const orderNotes =
       typeof body?.order_notes === "string" ? body.order_notes.trim().slice(0, 300) : "";
@@ -175,120 +174,11 @@ Deno.serve(async (req) => {
       ? { id: confirmacion.order_id!, order_number: confirmacion.order_number }
       : null;
 
-    /* ---------- lealtad ---------- */
-    let loyalty: Record<string, unknown> | null = null;
-    if (email && confirmacion.nuevo && payment) {
-      const { data: programs } = await admin
-        .from("loyalty_programs")
-        .select("*")
-        .eq("tenant_id", table.tenant_id)
-        .eq("is_active", true);
-
-      const program =
-        (programs ?? []).find((p) => p.branch_id === table.branch_id) ??
-        (programs ?? []).find((p) => p.branch_id === null) ??
-        null;
-
-      if (program) {
-        // Coincidencia exacta (antes ilike: un "%" en el correo coincidía con otros clientes).
-        const { data: existingCustomer } = await admin
-          .from("loyalty_customers")
-          .select("*")
-          .eq("tenant_id", table.tenant_id)
-          .eq("email", email)
-          .maybeSingle();
-
-        const earnedPoints = Math.floor(amount / 1000) * (program.points_per_thousand || 1);
-
-        let customer = existingCustomer;
-        if (customer) {
-          const { data: updated } = await admin
-            .from("loyalty_customers")
-            .update({
-              visits: (customer.visits || 0) + 1,
-              points: (customer.points || 0) + earnedPoints,
-              total_spent: (customer.total_spent || 0) + amount,
-              last_visit_at: new Date().toISOString(),
-              user_id: comensal!.id,
-            })
-            .eq("id", customer.id)
-            .select("*")
-            .single();
-          customer = updated ?? customer;
-        } else {
-          const { data: created } = await admin
-            .from("loyalty_customers")
-            .insert({
-              tenant_id: table.tenant_id,
-              email,
-              visits: 1,
-              points: earnedPoints,
-              total_spent: amount,
-              last_visit_at: new Date().toISOString(),
-              user_id: comensal!.id,
-            })
-            .select("*")
-            .single();
-          customer = created ?? null;
-        }
-
-        if (customer) {
-          if (redeemRewardId && UUID_RE.test(redeemRewardId)) {
-            await admin
-              .from("loyalty_rewards")
-              .update({
-                status: "redeemed",
-                redeemed_at: new Date().toISOString(),
-                payment_id: payment.id,
-              })
-              .eq("id", redeemRewardId)
-              .eq("customer_id", customer.id)
-              .eq("status", "earned");
-          }
-
-          let rewardEarned = false;
-          if (program.type === "stamps") {
-            if (program.goal_visits > 0 && customer.visits % program.goal_visits === 0) {
-              rewardEarned = true;
-            }
-          } else if (program.type === "points") {
-            if (program.points_goal > 0 && customer.points >= program.points_goal) {
-              rewardEarned = true;
-              const { data: after } = await admin
-                .from("loyalty_customers")
-                .update({ points: customer.points - program.points_goal })
-                .eq("id", customer.id)
-                .select("*")
-                .single();
-              customer = after ?? customer;
-            }
-          }
-
-          if (rewardEarned) {
-            await admin.from("loyalty_rewards").insert({
-              tenant_id: table.tenant_id,
-              customer_id: customer.id,
-              description: program.reward_description,
-            });
-          }
-
-          loyalty = {
-            type: program.type,
-            visits: customer.visits,
-            points: customer.points,
-            goal_visits: program.goal_visits,
-            points_goal: program.points_goal,
-            reward_description: program.reward_description,
-            reward_earned: rewardEarned,
-          };
-        }
-      }
-    }
+    // Los sellos los suma la base al guardarse el pago (disparador sumar_sellos, fase 3.7).
 
     return json({
       payment,
       approved: true,
-      loyalty,
       table_number: table.number,
       order: createdOrder,
     });

@@ -70,15 +70,19 @@ describe("perfil del comensal", () => {
 
 describe("sellos solo con cuenta verificada (N4)", () => {
   it("sin sesión no se pueden ver sellos", async () => {
-    const r = await llamarFuncion("loyalty-status", { tenant_id: DEMO.tenant, email: "victima@demo.tablio.test" });
-    expect(r.status).toBe(401);
+    const r = await anonimo().rpc("mis_sellos", { _tenant_id: DEMO.tenant });
+    expect(r.error).not.toBeNull();
   });
 
-  it("un invitado tampoco", async () => {
-    const a = await invitado();
-    const token = (await a.auth.getSession()).data.session!.access_token;
-    const r = await llamarFuncion("loyalty-status", { tenant_id: DEMO.tenant, email: "victima@demo.tablio.test" }, token);
-    expect(r.status).toBe(401);
+  it("un invitado ve el programa pero no tiene tarjeta (ni la de nadie)", async () => {
+    const r = await (await invitado()).rpc("mis_sellos", { _tenant_id: DEMO.tenant });
+    expect(r.error).toBeNull();
+    const d = r.data as { registrado?: boolean; total?: number; correo?: string };
+    if (d && "registrado" in d) {
+      expect(d.registrado).toBe(false);
+      expect(d.total).toBeUndefined();
+      expect(d.correo).toBeUndefined();
+    }
   });
 
   it.skipIf(!hayCredenciales)("un invitado que manda el correo de otra persona no suma sellos a nadie, y el pedido queda a su nombre", async () => {
@@ -93,8 +97,9 @@ describe("sellos solo con cuenta verificada (N4)", () => {
     );
     expect(r.status).toBe(200);
     const cuerpo = JSON.parse(r.cuerpo);
-    expect(cuerpo.loyalty).toBeNull();
     const dueno = (await conSesion("owner")).cliente;
+    const { data: victima } = await dueno.from("loyalty_customers").select("id").eq("tenant_id", DEMO.tenant).eq("email", "victima@demo.tablio.test");
+    expect(victima ?? []).toHaveLength(0);
     const { data: pedido } = await dueno.from("orders").select("user_id").eq("id", cuerpo.order.id).single();
     expect(pedido!.user_id).toBe(yo);
   });

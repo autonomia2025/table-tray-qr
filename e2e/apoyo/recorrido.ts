@@ -67,3 +67,20 @@ export async function ingresarCodigo(page: Page, numero: number) {
   await expect(page.getByText("Código de tu mesa")).toBeVisible({ timeout: 10_000 });
   await page.getByLabel("Código de 4 números de tu mesa").fill(await codigoMesa(numero));
 }
+
+/**
+ * Entra como el cliente del demo en la app del comensal (fase 3.7). El login del personal no sirve para
+ * clientes, así que se inicia sesión aparte y se deja la sesión en el navegador, como la dejaría la app.
+ */
+export async function entrarComoCliente(page: Page) {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = baseDeDatos();
+  const c = cuenta("cliente")!;
+  const sb = createClient(url, clave, { auth: { persistSession: false } });
+  const { data, error } = await sb.auth.signInWithPassword({ email: c.correo, password: c.clave });
+  if (error || !data.session) throw new Error("No se pudo entrar como cliente del demo");
+  const llave = `sb-${new URL(url).hostname.split(".")[0]}-auth-token`;
+  await page.addInitScript(([k, v]) => {
+    if (!window.localStorage.getItem(k)) window.localStorage.setItem(k, v);
+  }, [llave, JSON.stringify(data.session)] as const);
+}

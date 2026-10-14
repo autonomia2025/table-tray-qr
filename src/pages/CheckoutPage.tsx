@@ -8,13 +8,12 @@ import {
   CreditCard,
   ShieldCheck,
   AlertTriangle,
-  Gift,
   Apple,
   Plus,
   CheckCircle2,
 } from "lucide-react";
 import BloqueSellos from "@/components/comensal/BloqueSellos";
-import CuentaComensal from "@/components/comensal/CuentaComensal";
+import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { useSesion } from "@/contexts/SesionContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -33,15 +32,6 @@ interface PaidResult {
   tip: number;
   reference: string;
   orderNumber: number | null;
-  loyalty: {
-    type: string;
-    visits: number;
-    points: number;
-    goal_visits: number;
-    points_goal: number;
-    reward_description: string;
-    reward_earned: boolean;
-  } | null;
 }
 
 export default function CheckoutPage() {
@@ -57,8 +47,6 @@ export default function CheckoutPage() {
   const [orderNotes, setOrderNotes] = useState("");
   const [tipIdx, setTipIdx] = useState(1);
   const { perfil } = useSesion();
-  const [cuentaAbierta, setCuentaAbierta] = useState(false);
-  const [redeemRewardId, setRedeemRewardId] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [paid, setPaid] = useState<PaidResult | null>(null);
@@ -229,7 +217,6 @@ export default function CheckoutPage() {
           tip_amount: tipAmount,
           // La misma clave para el mismo pago: si se repite (doble toque, mala señal), no se cobra dos veces.
           idempotency_key: `${idemRef.current}-${cot.id}-${tipAmount}`,
-          redeem_reward_id: redeemRewardId,
         },
       });
 
@@ -239,7 +226,6 @@ export default function CheckoutPage() {
             error?: string;
             payment?: { amount: number; tip_amount: number; external_reference: string };
             order?: { order_number: number } | null;
-            loyalty?: PaidResult["loyalty"];
           }
         | null;
 
@@ -254,7 +240,6 @@ export default function CheckoutPage() {
         tip: payload.payment?.tip_amount ?? tipAmount,
         reference: payload.payment?.external_reference ?? "",
         orderNumber: payload.order?.order_number ?? null,
-        loyalty: payload.loyalty ?? null,
       });
       clearCart();
     } catch {
@@ -367,47 +352,11 @@ export default function CheckoutPage() {
             )}
           </div>
 
-          {paid.loyalty && (
-            <div className="mt-4 rounded-2xl border border-border bg-card p-5 text-left">
-              <div className="mb-2 flex items-center gap-2">
-                <Gift className="h-4 w-4" style={{ color: primaryColor }} />
-                <span className="text-sm font-bold text-card-foreground">Tu programa de lealtad</span>
-              </div>
-              {paid.loyalty.reward_earned ? (
-                <p className="text-sm text-card-foreground">
-                  🎉 ¡Desbloqueaste tu recompensa! <strong>{paid.loyalty.reward_description}</strong>
-                </p>
-              ) : paid.loyalty.type === "stamps" ? (
-                <p className="text-sm text-card-foreground">
-                  {paid.loyalty.visits % paid.loyalty.goal_visits} de {paid.loyalty.goal_visits} visitas · te faltan{" "}
-                  {paid.loyalty.goal_visits - (paid.loyalty.visits % paid.loyalty.goal_visits)} para{" "}
-                  {paid.loyalty.reward_description}
-                </p>
-              ) : (
-                <p className="text-sm text-card-foreground">
-                  {paid.loyalty.points} de {paid.loyalty.points_goal} puntos para {paid.loyalty.reward_description}
-                </p>
-              )}
-            </div>
-          )}
-
-          {!paid.loyalty && perfil?.es_anonimo && (
-            <button
-              onClick={() => setCuentaAbierta(true)}
-              className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${primaryColor}18` }}>
-                <Gift className="h-5 w-5" style={{ color: primaryColor }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-card-foreground">Guarda tus sellos</p>
-                <p className="text-[11px] text-muted-foreground">Crea tu cuenta en 10 segundos y suma premios desde tu próxima visita.</p>
-              </div>
-            </button>
-          )}
-          <CuentaComensal
-            abierto={cuentaAbierta}
-            onCambiar={setCuentaAbierta}
+          {/* Sellos (fase 3.7): el sello de este pago "cae" en la tarjeta */}
+          <TarjetaSellos
+            className="mt-4"
+            tenantId={tenant?.id}
+            branchId={table?.branch_id}
             nombreLocal={tenant?.name ?? "el local"}
             color={primaryColor}
           />
@@ -566,10 +515,9 @@ export default function CheckoutPage() {
             <BloqueSellos
               tenantId={tenant?.id}
               branchId={table?.branch_id}
+              monto={subtotal}
               nombreLocal={tenant?.name ?? "el local"}
               color={primaryColor}
-              premioElegido={redeemRewardId}
-              onElegirPremio={setRedeemRewardId}
             />
 
             {(errorMsg || errorCotizacion) && (

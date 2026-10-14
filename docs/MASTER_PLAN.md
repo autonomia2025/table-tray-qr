@@ -66,7 +66,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 - Diseño de pago asíncrono, para que la pasarela se elija más tarde sin rehacer.
 - Cada pago guarda el mozo asignado: informe de propinas por mozo y turno (brief 7).
 - La cotización admite productos para otras personas: deja listo "invitar una ronda" y "dividir un plato" (fase 7).
-- Sellos retroactivos: si un invitado paga y después guarda su cuenta, recibe los sellos de esa visita.
+- Sellos retroactivos: si un invitado paga y después guarda su cuenta, recibe los sellos de esa visita (hecho en la 3.7).
 
 ## Fase 3 — Operación de sala y experiencia del comensal 🔨
 
@@ -79,7 +79,7 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 | 3.4b | Aviso con la pantalla bloqueada: la app se instala sin tienda (PWA) y envía notificaciones push (estándar del navegador, sin cuentas externas) | ✅ |
 | 3.5 | Código de presencia en las tarjetas de mesa, cuenta abierta controlada y unir mesas | ✅ |
 | 3.6 | Reportes calculados por el servidor; inicio del dueño que cuenta una historia; productividad de cocina y mapa de calor de horas | ✅ |
-| 3.7 | Sellos que se sienten (el sello "cae" al pagar) | ⏳ |
+| 3.7 | Sellos que se sienten (el sello "cae" al pagar) | ✅ |
 | 3.8 | Compuerta de la fase 3 | ⏳ |
 
 Detalle de las ideas:

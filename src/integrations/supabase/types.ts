@@ -909,6 +909,7 @@ export type Database = {
           goal_visits: number
           id: string
           is_active: boolean
+          monto_minimo: number
           points_goal: number
           points_per_thousand: number
           reward_description: string
@@ -922,6 +923,7 @@ export type Database = {
           goal_visits?: number
           id?: string
           is_active?: boolean
+          monto_minimo?: number
           points_goal?: number
           points_per_thousand?: number
           reward_description?: string
@@ -935,6 +937,7 @@ export type Database = {
           goal_visits?: number
           id?: string
           is_active?: boolean
+          monto_minimo?: number
           points_goal?: number
           points_per_thousand?: number
           reward_description?: string
@@ -961,33 +964,48 @@ export type Database = {
       }
       loyalty_rewards: {
         Row: {
+          anulado_at: string | null
+          codigo: string | null
           created_at: string
           customer_id: string
           description: string
           earned_at: string
+          entregado_por: string | null
+          entregado_por_nombre: string | null
           id: string
+          movimiento_id: string | null
           payment_id: string | null
           redeemed_at: string | null
           status: string
           tenant_id: string
         }
         Insert: {
+          anulado_at?: string | null
+          codigo?: string | null
           created_at?: string
           customer_id: string
           description: string
           earned_at?: string
+          entregado_por?: string | null
+          entregado_por_nombre?: string | null
           id?: string
+          movimiento_id?: string | null
           payment_id?: string | null
           redeemed_at?: string | null
           status?: string
           tenant_id: string
         }
         Update: {
+          anulado_at?: string | null
+          codigo?: string | null
           created_at?: string
           customer_id?: string
           description?: string
           earned_at?: string
+          entregado_por?: string | null
+          entregado_por_nombre?: string | null
           id?: string
+          movimiento_id?: string | null
           payment_id?: string | null
           redeemed_at?: string | null
           status?: string
@@ -999,6 +1017,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "loyalty_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_movimiento_fkey"
+            columns: ["movimiento_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_lealtad"
             referencedColumns: ["id"]
           },
           {
@@ -1281,6 +1306,93 @@ export type Database = {
           },
           {
             foreignKeyName: "modifiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimientos_lealtad: {
+        Row: {
+          anulado_at: string | null
+          branch_id: string | null
+          created_at: string
+          customer_id: string
+          dia_negocio: string
+          id: string
+          monto: number
+          payment_id: string
+          premio_id: string | null
+          puntos: number
+          retroactivo: boolean
+          sello: boolean
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          anulado_at?: string | null
+          branch_id?: string | null
+          created_at?: string
+          customer_id: string
+          dia_negocio: string
+          id?: string
+          monto?: number
+          payment_id: string
+          premio_id?: string | null
+          puntos?: number
+          retroactivo?: boolean
+          sello?: boolean
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          anulado_at?: string | null
+          branch_id?: string | null
+          created_at?: string
+          customer_id?: string
+          dia_negocio?: string
+          id?: string
+          monto?: number
+          payment_id?: string
+          premio_id?: string | null
+          puntos?: number
+          retroactivo?: boolean
+          sello?: boolean
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_lealtad_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_lealtad_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_lealtad_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_lealtad_premio_id_fkey"
+            columns: ["premio_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_lealtad_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2729,6 +2841,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _anular_sellos_pago: { Args: { _payment_id: string }; Returns: undefined }
+      _codigo_premio: { Args: { _tenant_id: string }; Returns: string }
       _codigo_presencia: { Args: never; Returns: string }
       _comensal_en_mesa: {
         Args: { _qr_token: string }
@@ -2776,7 +2890,39 @@ export type Database = {
         Args: { _session_id: string; _user_id: string }
         Returns: boolean
       }
+      _programa_lealtad: {
+        Args: { _branch_id: string; _tenant_id: string }
+        Returns: {
+          branch_id: string | null
+          created_at: string
+          goal_visits: number
+          id: string
+          is_active: boolean
+          monto_minimo: number
+          points_goal: number
+          points_per_thousand: number
+          reward_description: string
+          tenant_id: string
+          type: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loyalty_programs"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
+      _sellos_pago: {
+        Args: {
+          _payment_id: string
+          _retroactivo?: boolean
+          _solo_usuario?: string
+        }
+        Returns: number
+      }
+      _sembrar_cliente_demo: { Args: never; Returns: number }
       _sembrar_historia_demo: { Args: { _dias?: number }; Returns: number }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _tenant_reportes: { Args: { _branch_id: string }; Returns: string }
@@ -2910,6 +3056,10 @@ export type Database = {
         Args: { _branch_id: string; _ts: string }
         Returns: string
       }
+      entregar_premio: {
+        Args: { _codigo: string; _premio_id: string }
+        Returns: Json
+      }
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
@@ -2948,6 +3098,10 @@ export type Database = {
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
+      mis_sellos: {
+        Args: { _branch_id?: string; _tenant_id: string }
+        Returns: Json
+      }
       pedir_cuenta: {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
         Returns: Json
@@ -2961,6 +3115,8 @@ export type Database = {
         }
         Returns: Json
       }
+      premios_en_mesa: { Args: { _table_id: string }; Returns: Json }
+      premios_por_entregar: { Args: { _tenant_id: string }; Returns: Json }
       puede_asignar_rol: {
         Args: { _rol: string; _tenant_id: string }
         Returns: boolean

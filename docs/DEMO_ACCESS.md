@@ -16,15 +16,15 @@ Este archivo explica cómo entrar. **Las contraseñas no están aquí**: viven e
 - **Portada:** `/demo-tablio`
 - **Sucursal:** Barrio Italia, en modo **prepago** (cocina solo ve lo pagado).
 - **Carta:** cervezas, tragos, sin alcohol, picoteo, platos y postres, con 24 productos, modificadores (punto de la carne, tamaño de papas, pisco y bebida) y alérgenos. **Todavía no tiene fotos.**
-- **Lealtad:** 5 visitas = un schop gratis.
+- **Lealtad:** 5 visitas = un schop gratis; cuenta una visita por día desde $3.000.
 - **Pagos:** simulados. No se cobra plata real.
 
 ### Cuentas (todas entran por `/login`)
 
 | Rol | Correo | Llega a |
 |---|---|---|
-| Dueño | `dueno@demo.tablio.test` | `/admin/demo-tablio/mesas` |
-| Administrador | `admin@demo.tablio.test` | `/admin/demo-tablio/mesas` |
+| Dueño | `dueno@demo.tablio.test` | `/admin/demo-tablio/inicio` |
+| Administrador | `admin@demo.tablio.test` | `/admin/demo-tablio/inicio` |
 | Mozo 1 (Camila) | `mozo1@demo.tablio.test` | `/mozo/mesas` |
 | Mozo 2 (Diego) | `mozo2@demo.tablio.test` | `/mozo/mesas` |
 | Cocina y barra | `cocina@demo.tablio.test` | Directo a la pantalla de cocina: `/kds?branch=aebe7faa-0e29-5aa9-83c2-1e1b336f1554` |
@@ -33,6 +33,7 @@ Este archivo explica cómo entrar. **Las contraseñas no están aquí**: viven e
 | Jefa de ventas | `jefe@demo.tablio.test` | `/jefe-ventas/dashboard` |
 | Vendedor | `vendedor@demo.tablio.test` | `/vendedor/mi-dia` |
 | Finanzas | `finanzas@demo.tablio.test` | `/finanzas/revenue` |
+| Cliente (comensal con cuenta) | `cliente@demo.tablio.test` | No entra por `/login` (es un cliente, no del equipo). Lo usan las pruebas automáticas; llega con 4 sellos de la historia de ejemplo. |
 
 Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un correo a nadie. Por eso "¿Olvidaste tu contraseña?" no sirve para estas cuentas.
 
@@ -67,13 +68,14 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 16. **Cuenta abierta controlada:** en Mesas, el dueño ve "Lo que todavía no se paga": lo que arriesga ahora y lo perdido en 30 días, con el motivo de cada mesa que se fue sin pagar. En cuenta abierta, cada persona tiene un límite (Sucursal).
 17. **Inicio del dueño:** al entrar, el dueño ve "Así le fue a Demo Tablio": cuánto vendió anoche comparado con el mismo día de la semana pasada, el plato estrella, la zona y la hora más fuertes, quién vendió más, las propinas y la calificación. Abajo aparecen los avisos; el demo trae la chorrillana saliendo lenta. El demo tiene 4 semanas de ventas de ejemplo (se vuelven a sembrar al reiniciarlo); hoy parte en cero.
 18. **Reportes:** con 30 días se ven las ventas por día, cómo te pagaron, los platos que más vendes, qué traba la cocina, el mapa de calor de horas y las zonas. Se exporta a CSV. Muestra también Caja: el pago que hiciste quedó registrado.
+19. **Sellos que se sienten:** paga desde una mesa con tu propio correo guardado (Sellos → Continuar con mi correo). En "¡Pago listo!" el sello cae en la tarjeta y vibra el celular; uno por día, desde $3.000. Si pagas como invitado, la tarjeta muestra el sello "fantasma": al guardar tu cuenta, ese sello cae. Al completar 5, aparece el premio con un código de 4 letras. Con Camila, abre la mesa: "Un premio para entregar"; escribe el código que muestra el cliente y queda entregado (el dueño lo ve en Lealtad).
 
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.
 - Arriba a la derecha aparece **"Sellos"**: ahí guarda su cuenta con su correo, Google o Apple. Al pagar, si es invitado, ve la invitación "Guarda tus sellos".
 - **Hoy, en la base real:** el registro con correo manda un **enlace** (no un código), y el correo incluido en Supabase **solo llega a direcciones del equipo**. Para comensales reales hace falta un servicio de correo (pendiente). Google y Apple muestran "muy pronto" hasta configurar sus credenciales.
-- Ya registrado, el cliente ve su inicial arriba a la derecha y su progreso de sellos al pagar.
+- Ya registrado, el cliente ve su inicial arriba a la derecha, qué suma cada pago y su tarjeta de sellos (también en el seguimiento del pedido, donde el sello cae cuando el mozo registra un cobro).
 
 ## Dejar el demo limpio
 

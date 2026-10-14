@@ -4,6 +4,68 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.7: sellos que se sienten ✅
+**Lo que había mal con los sellos** (revisando el código antes de animarlos). Los sumaba `process-payment` leyendo y escribiendo por separado, y eso traía cinco problemas:
+- Daba un sello por cada **pago**: tres rondas, tres sellos.
+- Dos pagos al mismo tiempo podían pisarse.
+- Pagarle al mozo no sumaba.
+- El premio "se canjeaba" al pagar, pero nadie del local se enteraba de que tenía que entregarlo.
+- Los sellos retroactivos del plan (fase 2) no existían.
+
+**Ahora los suma la base** (`20261014130000_sellos.sql`):
+- Un libro de movimientos, `movimientos_lealtad`, que se llena solo con un disparador al guardarse un pago aprobado. Funciona igual para la app y para el cobro del mozo o la caja: cada persona con cuenta verificada suma por lo suyo.
+- Si los sellos fallan, el pago no se cae: el problema queda anotado y el cobro sigue.
+- **Límites contra el abuso** (brief 6.2):
+  - un sello por cliente y día de negocio, protegido por un índice único;
+  - compra mínima configurable (`loyalty_programs.monto_minimo`; en el demo, $3.000);
+  - solo con cuenta verificada.
+- **Sellos retroactivos:** `mis_sellos` le da al cliente que acaba de guardar su cuenta los sellos de lo que pagó en las últimas 48 horas.
+- **Reembolso total:** anula el sello, los puntos y el premio que todavía no se entregó. Si ese día pagó otra cosa, el sello pasa a ese pago. Un premio ya entregado no se devuelve.
+- **Premios con código** de 4 letras (sin letras que se confunden). Los entrega el personal con `entregar_premio(premio, código)`:
+  - el cliente muestra el código en su celular y el mozo lo escribe;
+  - la pantalla del mozo y la lista del dueño no muestran el código, así que nadie lo marca entregado sin el cliente presente;
+  - queda registrado quién lo entregó, en `audit_logs`.
+- **Quién ve qué:**
+  - `premios_en_mesa`: el mozo ve los premios de los clientes de una mesa.
+  - `premios_por_entregar`: el dueño, el encargado y la caja ven la lista del local.
+- **Se borraron:**
+  - la función `loyalty-status`, reemplazada por `mis_sellos`;
+  - la lógica de sellos de `process-payment` y `refund-payment`;
+  - el canje del premio en el pago.
+
+**Lo que se siente (pantallas):**
+- **`TarjetaSellos`:**
+  - Al ganar un sello, este cae sobre la tarjeta con rebote, una onda y una vibración corta del celular.
+  - Al completar la tarjeta salen chispas y aparece el premio con su código grande.
+  - Si pagó como invitado, el primer casillero late como sello "fantasma" con "Guardar mi cuenta y mi sello"; al guardarla, ese sello cae.
+  - Está en "¡Pago listo!", en el pago de la cuenta y en el seguimiento del pedido. En el seguimiento cae cuando el mozo registra el cobro.
+- **Antes de pagar** dice qué suma ese pago: "Este pago suma tu sello 3 de 5", "Con este pago completas tu tarjeta", "Hoy ya sumaste tu sello" o "Desde $3.000…".
+- **El mozo**, en el detalle de la mesa, ve "Un premio para entregar · para Juan" y lo entrega escribiendo el código.
+- **El dueño**, en Lealtad:
+  - configura la compra mínima;
+  - el programa queda entre 2 y 30 visitas;
+  - ve los premios por entregar y los últimos entregados, con quién los entregó.
+
+**Demo:**
+- Nueva cuenta `cliente@demo.tablio.test` (solo para pruebas; los clientes no entran por `/login`).
+- `_sembrar_cliente_demo` le pone 4 sellos de la historia de ejemplo: al pagar hoy, el quinto completa la tarjeta.
+- Para cargar esa cuenta en la base real se usó `crear_demo.py --solo-cuenta cliente`, igual que con el cajero.
+
+**Pruebas:**
+- `tests/seguridad/f3-7-sellos.test.ts`:
+  - el invitado que guarda su cuenta recibe el sello y un segundo pago no suma otro;
+  - una compra bajo el mínimo no da sello;
+  - dos pagos simultáneos dan uno solo;
+  - pagarle al mozo suma;
+  - un reembolso quita el sello o lo pasa al otro pago del día;
+  - el premio tiene código y el mozo lo entrega una sola vez (no lo puede marcar el cliente, la cocina ni alguien sin sesión, y no se entrega con otro código);
+  - quién lee los movimientos, y que nadie se regala sellos;
+  - el dueño de otro local no ve nada.
+- `tests/seguridad/entorno.ts`: `guardarCuenta()` convierte a un invitado en cliente verificado con el buzón de prueba local.
+- `e2e/sellos.spec.ts`: el cliente paga, el sello cae y completa la tarjeta; la mozo rechaza un código equivocado y entrega el premio con el correcto.
+
+---
+
 ## 2026-10-14 — Fase 3.6: reportes del servidor e inicio del dueño que cuenta una historia ✅
 **Antes:** los reportes traían todos los pedidos al navegador y los sumaban ahí.
 - Contaban como venta pedidos sin pagar.

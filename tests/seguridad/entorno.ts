@@ -92,3 +92,31 @@ export async function confirmarPresencia(cliente: SupabaseClient, numero: number
   const { data, error } = await cliente.rpc("confirmar_presencia", { _qr_token: qrMesa(numero)!, _codigo: await codigoMesa(numero) });
   if (error || !(data as { ok: boolean }).ok) throw new Error(`No se pudo confirmar la presencia en la mesa ${numero}`);
 }
+
+/** Base desechable (Supabase local): ahí hay buzón de prueba para verificar correos. */
+export const esBaseLocal = process.env.E2E_BASE_DATOS === "local";
+const BUZON = "http://127.0.0.1:54324";
+
+/**
+ * El invitado guarda su cuenta con su correo y la confirma con el enlace del correo, como en la app.
+ * Solo en la base desechable (lee el correo del buzón de prueba). Sigue siendo la misma persona.
+ */
+export async function guardarCuenta(cliente: SupabaseClient, correo: string) {
+  const { error } = await cliente.auth.updateUser({ email: correo });
+  if (error) throw new Error(`No se pudo guardar la cuenta: ${error.message}`);
+  let enlace = "";
+  for (let i = 0; i < 60 && !enlace; i++) {
+    const lista = await (await fetch(`${BUZON}/api/v1/messages?limit=200`)).json();
+    const msg = lista.messages?.find((m: { To: Array<{ Address: string }> }) => m.To.some((t) => t.Address === correo));
+    if (msg) {
+      const completo = await (await fetch(`${BUZON}/api/v1/message/${msg.ID}`)).json();
+      enlace = (completo.Text as string).match(/\(\s*(http\S+\/verify\S+?)\s*\)/)?.[1] ?? "";
+    } else {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  if (!enlace) throw new Error(`No llegó el correo a ${correo}`);
+  await fetch(enlace, { redirect: "manual" });
+  const { data } = await cliente.auth.refreshSession();
+  if (!data.user?.email_confirmed_at || data.user.is_anonymous) throw new Error(`La cuenta ${correo} no quedó verificada`);
+}

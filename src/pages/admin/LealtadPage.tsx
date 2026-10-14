@@ -9,8 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Gift, Loader2 } from "lucide-react";
 import { formatCLP } from "@/lib/format";
+import { premiosPorEntregar, type PremiosLocal } from "@/lib/sellos";
 import { exportToCSV } from "@/lib/export-utils";
 
 interface ProgramForm {
@@ -21,6 +22,7 @@ interface ProgramForm {
   points_per_thousand: number;
   points_goal: number;
   reward_description: string;
+  monto_minimo: number;
 }
 
 interface CustomerRow {
@@ -40,6 +42,7 @@ const DEFAULT_FORM: ProgramForm = {
   points_per_thousand: 1,
   points_goal: 100,
   reward_description: "Bebida gratis",
+  monto_minimo: 3000,
 };
 
 export default function LealtadPage() {
@@ -48,14 +51,14 @@ export default function LealtadPage() {
 
   const [form, setForm] = useState<ProgramForm>(DEFAULT_FORM);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
-  const [redeemed, setRedeemed] = useState(0);
+  const [premios, setPremios] = useState<PremiosLocal | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
-    const [{ data: programs }, { data: custs }, { count }] = await Promise.all([
+    const [{ data: programs }, { data: custs }, listaPremios] = await Promise.all([
       supabase.from("loyalty_programs").select("*").eq("tenant_id", tenantId),
       supabase
         .from("loyalty_customers")
@@ -63,11 +66,7 @@ export default function LealtadPage() {
         .eq("tenant_id", tenantId)
         .order("last_visit_at", { ascending: false, nullsFirst: false })
         .limit(500),
-      supabase
-        .from("loyalty_rewards")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId)
-        .eq("status", "redeemed"),
+      premiosPorEntregar(tenantId),
     ]);
 
     const program =
@@ -84,10 +83,11 @@ export default function LealtadPage() {
           points_per_thousand: program.points_per_thousand,
           points_goal: program.points_goal,
           reward_description: program.reward_description,
+          monto_minimo: program.monto_minimo ?? 0,
         }
       : DEFAULT_FORM);
     setCustomers((custs ?? []) as CustomerRow[]);
-    setRedeemed(count ?? 0);
+    setPremios(listaPremios);
     setLoading(false);
   }, [tenantId, branchId]);
 
@@ -100,10 +100,11 @@ export default function LealtadPage() {
       branch_id: branchId || null,
       is_active: form.is_active,
       type: form.type,
-      goal_visits: Math.max(1, form.goal_visits),
-      points_per_thousand: Math.max(1, form.points_per_thousand),
+      goal_visits: Math.min(30, Math.max(2, form.goal_visits)),
+      points_per_thousand: Math.min(100, Math.max(1, form.points_per_thousand)),
       points_goal: Math.max(1, form.points_goal),
-      reward_description: form.reward_description.trim().slice(0, 120) || "Recompensa",
+      reward_description: form.reward_description.trim().slice(0, 80) || "Recompensa",
+      monto_minimo: Math.min(1_000_000, Math.max(0, Math.round(form.monto_minimo))),
     };
 
     const { error } = form.id
@@ -112,7 +113,7 @@ export default function LealtadPage() {
 
     setSaving(false);
     if (error) {
-      toast({ title: "No se pudo guardar", description: error.message, variant: "destructive" });
+      toast({ title: "No se pudo guardar", description: "Revisa los valores: entre 2 y 30 visitas y una recompensa de 2 a 80 letras.", variant: "destructive" });
       return;
     }
     toast({ title: "Programa de lealtad guardado" });
@@ -127,7 +128,8 @@ export default function LealtadPage() {
     <div className="max-w-4xl">
       <h2 className="text-2xl font-bold text-foreground mb-1">Lealtad</h2>
       <p className="text-sm text-muted-foreground mb-6">
-        Reconoce a tus clientes por email y premia sus visitas. Los datos son solo de tu local.
+        Tus clientes con cuenta suman un sello por visita (uno al día, desde el monto mínimo), también si le pagan al mozo.
+        Al completar la tarjeta ganan el premio: se lo muestran al mozo en su celular y él lo entrega con ese código.
       </p>
 
       <Card className="mb-6">
@@ -153,8 +155,8 @@ export default function LealtadPage() {
             <div>
               <Label>Visitas para la recompensa</Label>
               <Input
-                type="number" min={1} value={form.goal_visits}
-                onChange={(e) => setForm((p) => ({ ...p, goal_visits: parseInt(e.target.value) || 1 }))}
+                type="number" min={2} max={30} value={form.goal_visits}
+                onChange={(e) => setForm((p) => ({ ...p, goal_visits: parseInt(e.target.value) || 2 }))}
               />
             </div>
           ) : (
@@ -179,11 +181,22 @@ export default function LealtadPage() {
           <div>
             <Label>Recompensa</Label>
             <Input
-              value={form.reward_description} maxLength={120}
+              value={form.reward_description} maxLength={80}
               onChange={(e) => setForm((p) => ({ ...p, reward_description: e.target.value }))}
               placeholder="Ej: Café gratis"
             />
           </div>
+
+          {form.type === "stamps" && (
+            <div>
+              <Label htmlFor="monto-minimo">Compra mínima para sumar un sello</Label>
+              <Input
+                id="monto-minimo" type="number" min={0} step={500} value={form.monto_minimo}
+                onChange={(e) => setForm((p) => ({ ...p, monto_minimo: parseInt(e.target.value) || 0 }))}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Evita que alguien junte sellos comprando una bebida suelta. 0 = cualquier compra.</p>
+            </div>
+          )}
 
           <Button onClick={save} disabled={saving}>{saving ? "Guardando..." : "Guardar programa"}</Button>
         </CardContent>
@@ -199,10 +212,45 @@ export default function LealtadPage() {
           <p className="text-xl font-bold text-foreground">{customers.reduce((s, c) => s + c.visits, 0)}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground">Canjes</p>
-          <p className="text-xl font-bold text-foreground">{redeemed}</p>
+          <p className="text-xs text-muted-foreground">Premios entregados</p>
+          <p className="text-xl font-bold text-foreground">{premios?.entregados.length ?? 0}</p>
         </CardContent></Card>
       </div>
+
+      {premios && (premios.por_entregar.length > 0 || premios.entregados.length > 0) && (
+        <Card className="mb-6">
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Gift className="h-4 w-4 text-primary" /> Premios</CardTitle></CardHeader>
+          <CardContent className="grid gap-6 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-semibold text-foreground">Por entregar ({premios.por_entregar.length})</p>
+              {premios.por_entregar.length ? (
+                <ul className="space-y-1.5 text-sm">
+                  {premios.por_entregar.map((r) => (
+                    <li key={r.id} className="flex justify-between gap-2">
+                      <span className="truncate text-foreground">{r.correo}</span>
+                      <span className="shrink-0 text-muted-foreground">desde el {new Date(r.ganado_at).toLocaleDateString("es-CL")}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground">Nada pendiente.</p>}
+              <p className="mt-2 text-xs text-muted-foreground">Se entregan cuando el cliente vuelve: el mozo los ve en el detalle de su mesa.</p>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-semibold text-foreground">Últimos entregados</p>
+              {premios.entregados.length ? (
+                <ul className="space-y-1.5 text-sm">
+                  {premios.entregados.slice(0, 10).map((r) => (
+                    <li key={r.id} className="flex justify-between gap-2">
+                      <span className="truncate text-foreground">{r.correo}</span>
+                      <span className="shrink-0 text-muted-foreground">{new Date(r.entregado_at).toLocaleDateString("es-CL")} · {r.entregado_por ?? "—"}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground">Todavía ninguno.</p>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-foreground">Clientes</h3>
