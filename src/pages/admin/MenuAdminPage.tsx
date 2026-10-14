@@ -23,6 +23,8 @@ interface Category {
   is_visible: boolean | null;
   sort_order: number | null;
   menu_id: string;
+  /** Estación que la prepara (vacío = la principal). Fase 3.2. */
+  station_id: string | null;
 }
 
 interface MenuItem {
@@ -62,7 +64,8 @@ export default function MenuAdminPage() {
   // Category modal
   const [catModal, setCatModal] = useState(false);
   const [editCat, setEditCat] = useState<Category | null>(null);
-  const [catForm, setCatForm] = useState({ name: "", emoji: "🍽", is_visible: true });
+  const [catForm, setCatForm] = useState({ name: "", emoji: "🍽", is_visible: true, station_id: "" });
+  const [estaciones, setEstaciones] = useState<{ id: string; name: string; es_predeterminada: boolean }[]>([]);
 
   // Item sheet
   const [itemSheet, setItemSheet] = useState(false);
@@ -100,11 +103,14 @@ export default function MenuAdminPage() {
 
       const { data: cats } = await supabase
         .from("categories")
-        .select("id, name, emoji, is_visible, sort_order, menu_id")
+        .select("id, name, emoji, is_visible, sort_order, menu_id, station_id")
         .eq("menu_id", menu.id)
         .order("sort_order");
       setCategories(cats ?? []);
       if (cats?.length && !selectedCatId) setSelectedCatId(cats[0].id);
+      const { data: est } = await supabase.from("stations").select("id, name, es_predeterminada")
+        .eq("branch_id", branchId).eq("is_active", true).order("sort_order");
+      setEstaciones(est ?? []);
       setLoadingCats(false);
     }
     load();
@@ -129,10 +135,10 @@ export default function MenuAdminPage() {
   const openCatModal = (cat?: Category) => {
     if (cat) {
       setEditCat(cat);
-      setCatForm({ name: cat.name, emoji: cat.emoji ?? "🍽", is_visible: cat.is_visible ?? true });
+      setCatForm({ name: cat.name, emoji: cat.emoji ?? "🍽", is_visible: cat.is_visible ?? true, station_id: cat.station_id ?? "" });
     } else {
       setEditCat(null);
-      setCatForm({ name: "", emoji: "🍽", is_visible: true });
+      setCatForm({ name: "", emoji: "🍽", is_visible: true, station_id: "" });
     }
     setCatModal(true);
   };
@@ -141,12 +147,12 @@ export default function MenuAdminPage() {
     setSaving(true);
     if (editCat) {
       const { error } = await supabase.from("categories").update({
-        name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible,
+        name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible, station_id: catForm.station_id || null,
       }).eq("id", editCat.id);
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
     } else if (menuId) {
       const { error } = await supabase.from("categories").insert({
-        name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible,
+        name: catForm.name, emoji: catForm.emoji, is_visible: catForm.is_visible, station_id: catForm.station_id || null,
         menu_id: menuId, tenant_id: tenantId, sort_order: categories.length,
       });
       if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); setSaving(false); return; }
@@ -159,7 +165,7 @@ export default function MenuAdminPage() {
 
   const refreshCats = async () => {
     if (!menuId) return;
-    const { data } = await supabase.from("categories").select("id, name, emoji, is_visible, sort_order, menu_id").eq("menu_id", menuId).order("sort_order");
+    const { data } = await supabase.from("categories").select("id, name, emoji, is_visible, sort_order, menu_id, station_id").eq("menu_id", menuId).order("sort_order");
     setCategories(data ?? []);
   };
 
@@ -363,6 +369,11 @@ export default function MenuAdminPage() {
               )} onClick={() => setSelectedCatId(cat.id)}>
                 <span className="text-lg">{cat.emoji}</span>
                 <span className="flex-1 text-sm font-medium truncate">{cat.name}</span>
+                {cat.station_id && estaciones.length > 1 && (
+                  <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    {estaciones.find((e) => e.id === cat.station_id)?.name}
+                  </span>
+                )}
                 <div className="opacity-0 group-hover:opacity-100 flex gap-0.5">
                   <button onClick={(e) => { e.stopPropagation(); moveCat(i, -1); }} className="p-0.5"><ArrowUp className="h-3 w-3" /></button>
                   <button onClick={(e) => { e.stopPropagation(); moveCat(i, 1); }} className="p-0.5"><ArrowDown className="h-3 w-3" /></button>
@@ -441,6 +452,22 @@ export default function MenuAdminPage() {
             <div><Label>Nombre</Label><Input value={catForm.name} onChange={(e) => setCatForm((p) => ({ ...p, name: e.target.value }))} /></div>
             <div><Label>Emoji</Label><Input value={catForm.emoji} onChange={(e) => setCatForm((p) => ({ ...p, emoji: e.target.value }))} maxLength={2} className="w-20" /></div>
             <div className="flex items-center gap-2"><Switch checked={catForm.is_visible} onCheckedChange={(v) => setCatForm((p) => ({ ...p, is_visible: v }))} /><Label>Visible</Label></div>
+            {estaciones.length > 1 && (
+              <div>
+                <Label>Se prepara en</Label>
+                <Select value={estaciones.some((e) => e.id === catForm.station_id && !e.es_predeterminada) ? catForm.station_id : "principal"} onValueChange={(v) => setCatForm((p) => ({ ...p, station_id: v === "principal" ? "" : v }))}>
+                  <SelectTrigger aria-label="Se prepara en"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {estaciones.map((e) => (
+                      <SelectItem key={e.id} value={e.es_predeterminada ? "principal" : e.id}>
+                        {e.name}{e.es_predeterminada ? " (principal)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Sus platos aparecen en la pantalla de esa estación. Las estaciones se crean en Sucursal.</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCatModal(false)}>Cancelar</Button>

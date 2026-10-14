@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import EstacionesSucursal from "@/components/admin/EstacionesSucursal";
 
 interface TableData {
   id: string;
@@ -180,6 +181,9 @@ export default function SucursalPage() {
       <Button onClick={saveSettings} disabled={saving} className="mb-8 w-full md:w-auto">
         {saving ? "Guardando..." : "Guardar cambios"}
       </Button>
+
+      {/* Las estaciones se guardan al instante (no usan "Guardar cambios") */}
+      <EstacionesSucursal branchId={branchId} tenantId={tenantId} />
 
       <Separator className="mb-6" />
 

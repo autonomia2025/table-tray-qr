@@ -4,6 +4,52 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.2: cocina y barra por separado, y KDS robusto ✅
+**Antes:**
+- La base ya separaba estaciones y estado por producto (fase 1.4), pero la pantalla de cocina mostraba todo junto.
+- Nadie podía crear una "Barra" ni decir qué va a cada estación.
+- El mozo solo veía "listo" cuando todo el pedido estaba listo: la cerveza esperaba a la hamburguesa.
+- Si se cortaba internet, la pantalla no recuperaba lo que llegaba mientras tanto.
+
+**Ahora:**
+- **Migración `20261014070000_estaciones.sql`:**
+  - la estación principal no se borra ni se desactiva;
+  - un producto nunca va a una estación desactivada o de otra sucursal: cae en la principal;
+  - al desactivar o borrar una estación, lo pendiente pasa a la principal, para que ninguna comanda quede en una pantalla que nadie mira;
+  - el demo trae una "Barra" para Cervezas, Tragos y Sin alcohol (también en `crear_demo.py`).
+- **KDS:**
+  - **selector de estación** (Todas · Cocina · Barra), recordado en ese equipo y en la dirección (`?estacion=`);
+  - cada tarjeta muestra solo los productos de esa estación y avanza solo eso;
+  - en "Todas", cada producto lleva el nombre de su estación;
+  - se actualiza en vivo también por producto.
+- **KDS robusto:**
+  - al volver internet, al reconectarse y al volver a la pestaña recarga todo, y además cada 30 segundos;
+  - muestra "actualizado hh:mm:ss";
+  - si se corta internet, un aviso rojo grande: "Sin conexión. Los pedidos nuevos aparecerán solos al volver internet".
+- **Mozo:**
+  - la mesa se pone verde apenas una estación deja algo listo: "Listo en Barra · lo demás sigue en preparación";
+  - "Entregado ✓" lleva solo lo listo.
+- **Dueño:**
+  - en Sucursal, la sección "Estaciones": crear, renombrar y activar o desactivar;
+  - en Carta, cada categoría elige "Se prepara en".
+
+**Pruebas:**
+- `tests/seguridad/f3-2-estaciones.test.ts`: 5 pruebas.
+  - Bebidas a la barra y comida a la cocina.
+  - La barra avanza lo suyo sin tocar la cocina, y el mozo lleva la bebida sin esperar la comida.
+  - Solo el dueño o el encargado configuran estaciones; la principal no se borra ni se desactiva.
+  - Al desactivar una estación, lo pendiente pasa a la principal.
+  - El dueño de otro local no toca ni usa las estaciones del demo.
+- `e2e/estaciones.spec.ts`:
+  - dos pantallas de cocina (Barra y Cocina) con un pedido de agua y Barros Luco;
+  - la barra deja lista el agua y el mozo la lleva;
+  - se corta internet en la cocina y aparece el aviso;
+  - llega un pedido mientras tanto y, al volver internet, aparece solo.
+- **Base desechable:** 148 de 148 de seguridad y 59 de 59 de navegador.
+- **Base de pruebas:** 133 de seguridad (más 15 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 3.1: turnos de mozo y propina del mozo de la mesa ✅
 **Decisión del fundador (14 de octubre):** "el mozo que toma la mesa es el que le llega la propina". El cliente no elige; se actualizó el brief (6.2).
 

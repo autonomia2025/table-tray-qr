@@ -26,6 +26,9 @@ interface TableData {
   hasBillRequest: boolean;
   hasWaiterCall: boolean;
   readyOrdersCount: number;
+  /** Estaciones que ya dejaron algo listo (la barra no espera a la cocina) y si falta algo más. */
+  estacionesListas: string[];
+  listoParcial: boolean;
   sessionTotal: number;
   sessionOpenedAt: string | null;
   activeOrdersCount: number;
@@ -189,6 +192,8 @@ export default function MozoMesasPage() {
     const billMap: Record<string, number> = {};
     const callMap: Record<string, number> = {};
     const tipMap: Record<string, { amount: number; percentage: number }> = {};
+    // Productos listos por mesa (fase 3.2): cada estación avanza por su cuenta
+    const listosPorMesa: Record<string, { cantidad: number; desde: string | null; estaciones: Set<string>; parcial: boolean }> = {};
 
     if (occupiedIds.length > 0) {
       const [{ data: sessions }, { data: activeOrders }, { data: billReqs }, { data: waiterCalls }] = await Promise.all([
@@ -235,6 +240,26 @@ export default function MozoMesasPage() {
         else if (o.status === 'ready') ordersMap[o.table_id].ready++;
         else if (o.status === 'in_kitchen') ordersMap[o.table_id].inKitchen++;
       });
+      const idsActivos = (activeOrders ?? []).map(o => o.id);
+      if (idsActivos.length > 0) {
+        const [{ data: itemsListos }, { data: estaciones }] = await Promise.all([
+          supabase.from('order_items').select('order_id, status, ready_at, station_id').in('order_id', idsActivos).in('status', ['confirmed', 'in_kitchen', 'ready']),
+          supabase.from('stations').select('id, name').eq('branch_id', branchId).eq('is_active', true),
+        ]);
+        const nombre = new Map((estaciones ?? []).map(e => [e.id, e.name]));
+        const mesaDe = new Map((activeOrders ?? []).map(o => [o.id, o.table_id]));
+        for (const it of itemsListos ?? []) {
+          const mesa = mesaDe.get(it.order_id)!;
+          const l = listosPorMesa[mesa] ??= { cantidad: 0, desde: null, estaciones: new Set(), parcial: false };
+          if (it.status === 'ready') {
+            l.cantidad++;
+            l.desde = masAntiguo(l.desde, it.ready_at);
+            if ((estaciones ?? []).length > 1 && it.station_id && nombre.get(it.station_id)) l.estaciones.add(nombre.get(it.station_id)!);
+          } else {
+            l.parcial = true;
+          }
+        }
+      }
       billReqs?.forEach(b => {
         billMap[b.table_id] = (billMap[b.table_id] ?? 0) + 1;
         tipMap[b.table_id] = { amount: b.tip_amount ?? 0, percentage: b.tip_percentage ?? 0 };
@@ -252,10 +277,12 @@ export default function MozoMesasPage() {
       return {
         ...t,
         hasNewOrder: om.confirmed > 0 && !t.assigned_waiter_id,
-        hasReadyFood: om.ready > 0,
+        hasReadyFood: om.ready > 0 || (listosPorMesa[t.id]?.cantidad ?? 0) > 0,
         hasBillRequest: (billMap[t.id] ?? 0) > 0,
         hasWaiterCall: (callMap[t.id] ?? 0) > 0,
         readyOrdersCount: om.ready,
+        estacionesListas: [...(listosPorMesa[t.id]?.estaciones ?? [])],
+        listoParcial: (listosPorMesa[t.id]?.cantidad ?? 0) > 0 && !!listosPorMesa[t.id]?.parcial,
         sessionTotal: sessionsMap[t.id]?.total ?? 0,
         sessionOpenedAt: sessionsMap[t.id]?.opened ?? null,
         activeOrdersCount: om.confirmed + om.ready + om.inKitchen,
@@ -263,7 +290,7 @@ export default function MozoMesasPage() {
         pedidoDesde: om.pedidoDesde,
         pagadoDesde: om.pagadoDesde,
         porCobrarDesde: om.porCobrarDesde,
-        listoDesde: om.listoDesde,
+        listoDesde: masAntiguo(om.listoDesde, listosPorMesa[t.id]?.desde),
         llamadaDesde: llamadaDesde[t.id] || null,
         cuentaDesde: cuentaDesde[t.id] || null,
         tipAmount: tipMap[t.id]?.amount ?? 0,
@@ -314,8 +341,11 @@ export default function MozoMesasPage() {
   const handleMarkDelivered = async (tableId: string) => {
     setActionLoading(tableId);
     // Entrega por el servidor los pedidos listos de la mesa (fase 1.4).
-    const { data: listos } = await supabase.from('orders').select('id').eq('table_id', tableId).eq('status', 'ready');
-    const resultados = await Promise.all((listos ?? []).map((o) => cambiarEstadoPedido(o.id, 'delivered')));
+    // (con estaciones, un pedido puede tener la cerveza lista y la comida en cocina: el mozo lleva lo listo)
+    const { data: activos } = await supabase.from('orders').select('id').eq('table_id', tableId).in('status', ['confirmed', 'in_kitchen', 'ready']);
+    const { data: conListos } = await supabase.from('order_items').select('order_id').in('order_id', (activos ?? []).map((o) => o.id)).eq('status', 'ready');
+    const listos = [...new Set((conListos ?? []).map((i) => i.order_id))];
+    const resultados = await Promise.all(listos.map((id) => cambiarEstadoPedido(id, 'delivered')));
     fetchTables();
     const fallo = resultados.find((r) => r.ok === false);
     if (fallo && fallo.ok === false) toast({ title: 'No se pudo marcar entregado', description: fallo.error, variant: 'destructive' });
@@ -516,6 +546,12 @@ export default function MozoMesasPage() {
                 <p className="text-xs font-bold text-foreground">{est.etiqueta}</p>
                 {e === 'listo' && t.readyOrdersCount > 1 && (
                   <p className="text-xs text-foreground">{t.readyOrdersCount} pedidos listos</p>
+                )}
+                {e === 'listo' && (t.estacionesListas.length > 0 || t.listoParcial) && (
+                  <p className="text-xs text-foreground">
+                    {t.estacionesListas.length > 0 ? `Listo en ${t.estacionesListas.join(' y ')}` : 'Una parte está lista'}
+                    {t.listoParcial ? ' · lo demás sigue en preparación' : ''}
+                  </p>
                 )}
                 {min !== null && est.cronometro && (
                   <p className={`text-xs tabular-nums ${colorCronometro(e, min)}`}>⏱ {est.cronometro} {textoMinutos(min)}</p>

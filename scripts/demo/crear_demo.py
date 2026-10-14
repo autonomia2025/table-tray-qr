@@ -240,11 +240,15 @@ def main() -> None:
         "is_open": True, "payment_mode": "prepaid",
     }))
     sql.append(ins("public.menus", {"id": MENU, "tenant_id": TENANT, "branch_id": BRANCH, "name": "Carta Principal", "is_active": True}))
+    # Estaciones: "Cocina" la crea sola la base (predeterminada); las bebidas van a "Barra" (fase 3.2)
+    BARRA = uid("station-barra")
+    sql.append(ins("public.stations", {"id": BARRA, "tenant_id": TENANT, "branch_id": BRANCH, "name": "Barra", "sort_order": 1}))
 
     # Carta
     for ci, (cat, emoji, platos) in enumerate(CARTA):
         cid = uid(f"cat-{cat}")
-        sql.append(ins("public.categories", {"id": cid, "tenant_id": TENANT, "menu_id": MENU, "name": cat, "emoji": emoji, "sort_order": ci, "is_visible": True}))
+        sql.append(ins("public.categories", {"id": cid, "tenant_id": TENANT, "menu_id": MENU, "name": cat, "emoji": emoji, "sort_order": ci, "is_visible": True,
+                                              "station_id": BARRA if cat in ("Cervezas", "Tragos", "Sin alcohol") else None}))
         for pi, (nombre, desc, precio, alerg, etiq, mins, mod) in enumerate(platos):
             pid = uid(f"item-{nombre}")
             sql.append(ins("public.menu_items", {

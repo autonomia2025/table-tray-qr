@@ -17,7 +17,20 @@ interface KDSOrderItem {
   quantity: number;
   selected_modifiers: any;
   item_notes: string | null;
+  /** Estado de este producto en su estación (fase 1.4) y la estación que lo prepara (fase 3.2). */
+  status: string;
+  station_id: string | null;
 }
+
+interface Estacion {
+  id: string;
+  name: string;
+  es_predeterminada: boolean;
+}
+
+// Una comanda avanza por estación: su columna es la del producto más atrasado de esa estación.
+const RANGO: Record<string, number> = { confirmed: 1, in_kitchen: 2, ready: 3, delivered: 4 };
+const ESTADO_POR_RANGO = ["", "confirmed", "in_kitchen", "ready"];
 
 interface KDSOrder {
   id: string;
@@ -86,7 +99,7 @@ async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, menu_item_name, quantity, selected_modifiers, item_notes")
+    .select("id, menu_item_name, quantity, selected_modifiers, item_notes, status, station_id")
     .eq("order_id", o.id);
 
   return {
@@ -151,11 +164,14 @@ function OrderCard({
   column,
   onAction,
   onDisableItem,
+  nombreEstacion,
 }: {
   order: KDSOrder;
   column: "new" | "kitchen" | "ready";
   onAction: (orderId: string, newStatus: string) => void;
   onDisableItem?: (itemId: string, itemName: string) => void;
+  /** En la vista "Todas", a qué estación va cada producto. */
+  nombreEstacion?: (id: string | null) => string | null;
 }) {
   const borderColor = column === "new" ? "#EF4444" : column === "kitchen" ? "#F59E0B" : "#22C55E";
 
@@ -200,6 +216,11 @@ function OrderCard({
             <div className="flex items-center justify-between gap-2">
               <p className="text-[17px] text-white flex-1">
                 {item.quantity}× {item.menu_item_name}
+                {nombreEstacion?.(item.station_id) && (
+                  <span className="ml-2 rounded px-1.5 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wide text-gray-400" style={{ backgroundColor: "#262626" }}>
+                    {nombreEstacion(item.station_id)}
+                  </span>
+                )}
               </p>
               {(column === "new" || column === "kitchen") && onDisableItem && (
                 <button
@@ -298,6 +319,7 @@ function KDSColumn({
   onDisableItem,
   recentlyDelivered,
   groupedNewItems,
+  nombreEstacion,
 }: {
   title: string;
   count: number;
@@ -309,6 +331,7 @@ function KDSColumn({
   onDisableItem?: (itemId: string, itemName: string) => void;
   recentlyDelivered?: RecentlyDeliveredEntry[];
   groupedNewItems?: { name: string; totalQty: number; tables: number[] }[];
+  nombreEstacion?: (id: string | null) => string | null;
 }) {
   return (
     <div className="flex flex-col min-h-0 flex-1">
@@ -352,7 +375,7 @@ function KDSColumn({
             </div>
           ) : (
             orders.map((order) => (
-              <OrderCard key={order.id} order={order} column={column} onAction={onAction} onDisableItem={onDisableItem} />
+              <OrderCard key={order.id} order={order} column={column} onAction={onAction} onDisableItem={onDisableItem} nombreEstacion={nombreEstacion} />
             ))
           )}
         </AnimatePresence>
@@ -487,7 +510,11 @@ export default function KDSPage() {
 }
 
 function KDSBoard({ branchId }: { branchId: string }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<KDSOrder[]>([]);
+  // Hora de la última vez que la pantalla supo de la base (carga o aviso en vivo)
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
+  const marcarActualizado = useCallback(() => setUltimaActualizacion(new Date()), []);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -546,6 +573,36 @@ function KDSBoard({ branchId }: { branchId: string }) {
     staleTime: Infinity,
   });
 
+  // Estaciones de la sucursal (cocina, barra…). Cada pantalla elige la suya; queda recordada en este equipo.
+  const { data: estaciones = [] } = useQuery<Estacion[]>({
+    queryKey: ["kds-estaciones", branchId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("stations")
+        .select("id, name, es_predeterminada")
+        .eq("branch_id", branchId)
+        .eq("is_active", true)
+        .order("sort_order");
+      return (data ?? []) as Estacion[];
+    },
+    staleTime: 60_000,
+  });
+  const claveEstacion = `kds-estacion-${branchId}`;
+  const pedida = searchParams.get("estacion") ?? (() => {
+    try { return localStorage.getItem(claveEstacion); } catch { return null; }
+  })();
+  const estacion = estaciones.some((e) => e.id === pedida) ? pedida! : "todas";
+  const elegirEstacion = useCallback((id: string) => {
+    try { localStorage.setItem(claveEstacion, id); } catch { /* sin almacenamiento: se usa la URL */ }
+    const p = new URLSearchParams(searchParams);
+    if (id === "todas") p.delete("estacion"); else p.set("estacion", id);
+    setSearchParams(p, { replace: true });
+  }, [claveEstacion, searchParams, setSearchParams]);
+  const nombreEstacion = useCallback((id: string | null) => {
+    if (estacion !== "todas" || estaciones.length < 2) return null;
+    return estaciones.find((e) => e.id === id)?.name ?? null;
+  }, [estacion, estaciones]);
+
   // Initial orders fetch
   const { data: initialOrders, refetch: fetchOrders } = useQuery({
     queryKey: ["kds-orders", branchId],
@@ -571,7 +628,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
       const orderIds = data.map((o) => o.id);
       const { data: allItems } = await supabase
         .from("order_items")
-        .select("id, order_id, menu_item_name, quantity, selected_modifiers, item_notes")
+        .select("id, order_id, menu_item_name, quantity, selected_modifiers, item_notes, status, station_id")
         .in("order_id", orderIds);
       const itemsByOrder = new Map<string, KDSOrderItem[]>();
       for (const item of allItems || []) {
@@ -580,6 +637,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
         itemsByOrder.set(item.order_id, arr);
       }
 
+      marcarActualizado();
       return data.map((o): KDSOrder => {
         const t = tableMap.get(o.table_id);
         return {
@@ -606,6 +664,27 @@ function KDSBoard({ branchId }: { branchId: string }) {
     if (initialOrders) setOrders(initialOrders);
   }, [initialOrders]);
 
+  // Si se corta internet, al volver se recupera todo: al reconectar, al volver a la pestaña y cada 30 s.
+  const recargarRef = useRef(fetchOrders);
+  recargarRef.current = fetchOrders;
+  const estuvoDesconectado = useRef(false);
+  useEffect(() => {
+    const recargar = () => { if (navigator.onLine) recargarRef.current(); };
+    const alVolver = () => { setIsOnline(true); recargar(); };
+    const alCaer = () => { setIsOnline(false); estuvoDesconectado.current = true; };
+    const alMirar = () => { if (document.visibilityState === "visible") recargar(); };
+    window.addEventListener("online", alVolver);
+    window.addEventListener("offline", alCaer);
+    document.addEventListener("visibilitychange", alMirar);
+    const id = setInterval(recargar, 30_000);
+    return () => {
+      window.removeEventListener("online", alVolver);
+      window.removeEventListener("offline", alCaer);
+      document.removeEventListener("visibilitychange", alMirar);
+      clearInterval(id);
+    };
+  }, []);
+
   // Realtime subscription
   useEffect(() => {
     const channel = supabase
@@ -614,6 +693,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` },
         (payload) => {
+          marcarActualizado();
           fetchOrderWithItems(payload.new.id).then((order) => {
             if (order && ["confirmed", "in_kitchen", "ready"].includes(order.status)) {
               setOrders((prev) => {
@@ -629,6 +709,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `branch_id=eq.${branchId}` },
         (payload) => {
+          marcarActualizado();
           const updated = payload.new as any;
           const prevRow = payload.old as any;
           if (["delivered", "cancelled"].includes(updated.status)) {
@@ -657,50 +738,80 @@ function KDSBoard({ branchId }: { branchId: string }) {
         },
       )
 
+      // Cada producto avanza por estación: la barra marca lista la cerveza sin esperar a la cocina.
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "order_items" },
+        (payload) => {
+          const it = payload.new as { id: string; order_id: string; status: string; station_id: string | null };
+          setOrders((prev) => prev.map((o) => o.id === it.order_id
+            ? { ...o, items: o.items.map((i) => (i.id === it.id ? { ...i, status: it.status, station_id: it.station_id } : i)) }
+            : o));
+          marcarActualizado();
+        },
+      )
       .subscribe((status) => {
-        setIsOnline(status === "SUBSCRIBED");
+        const conectado = status === "SUBSCRIBED";
+        setIsOnline(conectado && navigator.onLine);
+        if (conectado) {
+          // Volvió la conexión: lo que pasó mientras tanto se trae de nuevo
+          if (estuvoDesconectado.current) recargarRef.current();
+          estuvoDesconectado.current = false;
+          marcarActualizado();
+        } else {
+          estuvoDesconectado.current = true;
+        }
       });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [branchId]);
+  }, [branchId, marcarActualizado]);
 
-  // Action handler
+  // En modo prepago, la cocina solo ve pedidos ya pagados
+  const kitchenVisible = useMemo(() => (branch?.payment_mode === "prepaid"
+    ? orders.filter((o) => o.payment_status === "paid")
+    : orders), [orders, branch?.payment_mode]);
+
+  // Lo que ve esta pantalla: de cada pedido, solo los productos de su estación que faltan por entregar
+  const vista = useMemo(() => kitchenVisible.flatMap((o): KDSOrder[] => {
+    if (o.items.length === 0) return estacion === "todas" ? [o] : []; // pedidos antiguos sin productos
+    const items = o.items.filter((i) => (RANGO[i.status] ?? 0) >= 1 && RANGO[i.status] <= 3
+      && (estacion === "todas" || i.station_id === estacion));
+    if (items.length === 0) return [];
+    const rango = Math.min(...items.map((i) => RANGO[i.status]));
+    return [{ ...o, status: ESTADO_POR_RANGO[rango], items }];
+  }), [kitchenVisible, estacion]);
+
+  // Action handler: avanza lo de esta estación (o todo, en la vista "Todas").
   const handleAction = useCallback(async (orderId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus };
-    if (newStatus === "in_kitchen") updateData.kitchen_accepted_at = new Date().toISOString();
-    if (newStatus === "ready") updateData.ready_at = new Date().toISOString();
-    if (newStatus === "delivered") updateData.delivered_at = new Date().toISOString();
+    const estacionId = estacion === "todas" ? null : estacion;
+    const order = vista.find((o) => o.id === orderId);
 
     // Track delivered orders
-    if (newStatus === "delivered") {
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        setDeliveredToday(prev => prev + 1);
-        setRecentlyDelivered(prev => [
-          { id: orderId, table_number: order.table_number, order_number: order.order_number, delivered_at: new Date().toISOString() },
-          ...prev.slice(0, 7),
-        ]);
-      }
+    if (newStatus === "delivered" && order) {
+      setDeliveredToday(prev => prev + 1);
+      setRecentlyDelivered(prev => [
+        { id: orderId, table_number: order.table_number, order_number: order.order_number, delivered_at: new Date().toISOString() },
+        ...prev.slice(0, 7),
+      ]);
     }
 
-    // Optimistic update — remove delivered/cancelled, update others
-    if (newStatus === "delivered") {
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-    } else {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, ...updateData } : o)),
-      );
-    }
+    // Optimista: los productos de esta estación avanzan al tiro; el aviso en vivo confirma después
+    setOrders((prev) => prev.map((o) => o.id !== orderId ? o : {
+      ...o,
+      items: o.items.map((i) => (estacionId === null || i.station_id === estacionId) && (RANGO[i.status] ?? 9) < RANGO[newStatus]
+        ? { ...i, status: newStatus }
+        : i),
+    }));
 
     // El servidor valida el rol, la regla de prepago y deja registro (fase 1.4).
-    const r = await cambiarEstadoPedido(orderId, newStatus as EstadoPedido);
+    const r = await cambiarEstadoPedido(orderId, newStatus as EstadoPedido, { estacionId });
     if (r.ok === false) {
       toast({ title: "No se pudo actualizar el pedido", description: r.error, variant: "destructive" });
       fetchOrders();
     }
-  }, [orders, fetchOrders]);
+  }, [estacion, vista, fetchOrders]);
 
   // Disable item handler (86)
   const handleDisableItem = useCallback(async (itemId: string, _itemName: string) => {
@@ -737,16 +848,12 @@ function KDSBoard({ branchId }: { branchId: string }) {
   }, [audioUnlocked]);
 
   // Categorize
-  // En modo prepago, la cocina solo ve pedidos ya pagados
-  const kitchenVisible = branch?.payment_mode === "prepaid"
-    ? orders.filter((o) => o.payment_status === "paid")
-    : orders;
   const pendingPayment = branch?.payment_mode === "prepaid"
     ? orders.filter((o) => o.payment_status !== "paid" && o.status === "confirmed").length
     : 0;
-  const newOrders = kitchenVisible.filter((o) => o.status === "confirmed");
-  const kitchenOrders = kitchenVisible.filter((o) => o.status === "in_kitchen");
-  const readyOrders = kitchenVisible.filter((o) => o.status === "ready");
+  const newOrders = vista.filter((o) => o.status === "confirmed");
+  const kitchenOrders = vista.filter((o) => o.status === "in_kitchen");
+  const readyOrders = vista.filter((o) => o.status === "ready");
 
 
   // Grouped new items
@@ -781,6 +888,24 @@ function KDSBoard({ branchId }: { branchId: string }) {
           {branch?.name && (
             <span className="text-sm text-gray-500">· {branch.name}</span>
           )}
+          {/* Estación de esta pantalla (cocina, barra…) */}
+          {estaciones.length > 1 && (
+            <div className="ml-3 flex items-center gap-1 rounded-lg p-0.5" style={{ backgroundColor: "#1F1F1F" }} role="group" aria-label="Estación">
+              {[{ id: "todas", name: "Todas" }, ...estaciones].map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => elegirEstacion(e.id)}
+                  aria-pressed={estacion === e.id}
+                  className="rounded-md px-3 py-1 text-sm font-bold transition-colors"
+                  style={estacion === e.id
+                    ? { backgroundColor: "#E8531D", color: "#FFFFFF" }
+                    : { color: "#9CA3AF" }}
+                >
+                  {e.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -812,6 +937,11 @@ function KDSBoard({ branchId }: { branchId: string }) {
                 <span className="text-xs text-red-500">Sin conexión</span>
               </>
             )}
+            {ultimaActualizacion && (
+              <span className="text-xs text-gray-500">
+                · actualizado {ultimaActualizacion.toLocaleTimeString("es-CL", { hour12: false })}
+              </span>
+            )}
           </div>
 
           {/* Sound toggle */}
@@ -829,6 +959,21 @@ function KDSBoard({ branchId }: { branchId: string }) {
         </div>
       </header>
 
+      {/* Sin conexión: que se note desde lejos, y que nadie se asuste */}
+      {!isOnline && (
+        <div role="alert" className="flex shrink-0 items-center justify-center gap-3 px-4 py-3 text-center" style={{ backgroundColor: "#7F1D1D" }}>
+          <WifiOff className="h-6 w-6 text-white" />
+          <p className="text-lg font-bold text-white">
+            Sin conexión. Los pedidos nuevos aparecerán solos al volver internet.
+            {ultimaActualizacion && (
+              <span className="ml-2 font-normal text-red-100">
+                Última actualización: {ultimaActualizacion.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })}
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* COLUMNS */}
       <div className="flex flex-1 min-h-0 divide-x divide-gray-800">
         <KDSColumn
@@ -841,6 +986,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           onAction={handleAction}
           onDisableItem={handleDisableItem}
           groupedNewItems={groupedNewItems}
+          nombreEstacion={nombreEstacion}
         />
         <KDSColumn
           title="EN COCINA"
@@ -851,6 +997,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           column="kitchen"
           onAction={handleAction}
           onDisableItem={handleDisableItem}
+          nombreEstacion={nombreEstacion}
         />
         <KDSColumn
           title="LISTOS PARA ENTREGAR"
@@ -861,6 +1008,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           column="ready"
           onAction={handleAction}
           recentlyDelivered={recentlyDelivered}
+          nombreEstacion={nombreEstacion}
         />
       </div>
     </div>
