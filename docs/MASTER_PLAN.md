@@ -68,9 +68,22 @@ Cotización con precio congelado → intento de pago reservado antes de cobrar �
 - La cotización admite productos para otras personas: deja listo "invitar una ronda" y "dividir un plato" (fase 7).
 - Sellos retroactivos: si un invitado paga y después guarda su cuenta, recibe los sellos de esa visita.
 
-## Fase 3 — Operación de sala y experiencia del comensal ⏳
+## Fase 3 — Operación de sala y experiencia del comensal 🔨
 
-- **Turnos de mozo** (abrir y cerrar turno) y **propina elegida por el cliente** (a qué mozo va), para que cada propina del cierre de caja tenga dueño (brief 7) · estaciones en pantalla (cocina, barra) y KDS robusto · código de presencia para las tarjetas de mesa · mozo y administración pulidos · reportes en el servidor · cuenta abierta controlada · unir mesas.
+| Paso | Qué | Estado |
+|---|---|---|
+| 3.1 | Turnos de mozo (abrir y cerrar, con duración) y **propina para el mozo que tomó la mesa** (decisión del fundador del 14 de octubre: el cliente no elige; si nadie la había tomado al pagar, va al primero que la tome); propinas por mozo y por turno | ✅ |
+| 3.2 | Estaciones en pantalla (cocina y barra por separado) y KDS robusto: recupera todo al volver internet, muestra conexión y última actualización | ⏳ |
+| 3.3 | Control del equipo: ranking por período, tiempos objetivo con semáforo, alertas de pedido listo sin entregar, calificación atribuida al mozo que cerró la mesa, metas por mozo | ⏳ |
+| 3.4 | La mesa en vivo (comensal): quién está, tu pedido por estación, "otra ronda", "lo de siempre", tiempo estimado y aviso al celular | ⏳ |
+| 3.5 | Código de presencia en las tarjetas de mesa, cuenta abierta controlada y unir mesas | ⏳ |
+| 3.6 | Reportes calculados por el servidor; inicio del dueño que cuenta una historia; productividad de cocina y mapa de calor de horas | ⏳ |
+| 3.7 | Sellos que se sienten (el sello "cae" al pagar) | ⏳ |
+| 3.8 | Compuerta de la fase 3 | ⏳ |
+
+Detalle de las ideas:
+
+- Estaciones en pantalla (cocina, barra) y KDS robusto · código de presencia para las tarjetas de mesa · mozo y administración pulidos · reportes en el servidor · cuenta abierta controlada · unir mesas.
 - **La mesa en vivo** (ideas de experiencia, elegidas por su impacto en ventas):
   - ver quién está en la mesa (alias o avatar) y el estado de **tu** pedido por estación ("tu cerveza está lista, la comida sigue en cocina");
   - **"Otra ronda"** con un toque: repite lo que pediste;

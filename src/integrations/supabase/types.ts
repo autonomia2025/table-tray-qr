@@ -1534,6 +1534,7 @@ export type Database = {
           table_id: string | null
           tenant_id: string
           tip_amount: number
+          turno_id: string | null
           updated_at: string
           user_id: string | null
           wallet: string | null
@@ -1561,6 +1562,7 @@ export type Database = {
           table_id?: string | null
           tenant_id: string
           tip_amount?: number
+          turno_id?: string | null
           updated_at?: string
           user_id?: string | null
           wallet?: string | null
@@ -1588,6 +1590,7 @@ export type Database = {
           table_id?: string | null
           tenant_id?: string
           tip_amount?: number
+          turno_id?: string | null
           updated_at?: string
           user_id?: string | null
           wallet?: string | null
@@ -1633,6 +1636,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "turnos"
             referencedColumns: ["id"]
           },
         ]
@@ -2384,6 +2394,70 @@ export type Database = {
           },
         ]
       }
+      turnos: {
+        Row: {
+          abierto_por: string
+          branch_id: string
+          cerrado_por: string | null
+          cerrado_por_user: string | null
+          created_at: string
+          fin: string | null
+          id: string
+          inicio: string
+          nota: string | null
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          abierto_por?: string
+          branch_id: string
+          cerrado_por?: string | null
+          cerrado_por_user?: string | null
+          created_at?: string
+          fin?: string | null
+          id?: string
+          inicio?: string
+          nota?: string | null
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          abierto_por?: string
+          branch_id?: string
+          cerrado_por?: string | null
+          cerrado_por_user?: string | null
+          created_at?: string
+          fin?: string | null
+          id?: string
+          inicio?: string
+          nota?: string | null
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turnos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turnos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waiter_calls: {
         Row: {
           attended_at: string | null
@@ -2472,8 +2546,30 @@ export type Database = {
         Args: { _table_id: string }
         Returns: Record<string, unknown>
       }
+      _mi_ficha: {
+        Args: { _tenant_id: string }
+        Returns: {
+          auth_user_id: string | null
+          branch_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          role: string
+          tenant_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "staff_users"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
+      _turno_abierto: { Args: { _staff_id: string }; Returns: string }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
+      abrir_turno: { Args: { _branch_id: string }; Returns: Json }
       activar_personal: {
         Args: { _activo: boolean; _staff_id: string }
         Returns: undefined
@@ -2530,6 +2626,10 @@ export type Database = {
       }
       cerrar_mesa: {
         Args: { _motivo?: string; _table_id: string }
+        Returns: Json
+      }
+      cerrar_turno: {
+        Args: { _nota?: string; _turno_id?: string }
         Returns: Json
       }
       confirmar_pago: {
@@ -2602,6 +2702,7 @@ export type Database = {
       }
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
+      mi_turno: { Args: { _branch_id: string }; Returns: Json }
       pedir_cuenta: {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
         Returns: Json
@@ -2703,6 +2804,10 @@ export type Database = {
       tomar_mesa: { Args: { _table_id: string }; Returns: Json }
       transferir_mesa: {
         Args: { _staff_id: string; _table_id: string }
+        Returns: Json
+      }
+      turnos_sucursal: {
+        Args: { _branch_id: string; _desde: string; _hasta: string }
         Returns: Json
       }
       unirse_a_mesa: {

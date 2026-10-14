@@ -4,6 +4,45 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.1: turnos de mozo y propina del mozo de la mesa ✅
+**Decisión del fundador (14 de octubre):** "el mozo que toma la mesa es el que le llega la propina". El cliente no elige; se actualizó el brief (6.2).
+
+**Antes:**
+- si el cliente pagaba con la app antes de que un mozo tomara la mesa, la propina quedaba "Sin mozo asignado";
+- si la caja cobraba en efectivo una mesa de un mozo, la propina quedaba a nombre de la caja;
+- no había turnos.
+
+**Ahora (migración `20261014060000_turnos_y_propinas.sql`):**
+- **Turnos** (tabla `turnos`): inicio, fin, duración, quién lo abrió y quién lo cerró. Un solo turno abierto por persona.
+  - `abrir_turno`: un doble toque no abre dos.
+  - `cerrar_turno`: el mozo no puede terminar su turno con mesas a cargo. Un encargado puede cerrar un turno olvidado, con motivo, y queda en la auditoría.
+  - `mi_turno` y `turnos_sucursal` entregan duración, mesas, pagos, ventas y propinas netas de reembolsos.
+  - Tomar una mesa sin turno lo abre solo.
+- **La propina es del mozo de la mesa:**
+  - `atribuir_propina`, al guardar un pago, lo deja a nombre del mozo de la mesa, aunque cobre la caja (quién cobró queda en el detalle). Si la mesa no tiene mozo, queda pendiente.
+  - `al_asignar_mozo`: cuando un mozo toma la mesa, los pagos pendientes de esa visita pasan a ser suyos. En una transferencia, lo ya pagado queda con el anterior, y no se toca un día de caja ya cerrado.
+  - Cada pago guarda su turno.
+  - Los pagos anteriores que quedaron a nombre de la caja quedaron sin dueño.
+- Reiniciar el demo también borra los turnos.
+- Los botones para cerrar paneles y ventanas decían "Close" en el texto oculto para lectores de pantalla; ahora dicen "Cerrar" (regla 10).
+
+**Pantallas:**
+- **Mozo:** barra verde "En turno desde 18:02 · 2 h 15 min · Propinas $X", que se actualiza con cada pago, o "Empezar turno" si no tiene. En **Perfil**, "Mi turno" muestra desde, duración, mesas, ventas y sus propinas (cuánto en efectivo), y el botón "Terminar turno".
+- **Dueño:** en Equipo, la sección "Turnos" lista mozo, inicio, fin, duración, mesas, ventas y propinas, con el total. Permite filtrar por días y cerrar un turno olvidado con motivo.
+
+**Pruebas:**
+- `tests/seguridad/f3-1-turnos.test.ts`: 6 pruebas.
+  - Abrir y cerrar turno; un doble toque abre uno solo.
+  - Tomar una mesa abre el turno solo; no se termina el turno con mesas a cargo.
+  - La propina es del mozo aunque cobre la caja.
+  - Pagado antes de tomar la mesa: la propina va al primero que la toma, y transferir no se la quita.
+  - Quién ve qué turnos; el encargado cierra con motivo y queda auditado.
+  - El dueño de otro local no ve ni cierra turnos.
+- `e2e/turnos.spec.ts`: la mozo empieza su turno, un cliente paga con propina, ella toma la mesa y la propina aparece en su barra. No puede terminar el turno con la mesa a cargo; el dueño ve el turno en Equipo; ella cierra la mesa y termina su turno.
+- **Base desechable:** 143 de 143 de seguridad y 58 de 58 de navegador. **Base de pruebas:** 129 de seguridad (más 14 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 2.E: compuerta de la plata ✅ (fase 2 terminada)
 **Qué es:** igual que la compuerta de seguridad de la fase 1.10, pero para los montos. Es una revisión automática de que la plata calza en toda la base, y una batería con los casos difíciles que faltaban.
 

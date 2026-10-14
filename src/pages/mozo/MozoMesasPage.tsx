@@ -5,6 +5,7 @@ import { cambiarEstadoPedido, registrarCobroMozo } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
 import { atenderLlamado, cerrarMesa, tomarMesa, transferirMesa } from "@/lib/mesa";
 import { formatCLP } from '@/lib/format';
+import { abrirTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,8 @@ function playAlert() {
 export default function MozoMesasPage() {
   const navigate = useNavigate();
   const { branchId, staffId } = useWaiters();
+  const { turno, cargando: cargandoTurno, recargar: recargarTurno } = useMiTurno(branchId);
+  const [abriendoTurno, setAbriendoTurno] = useState(false);
   const { toast } = useToast();
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -268,7 +271,8 @@ export default function MozoMesasPage() {
       };
     }));
     setLoading(false);
-  }, [branchId]);
+    recargarTurno(); // un pago nuevo en una de mis mesas suma a mis propinas
+  }, [branchId, recargarTurno]);
 
   useEffect(() => {
     fetchTables();
@@ -301,7 +305,7 @@ export default function MozoMesasPage() {
   const handleTakeTable = async (tableId: string) => {
     setActionLoading(tableId);
     const r = await tomarMesa(tableId);
-    fetchTables();
+    fetchTables(); // también refresca el turno: tomar una mesa sin turno lo abre solo
     if (r.ok === false) toast({ title: 'No se pudo tomar la mesa', description: r.error, variant: 'destructive' });
     else toast({ title: 'Mesa tomada' });
     setActionLoading(null);
@@ -434,8 +438,44 @@ export default function MozoMesasPage() {
   const estadoSeleccionado = selectedTable ? estadoMesa(selectedTable) : 'libre';
   const puedoCerrar = (t: TableData) => !t.assigned_waiter_id || t.assigned_waiter_id === staffId;
 
+  const empezarTurno = async () => {
+    setAbriendoTurno(true);
+    const r = await abrirTurno(branchId);
+    setAbriendoTurno(false);
+    if (r.ok === false) { toast({ title: 'No se pudo empezar el turno', description: r.error, variant: 'destructive' }); return; }
+    toast({ title: '¡Turno empezado!', description: 'Las propinas de tus mesas se anotan a tu nombre.' });
+    recargarTurno();
+  };
+
   return (
     <div className="p-4 pb-24">
+      {/* Turno: la propina es del mozo que tomó la mesa */}
+      {!cargandoTurno && (turno ? (
+        <button
+          type="button"
+          onClick={() => navigate('/mozo/perfil')}
+          className="mb-3 flex w-full items-center justify-between gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-50 px-3.5 py-2.5 text-left dark:bg-emerald-950/40"
+        >
+          <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+            <span className="truncate">
+              <span className="font-bold">En turno</span> desde {new Date(turno.inicio).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })} · {duracion(turno.minutos)}
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-bold text-foreground">Propinas {formatCLP(turno.propinas)}</span>
+        </button>
+      ) : (
+        <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border bg-card p-3.5">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-foreground">No has empezado tu turno</p>
+            <p className="text-xs text-muted-foreground">Las propinas de las mesas que tomes se anotan a tu nombre.</p>
+          </div>
+          <Button size="sm" className="h-10 shrink-0" onClick={empezarTurno} disabled={abriendoTurno}>
+            {abriendoTurno ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Empezar turno'}
+          </Button>
+        </div>
+      ))}
+
       {/* Resumen por color: también sirve de leyenda */}
       <div className="flex flex-wrap gap-1.5 mb-4" aria-label="Resumen de mesas">
         {(Object.keys(ESTADOS) as EstadoMesa[]).filter(e => cuenta(e) > 0).map(e => (

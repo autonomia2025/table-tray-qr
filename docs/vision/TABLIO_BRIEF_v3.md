@@ -124,7 +124,7 @@ Funcionalidades que ayudan al local a vender más. **Todas vienen desactivadas**
   - Se separa la plata cargada del bono regalado.
   - Si el local cierra o se suspende, el saldo no desaparece.
   - **No se activa con dinero real hasta revisarlo con un asesor tributario y legal.**
-- **Propina por mozo:** el cliente elige a qué mozo va su propina. Tablio informa, no reparte la plata. Tablio no cobra nada sobre las propinas.
+- **Propina por mozo:** la propina es del mozo que tomó la mesa (decisión del fundador, 14 de octubre de 2026: el cliente no elige). Si nadie había tomado la mesa cuando el cliente pagó, va al primer mozo que la tome en esa visita. Tablio informa, no reparte la plata. Tablio no cobra nada sobre las propinas.
 
 ### 6.3 Backoffice comercial (interno de Tablio)
 

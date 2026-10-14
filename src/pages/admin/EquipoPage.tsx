@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Pencil, Loader2, Users, Link2, Copy, Check, Mail } from "lucide-react";
+import TurnosEquipo from "@/components/admin/TurnosEquipo";
 
 interface StaffRow {
   id: string;
@@ -224,6 +225,8 @@ export default function EquipoPage() {
           </table>
         </div>
       )}
+
+      <TurnosEquipo branchId={branchId} />
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
