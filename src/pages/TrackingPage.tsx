@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useComensalEnMesa } from "@/hooks/useTableSession";
@@ -18,6 +18,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { Json } from "@/integrations/supabase/types";
+import { miMesaEnVivo, otraRonda, ponerAlias, resumenPorEstacion, type MesaEnVivo } from "@/lib/mesaEnVivo";
+import { Repeat, Users } from "lucide-react";
 
 /* ---------- types ---------- */
 interface OrderItem {
@@ -116,6 +118,21 @@ export default function TrackingPage() {
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
 
   const [visitaTerminada, setVisitaTerminada] = useState(false);
+
+  // La mesa en vivo (fase 3.4): quién está, mis productos por estación y cuánto falta
+  const [enVivo, setEnVivo] = useState<MesaEnVivo | null>(null);
+  const [aliasModal, setAliasModal] = useState(false);
+  const [alias, setAlias] = useState("");
+  const [repitiendo, setRepitiendo] = useState(false);
+  const listosAvisados = useRef<Set<string> | null>(null);
+  const [permisoAviso, setPermisoAviso] = useState<string>(() => {
+    try { return "Notification" in window ? Notification.permission : "unsupported"; } catch { return "unsupported"; }
+  });
+  const recargarEnVivo = useCallback(async () => {
+    if (!tableToken) return;
+    const r = await miMesaEnVivo(tableToken);
+    if (r) setEnVivo(r);
+  }, [tableToken]);
 
   // Tenant
   const { data: tenant } = useQuery({
@@ -223,6 +240,7 @@ export default function TrackingPage() {
         },
         (payload) => {
           const updated = payload.new as { id: string; status: string; payment_status?: string | null };
+          recargarEnVivo();
           setOrders((prev) =>
             prev.map((o) => (o.id === updated.id
               ? { ...o, status: updated.status, payment_status: updated.payment_status ?? o.payment_status }
@@ -235,7 +253,45 @@ export default function TrackingPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.id]);
+  }, [session?.id, recargarEnVivo]);
+
+  // Carga la mesa en vivo y la refresca cada 30 s (el tiempo estimado baja solo)
+  useEffect(() => {
+    if (!unido) return;
+    recargarEnVivo();
+    const id = setInterval(recargarEnVivo, 30_000);
+    return () => clearInterval(id);
+  }, [unido, recargarEnVivo, orders.length]);
+
+  // Aviso cuando algo mío queda listo (sonido, vibración y, si la pestaña está en segundo plano, notificación)
+  useEffect(() => {
+    if (!enVivo) return;
+    const listos = enVivo.pedidos.flatMap((p) => p.items.filter((i) => i.estado === "ready"));
+    if (listosAvisados.current === null) {
+      listosAvisados.current = new Set(listos.map((i) => i.id)); // lo que ya estaba listo al abrir no suena
+      return;
+    }
+    const nuevos = listos.filter((i) => !listosAvisados.current!.has(i.id));
+    if (!nuevos.length) return;
+    nuevos.forEach((i) => listosAvisados.current!.add(i.id));
+    const texto = `Ya está listo: ${nuevos.map((i) => i.nombre).join(", ")}`;
+    try { navigator.vibrate?.([200, 100, 200]); } catch { /* sin vibración */ }
+    try {
+      const ctx = new AudioContext();
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.setValueAtTime(880, ctx.currentTime); o.frequency.setValueAtTime(1175, ctx.currentTime + 0.15);
+      g.gain.setValueAtTime(0.2, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      o.start(); o.stop(ctx.currentTime + 0.5);
+    } catch { /* sin sonido */ }
+    toast({ title: `🔔 ${texto}`, description: "El mozo te lo trae." });
+    try {
+      if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+        new Notification(tenant?.name ?? "Tu pedido", { body: `${texto}. El mozo te lo trae.` });
+      }
+    } catch { /* algunos celulares no permiten avisos sin app instalada */ }
+  }, [enVivo, toast, tenant?.name]);
+
 
   // Realtime subscription for session close (redirect to menu)
   useEffect(() => {
@@ -457,6 +513,46 @@ export default function TrackingPage() {
   const POR_PAGAR = { label: "💳 Por pagar al mozo", sublabel: "El mozo viene a cobrarte. Apenas pagues, pasa a la cocina.", color: "text-amber-600", step: 0 };
   const currentStatusInfo = porPagarAlMozo(currentOrder) ? POR_PAGAR : STATUS_MAP[currentOrder.status] || STATUS_MAP.confirmed;
 
+  // Mesa en vivo: mi pedido actual con sus productos por estación y el tiempo estimado real
+  const pedidoVivo = enVivo?.pedidos.find((p) => p.id === currentOrder.id) ?? null;
+  const itemVivo = new Map((pedidoVivo?.items ?? []).map((i) => [i.id, i]));
+  const porEstacion = pedidoVivo ? resumenPorEstacion(pedidoVivo) : null;
+  const sublabel = pedidoVivo?.faltan_min && ["confirmed", "in_kitchen"].includes(currentOrder.status) && !porPagarAlMozo(currentOrder)
+    ? `Listo en aprox. ${pedidoVivo.faltan_min} min · según cada plato y lo cargada que está la cocina`
+    : currentStatusInfo.sublabel;
+  const ESTADO_ITEM: Record<string, { texto: string; clase: string }> = {
+    confirmed: { texto: "Recibido", clase: "text-muted-foreground" },
+    in_kitchen: { texto: "Preparando", clase: "text-primary" },
+    ready: { texto: "¡Listo!", clase: "text-[#1A6B45] font-bold" },
+    delivered: { texto: "Entregado", clase: "text-[#1A6B45]" },
+  };
+  const otros = (enVivo?.personas ?? []).filter((x) => !x.yo);
+  const yo = enVivo?.personas.find((x) => x.yo);
+
+  const repetir = async () => {
+    setRepitiendo(true);
+    const r = await otraRonda(currentOrder.id);
+    setRepitiendo(false);
+    if (!r.agregados) {
+      toast({ title: "No pudimos repetir tu pedido", description: r.agotados.length ? "Lo que pediste está agotado por ahora." : undefined, variant: "destructive" });
+      return;
+    }
+    if (r.agotados.length) toast({ title: "Agregamos tu ronda", description: `Agotado por ahora: ${r.agotados.join(", ")}` });
+    navigate(`/${slug}/cart${qs}`);
+  };
+
+  const guardarAlias = async () => {
+    if (!tableToken || !alias.trim()) return;
+    const r = await ponerAlias(tableToken, alias);
+    if (r.ok === false) { toast({ title: "No se pudo guardar tu nombre", description: r.error, variant: "destructive" }); return; }
+    setAliasModal(false);
+    recargarEnVivo();
+  };
+
+  const pedirPermisoAviso = async () => {
+    try { setPermisoAviso(await Notification.requestPermission()); } catch { setPermisoAviso("unsupported"); }
+  };
+
   const modifiersLabel = (mods: Json) => {
     if (!Array.isArray(mods) || mods.length === 0) return null;
     return (mods as Array<{ modifierName: string }>).map((m) => m.modifierName).join(", ");
@@ -498,8 +594,21 @@ export default function TrackingPage() {
             #{String(currentOrder.order_number).padStart(3, "0")}
           </motion.div>
           <p className="text-sm text-muted-foreground">
-            Mesa {tableData?.number || "?"}{tableData?.name ? ` · ${tableData.name}` : ""}
+            Mesa {tableData?.number || "?"}{tableData?.name && tableData.name !== `Mesa ${tableData.number}` ? ` · ${tableData.name}` : ""}
           </p>
+          {enVivo && (
+            <button
+              type="button"
+              onClick={() => { setAlias(yo?.alias ?? ""); setAliasModal(true); }}
+              className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground underline-offset-2 hover:underline"
+            >
+              <Users className="h-3.5 w-3.5" />
+              En tu mesa: {yo?.alias ? `Tú (${yo.alias})` : "Tú"}
+              {otros.filter((x) => x.alias).map((x) => ` · ${x.alias}`).join("")}
+              {otros.filter((x) => !x.alias).length > 0 && ` · ${otros.filter((x) => !x.alias).length} ${otros.filter((x) => !x.alias).length === 1 ? "invitado" : "invitados"}`}
+              {!yo?.alias && <span className="ml-1 font-semibold" style={{ color: primaryColor }}>Ponte un nombre</span>}
+            </button>
+          )}
           {!isCancelled && (
             <p className={`mt-2 text-sm font-semibold ${currentStatusInfo.color}`}>{currentStatusInfo.label}</p>
           )}
@@ -547,8 +656,21 @@ export default function TrackingPage() {
             </div>
 
             {/* Status sublabel */}
-            {currentStatusInfo.sublabel && (
-              <p className="text-xs text-muted-foreground mt-3 text-center">{currentStatusInfo.sublabel}</p>
+            {sublabel && (
+              <p className="text-xs text-muted-foreground mt-3 text-center">{sublabel}</p>
+            )}
+
+            {/* Cada estación a su ritmo: lo listo no espera lo que sigue en preparación */}
+            {porEstacion && (
+              <p className="mt-3 rounded-xl px-3 py-2 text-center text-sm font-semibold text-foreground" style={{ backgroundColor: `${primaryColor}14` }}>
+                ✅ {porEstacion}
+              </p>
+            )}
+
+            {permisoAviso === "default" && !["ready", "delivered"].includes(currentOrder.status) && (
+              <button type="button" onClick={pedirPermisoAviso} className="mx-auto mt-3 block text-xs font-semibold underline-offset-2 hover:underline" style={{ color: primaryColor }}>
+                🔔 Avísame cuando esté listo
+              </button>
             )}
 
             <AnimatePresence>
@@ -580,6 +702,12 @@ export default function TrackingPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-card-foreground">
                   {item.quantity}× {item.menu_item_name}
+                  {itemVivo.get(item.id) && ESTADO_ITEM[itemVivo.get(item.id)!.estado] && !isCancelled && (
+                    <span className={`ml-2 text-xs ${ESTADO_ITEM[itemVivo.get(item.id)!.estado].clase}`}>
+                      · {ESTADO_ITEM[itemVivo.get(item.id)!.estado].texto}
+                      {itemVivo.get(item.id)!.estacion && ["confirmed", "in_kitchen"].includes(itemVivo.get(item.id)!.estado) && ` en ${itemVivo.get(item.id)!.estacion}`}
+                    </span>
+                  )}
                 </span>
                 <span className="text-sm text-muted-foreground">{formatCLP(item.subtotal)}</span>
               </div>
@@ -679,6 +807,17 @@ export default function TrackingPage() {
         {!isCancelled && (
           <div className="space-y-3 mb-6">
             <hr className="border-border" />
+
+            {/* Otra ronda: repite lo que pediste con un toque (el precio lo calcula el servidor al pagar) */}
+            <button
+              onClick={repetir}
+              disabled={repitiendo}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 py-3.5 text-sm font-bold transition-transform active:scale-[0.98] disabled:opacity-60"
+              style={{ borderColor: primaryColor, color: primaryColor }}
+            >
+              <Repeat className="h-4 w-4" />
+              Otra ronda · repetir este pedido
+            </button>
 
             <button
               onClick={() => navigate(`/${slug}/menu`)}
@@ -801,6 +940,34 @@ export default function TrackingPage() {
           </>
         )}
       </div>
+
+      {/* Mi nombre en la mesa (lo ven los demás de la mesa) */}
+      <Dialog open={aliasModal} onOpenChange={setAliasModal}>
+        <DialogContent className="max-w-[340px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>¿Cómo te llamas?</DialogTitle>
+            <DialogDescription>Así te ven los demás en tu mesa. Es opcional.</DialogDescription>
+          </DialogHeader>
+          <input
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") guardarAlias(); }}
+            maxLength={30}
+            placeholder="Tu nombre o apodo"
+            aria-label="Tu nombre en la mesa"
+            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground"
+            autoFocus
+          />
+          <button
+            onClick={guardarAlias}
+            disabled={!alias.trim()}
+            className="w-full rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
+            style={{ backgroundColor: primaryColor }}
+          >
+            Listo
+          </button>
+        </DialogContent>
+      </Dialog>
 
       {/* Waiter call modal — select reason */}
       <Dialog open={waiterModalOpen} onOpenChange={setWaiterModalOpen}>

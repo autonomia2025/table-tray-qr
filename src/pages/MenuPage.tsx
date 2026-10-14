@@ -10,7 +10,11 @@ import MenuItemCard from "@/components/menu/MenuItemCard";
 import FloatingCartBar from "@/components/menu/FloatingCartBar";
 import MenuSkeleton from "@/components/menu/MenuSkeleton";
 import BotonCuenta from "@/components/comensal/BotonCuenta";
-import { useTableSession } from "@/hooks/useTableSession";
+import { useComensalEnMesa, useTableSession } from "@/hooks/useTableSession";
+import { loDeSiempre } from "@/lib/mesaEnVivo";
+import { formatCLP } from "@/lib/format";
+import { useToast } from "@/hooks/use-toast";
+import { Plus } from "lucide-react";
 
 /* ---------- types ---------- */
 interface MenuItem {
@@ -113,7 +117,18 @@ export default function MenuPage() {
   const totalPrice = useCartStore((s) => s.getTotalPrice());
 
   // Un QR por mesa: ?t=token identifica la mesa y queda guardada en el dispositivo
-  const { table: activeTable, status: tableStatus } = useTableSession();
+  const { table: activeTable, status: tableStatus, token: tableToken } = useTableSession();
+  const { toast } = useToast();
+  const addItem = useCartStore((s) => s.addItem);
+
+  // "Lo de siempre" (fase 3.4): lo que esta persona pide visita tras visita, para pedirlo con un toque
+  const enMesa = useComensalEnMesa(tableToken);
+  const { data: siempre = [] } = useQuery({
+    queryKey: ["lo-de-siempre", tableToken, enMesa],
+    queryFn: () => loDeSiempre(tableToken!),
+    enabled: !!tableToken && enMesa === true,
+    staleTime: 60_000,
+  });
 
   // Resolve branchId if not in state
   const { data: resolvedIds } = useQuery({
@@ -305,6 +320,35 @@ export default function MenuPage() {
 
       {/* Content */}
       <main className="px-4 pt-4">
+        {filteredItems === null && siempre.length > 0 && (
+          <section className="mb-6 rounded-2xl border border-border bg-card p-4" aria-labelledby="lo-de-siempre">
+            <h2 id="lo-de-siempre" className="mb-1 text-base font-extrabold text-foreground">⭐ Lo de siempre</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Lo que más pides aquí. Agrégalo con un toque.</p>
+            <div className="flex flex-col gap-2">
+              {siempre.map((p) => (
+                <div key={p.menu_item_id} className="flex items-center gap-3">
+                  {p.imagen && <img src={p.imagen} alt="" className="h-11 w-11 shrink-0 rounded-xl object-cover" />}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{p.nombre}</p>
+                    <p className="text-xs text-muted-foreground">{formatCLP(p.precio)} · lo pediste en {p.visitas} visitas</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Agregar ${p.nombre}`}
+                    onClick={() => {
+                      addItem({ menuItemId: p.menu_item_id, name: p.nombre, unitPrice: p.precio, quantity: 1, selectedModifiers: [], itemNotes: "" });
+                      toast({ title: `${p.nombre} al carrito` });
+                    }}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white active:scale-95"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         {filteredItems !== null ? (
           filteredItems.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">

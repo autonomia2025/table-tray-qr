@@ -2651,6 +2651,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      _minutos_plato: { Args: { _menu_item_id: string }; Returns: number }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _turno_abierto: { Args: { _staff_id: string }; Returns: string }
@@ -2786,11 +2787,13 @@ export type Database = {
         Args: { _motivo?: string; _qr_token: string }
         Returns: Json
       }
+      lo_de_siempre: { Args: { _qr_token: string }; Returns: Json }
       marcar_agotado: {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined
       }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
+      mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }

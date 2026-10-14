@@ -404,7 +404,7 @@ export default function CheckoutPage() {
             className="mt-6 w-full rounded-2xl py-4 text-base font-semibold text-white"
             style={{ backgroundColor: primaryColor }}
           >
-            Pedir otra ronda
+            Seguir pidiendo
           </button>
           <button
             onClick={() => navigate(`/${slug}/tracking${qs}`)}

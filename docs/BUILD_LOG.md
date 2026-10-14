@@ -4,6 +4,43 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.4: la mesa en vivo para el comensal ✅
+**Antes:**
+- El seguimiento decía siempre "Listo en aprox. 10-15 min", sin importar el plato ni la cocina.
+- La cerveza lista no se notaba si la comida seguía en preparación.
+- El botón "Pedir otra ronda" solo volvía a la carta.
+
+**Ahora (migración `20261014090000_mesa_en_vivo.sql`):**
+- **`mi_mesa_en_vivo`** (solo para quien está en la mesa):
+  - quién está en la mesa (su nombre o "invitado"; cada uno puede ponerse un nombre);
+  - **mis** pedidos, con cada producto, su estado y su estación;
+  - un **tiempo estimado real**: lo que de verdad tardó cada plato los últimos 30 días (mediana, con al menos 5 casos) o el tiempo que puso el dueño, más la fila de su estación (unos 3 productos a la vez; cada tanda delante suma 2 minutos).
+  - El comensal sigue sin leer estaciones ni pedidos ajenos.
+- **Seguimiento:**
+  - "Listo en aprox. N min · según cada plato y lo cargada que está la cocina";
+  - cada producto con "Recibido en Barra", "Preparando" o "¡Listo!";
+  - "✅ Ya está listo: Agua mineral. Sigue en Cocina: Barros Luco.";
+  - "En tu mesa: Tú (Juan) · 1 invitado".
+- **Aviso cuando algo queda listo:** sonido, vibración y un mensaje, y una notificación del navegador si la pestaña está en segundo plano y el comensal lo permitió ("🔔 Avísame cuando esté listo"). Con la pantalla bloqueada queda para el paso 3.4b (app instalable y notificaciones push).
+- **"Otra ronda · repetir este pedido":** copia el pedido al carrito con sus opciones y deja fuera lo agotado. El precio lo vuelve a calcular el servidor al pagar. En la pantalla de pago, el botón que solo volvía a la carta ahora dice "Seguir pidiendo".
+- **"⭐ Lo de siempre"** arriba de la carta (`lo_de_siempre`): lo que esa persona pidió en dos visitas o más, si hoy está disponible y no tiene opciones obligatorias. Se agrega con un toque. Sirve también para un invitado que vuelve con el mismo celular.
+- Ya no se repite "Mesa 2 · Mesa 2" cuando el nombre de la mesa es igual a su número.
+
+**Pruebas:**
+- `tests/seguridad/f3-4-mesa-en-vivo.test.ts`: 3 pruebas.
+  - Productos por estación con tiempo estimado; lo listo no espera lo demás; al quedar todo listo, ya no hay estimado.
+  - Se ve quién está, pero cada uno ve solo sus pedidos; quien no está en la mesa no ve nada.
+  - "Lo de siempre" aparece con dos visitas y nunca para alguien nuevo.
+- `e2e/mesa-en-vivo.spec.ts`:
+  - el comensal ve su pedido por estación y se pone nombre;
+  - la barra deja lista el agua y le llega el aviso;
+  - "Otra ronda" llena el carrito;
+  - tras dos visitas, la carta le ofrece "Lo de siempre".
+- **Base desechable:** 156 de 156 de seguridad y 62 de 62 de navegador.
+- **Base de pruebas:** 140 de seguridad (más 16 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 3.3: control del equipo ✅
 **Antes:** el dueño no sabía quién hacía qué ni cuánto tardaban. El semáforo del mozo tenía minutos fijos en el código, y nadie avisaba si un plato listo se quedaba enfriándose.
 

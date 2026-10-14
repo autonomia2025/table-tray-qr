@@ -51,7 +51,12 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 9. **Turnos y propinas:** con la cuenta de Camila, arriba en Mesas aparece "Empezar turno" (o empieza solo al tomar una mesa). Un cliente paga con propina; cuando Camila toma esa mesa, la propina aparece en su barra verde "En turno". En Perfil ve su turno (duración, mesas, ventas, propinas) y no puede terminarlo mientras tenga mesas a cargo. El dueño ve todos los turnos con sus propinas en Equipo → Turnos.
 10. **Cocina y barra:** abre el KDS en dos pantallas con la cuenta de cocina y elige arriba "Barra" en una y "Cocina" en la otra. Pide desde la mesa un agua y un Barros Luco: el agua aparece solo en la barra y el sándwich solo en la cocina. Cuando la barra marca lista el agua, Camila ve la mesa "Listo en Barra · lo demás sigue en preparación" y puede llevarla al tiro. Las estaciones se crean en Sucursal → Estaciones, y cada categoría elige la suya en Carta ("Se prepara en").
 11. **Control del equipo:** en Equipo, "Desempeño del equipo" muestra a cada mozo (mesas cerradas, entregas, ventas, ticket, propinas, cuánto tarda en responder y en llevar lo listo, con semáforo, y su calificación) por hoy, 7 o 30 días. Debajo se ponen metas (el demo trae una general: $150.000 diarios). Camila ve el avance en su Perfil. Si algo listo pasa del objetivo (Sucursal → Tiempos objetivo, 5 minutos en el demo), su pantalla muestra "Hay pedidos listos esperando" y suena, y la cocina marca la tarjeta en rojo.
-12. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
+12. **La mesa en vivo (comensal):** pide un agua y un Barros Luco y abre "Ver estado de mi pedido":
+    - aparece "Listo en aprox. 12 min" y cada producto con su estación;
+    - toca "En tu mesa" para ponerte un nombre.
+
+    Cuando la barra deja lista el agua, el comensal recibe el aviso y lee "Ya está listo: Agua mineral. Sigue en Cocina: Barros Luco". "Otra ronda" copia el pedido al carrito. Si pides lo mismo en dos visitas, la tercera vez la carta te ofrece "⭐ Lo de siempre" arriba.
+13. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
 ## Experiencia del comensal (invitado o cliente)
 
