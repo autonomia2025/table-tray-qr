@@ -51,4 +51,4 @@ supabase/.temp/
 supabase/.branches/
 
 # Fotos de los recorridos por fase (se publican en el informe, no van al repositorio)
-e2e/recorridos/fase-*/
+e2e/recorridos/*/
