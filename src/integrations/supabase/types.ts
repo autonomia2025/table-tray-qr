@@ -1654,11 +1654,14 @@ export type Database = {
           amount: number
           authorized_by: string | null
           authorized_by_name: string | null
+          authorized_role: string | null
           created_at: string
+          devolucion: string | null
           external_reference: string | null
           id: string
           payment_id: string
           reason: string
+          resuelto_at: string | null
           status: string
           tenant_id: string
         }
@@ -1666,11 +1669,14 @@ export type Database = {
           amount: number
           authorized_by?: string | null
           authorized_by_name?: string | null
+          authorized_role?: string | null
           created_at?: string
+          devolucion?: string | null
           external_reference?: string | null
           id?: string
           payment_id: string
           reason: string
+          resuelto_at?: string | null
           status?: string
           tenant_id: string
         }
@@ -1678,11 +1684,14 @@ export type Database = {
           amount?: number
           authorized_by?: string | null
           authorized_by_name?: string | null
+          authorized_role?: string | null
           created_at?: string
+          devolucion?: string | null
           external_reference?: string | null
           id?: string
           payment_id?: string
           reason?: string
+          resuelto_at?: string | null
           status?: string
           tenant_id?: string
         }
@@ -2473,6 +2482,10 @@ export type Database = {
         }
         Returns: Json
       }
+      confirmar_reembolso: {
+        Args: { _ok: boolean; _referencia?: string; _refund_id: string }
+        Returns: Json
+      }
       cotizar: {
         Args: {
           _items?: Json
@@ -2562,6 +2575,15 @@ export type Database = {
           _idempotency_key: string
           _metodo: string
           _propina?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
+      reservar_reembolso: {
+        Args: {
+          _monto: number
+          _motivo: string
+          _payment_id: string
           _user_id: string
         }
         Returns: Json

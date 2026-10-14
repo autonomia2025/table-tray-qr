@@ -4,6 +4,37 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 2.C: reembolsos atómicos ✅
+**Antes:**
+- reembolsaban solo el dueño o el administrador;
+- se llamaba al proveedor y después se anotaba;
+- dos reembolsos al mismo tiempo podían devolver más de lo cobrado;
+- la lealtad se buscaba por un correo parecido (`ilike`).
+
+**Ahora (migración `20261014030000_reembolsos.sql`, `refund-payment` publicada de nuevo):**
+1. **`reservar_reembolso`**:
+   - valida el rol: dueño, administrador, encargado o **caja** (brief 5.4);
+   - exige motivo, de 5 a 500 letras;
+   - **bloquea el pago y cuenta los reembolsos en curso**, así que nunca se devuelve más de lo cobrado (consumo más propina), ni con dos pedidos a la vez.
+2. La plata se devuelve por la pasarela o, en pagos en **efectivo o POS, en el local** (`devolucion = local`), sin llamar a la pasarela.
+3. **`confirmar_reembolso`** deja todo junto: el pago queda "reembolsado" o "reembolso parcial"; si es total, los pedidos de ese pago quedan "reembolsados"; la sesión descuenta lo devuelto; y la **auditoría** guarda quién, con qué rol, cuánto y por qué. Es idempotente: si falla la devolución, la reserva se libera.
+- La lealtad solo se revierte en el primer reembolso total, y por coincidencia exacta del correo.
+- Caja muestra "POS" como medio de pago.
+
+**Queda para la 2.D:** las propinas por mozo, calculadas por el servidor dentro del cierre de caja.
+
+**Pruebas:**
+- `tests/seguridad/f2c-reembolsos.test.ts`: 5 pruebas.
+  - Reembolso en partes por la caja, pedido reembolsado al completar, auditoría y nada de más.
+  - **Dos reembolsos totales a la vez: uno solo.**
+  - Sin motivo, con monto de más o sin rol (mozo, cocina, comensal, sin sesión): no.
+  - El efectivo se devuelve en el local.
+  - Nadie escribe reembolsos ni pagos desde el navegador.
+- `e2e/caja-reembolso.spec.ts`: un comensal paga y la cajera lo reembolsa con motivo. Queda "Reembolsado" y aparece en la pestaña Reembolsos.
+- **Base desechable:** 121 de seguridad y 57 de navegador. **Base de pruebas:** 114 de seguridad (más 7 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 2.B: pagar al mozo y cuenta abierta ✅
 **Decisión del fundador (1 de octubre):** al pagar, el comensal puede elegir "Pagar al mozo" (efectivo o POS) o, en locales con cuenta abierta, "Agregar a mi cuenta". Es un respaldo: lo principal sigue siendo pagar en la app.
 

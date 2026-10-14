@@ -56,6 +56,7 @@ const METHOD_LABELS: Record<string, string> = {
   google_pay: "Google Pay",
   card: "Tarjeta",
   cash: "Efectivo",
+  pos: "POS",
 };
 
 const STATUS_LABELS: Record<string, string> = {

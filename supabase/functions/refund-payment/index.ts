@@ -21,114 +21,57 @@ Deno.serve(async (req) => {
     const paymentId = typeof body?.payment_id === "string" ? body.payment_id : "";
     const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
     const amountRaw = Number.isFinite(body?.amount) ? Math.round(body.amount) : 0;
-
     if (!UUID_RE.test(paymentId)) return json({ error: "Pago inválido" }, 400);
-    if (reason.length < 3 || reason.length > 500) return json({ error: "Indica un motivo (3 a 500 caracteres)" }, 400);
 
-    const { data: payment } = await admin
-      .from("payments")
-      .select("*")
-      .eq("id", paymentId)
-      .maybeSingle();
-    if (!payment) return json({ error: "Pago no encontrado" }, 404);
-    if (payment.status !== "approved" && payment.status !== "partially_refunded") {
-      return json({ error: "Solo se pueden reembolsar pagos aprobados" }, 400);
+    /* 1. Reservar en la base (fase 2.C): valida rol, motivo y monto, y bloquea el pago. */
+    const { data: reserva, error: resErr } = await admin.rpc("reservar_reembolso", {
+      _user_id: callerId,
+      _payment_id: paymentId,
+      _monto: amountRaw > 0 ? amountRaw : null,
+      _motivo: reason,
+    });
+    if (resErr || !reserva) {
+      const mensaje = resErr?.message && !/[a-z]+_[a-z]+|violates|permission|function/i.test(resErr.message)
+        ? resErr.message
+        : "No se pudo reembolsar. Intenta de nuevo.";
+      return json({ error: mensaje }, resErr?.code === "42501" ? 403 : 409);
+    }
+    const r = reserva as { refund_id: string; monto: number; devolucion: string; referencia_pago: string | null };
+
+    /* 2. Devolver la plata: por la pasarela, o en el local (efectivo o POS: lo devuelve la caja). */
+    let ok = true;
+    let referencia: string | null = null;
+    if (r.devolucion === "pasarela") {
+      const resultado = await providerRefund(r.referencia_pago, r.monto);
+      ok = resultado.ok;
+      referencia = resultado.externalReference;
     }
 
-    // Autorización: dueño/admin del tenant o platform admin
-    const { data: platformAdmin } = await admin
-      .from("platform_admins")
-      .select("id")
-      .eq("user_id", callerId)
-      .maybeSingle();
-
-    let allowed = !!platformAdmin;
-    let authorizedName = "Platform admin";
-    if (!allowed) {
-      const { data: member } = await admin
-        .from("tenant_members")
-        .select("role")
-        .eq("user_id", callerId)
-        .eq("tenant_id", payment.tenant_id)
-        .eq("is_active", true)
-        .maybeSingle();
-      allowed = !!member && ["owner", "admin"].includes(member.role);
-      authorizedName = member?.role ?? "";
+    /* 3. Confirmar: pago, pedidos, sesión y auditoría juntos. */
+    const { data: conf, error: confErr } = await admin.rpc("confirmar_reembolso", {
+      _refund_id: r.refund_id,
+      _ok: ok,
+      _referencia: referencia,
+    });
+    if (confErr || !conf) {
+      console.error("confirmar_reembolso error", confErr);
+      return json({ error: "El reembolso quedó en revisión. No lo repitas." }, 500);
     }
-    if (!allowed) return json({ error: "Solo el dueño o administrador puede reembolsar" }, 403);
+    const confirmacion = conf as { estado: string; completo: boolean };
+    if (confirmacion.estado === "failed") return json({ error: "El medio de pago rechazó el reembolso" }, 502);
 
-    const totalCharged = (payment.amount || 0) + (payment.tip_amount || 0);
-    const alreadyRefunded = payment.refunded_amount || 0;
-    const maxRefundable = totalCharged - alreadyRefunded;
-    const amount = amountRaw > 0 ? amountRaw : maxRefundable;
-    if (amount <= 0 || amount > maxRefundable) {
-      return json({ error: `Monto a reembolsar inválido (máximo ${maxRefundable})` }, 400);
-    }
-
-    const providerResult = await providerRefund(payment.external_reference, amount);
-    if (!providerResult.ok) return json({ error: "El proveedor rechazó el reembolso" }, 502);
-
-    const { data: refundRow, error: refundErr } = await admin
-      .from("refunds")
-      .insert({
-        tenant_id: payment.tenant_id,
-        payment_id: payment.id,
-        amount,
-        reason,
-        authorized_by: callerId,
-        authorized_by_name: userData.user.email ?? authorizedName,
-        external_reference: providerResult.externalReference,
-      })
-      .select("*")
-      .single();
-
-    if (refundErr) {
-      console.error("refund insert error", refundErr);
-      return json({ error: "No se pudo registrar el reembolso" }, 500);
-    }
-
-    const newRefunded = alreadyRefunded + amount;
-    const fullyRefunded = newRefunded >= totalCharged;
-
-    await admin
-      .from("payments")
-      .update({
-        refunded_amount: newRefunded,
-        status: fullyRefunded ? "refunded" : "partially_refunded",
-      })
-      .eq("id", payment.id);
-
-    // Revertir en la sesión y los pedidos
-    if (payment.session_id) {
-      const { data: session } = await admin
-        .from("table_sessions")
-        .select("id, paid_amount")
-        .eq("id", payment.session_id)
-        .maybeSingle();
-      if (session) {
-        const back = Math.min(session.paid_amount || 0, Math.min(amount, payment.amount || 0));
-        await admin
-          .from("table_sessions")
-          .update({ paid_amount: (session.paid_amount || 0) - back })
-          .eq("id", session.id);
-      }
-      if (fullyRefunded) {
-        const query = admin.from("orders").update({ payment_status: "refunded" });
-        if (payment.order_id) {
-          await query.eq("id", payment.order_id);
-        } else {
-          await query.eq("session_id", payment.session_id).eq("payment_status", "paid");
-        }
-      }
-    }
+    const fullyRefunded = confirmacion.completo;
+    const amount = r.monto;
+    const { data: payment } = await admin.from("payments").select("*").eq("id", paymentId).single();
+    const { data: refundRow } = await admin.from("refunds").select("*").eq("id", r.refund_id).single();
 
     // Revertir lealtad
-    if (payment.customer_email) {
+    if (payment?.customer_email && fullyRefunded) {
       const { data: customer } = await admin
         .from("loyalty_customers")
         .select("*")
         .eq("tenant_id", payment.tenant_id)
-        .ilike("email", payment.customer_email)
+        .eq("email", payment.customer_email)
         .maybeSingle();
       if (customer && fullyRefunded) {
         const { data: programs } = await admin
@@ -153,7 +96,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ refund: refundRow, fully_refunded: fullyRefunded });
+    return json({ refund: refundRow, fully_refunded: fullyRefunded, devolucion: r.devolucion, amount });
   } catch (err) {
     console.error("refund-payment error", err);
     return json({ error: "Error procesando el reembolso" }, 500);
