@@ -454,6 +454,76 @@ export type Database = {
           },
         ]
       }
+      cotizaciones: {
+        Row: {
+          branch_id: string
+          created_at: string
+          estado: string
+          expira_at: string
+          id: string
+          items: Json | null
+          notas: string | null
+          order_ids: string[] | null
+          subtotal: number
+          table_id: string
+          tenant_id: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          estado?: string
+          expira_at?: string
+          id?: string
+          items?: Json | null
+          notas?: string | null
+          order_ids?: string[] | null
+          subtotal: number
+          table_id: string
+          tenant_id: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          estado?: string
+          expira_at?: string
+          id?: string
+          items?: Json | null
+          notas?: string | null
+          order_ids?: string[] | null
+          subtotal?: number
+          table_id?: string
+          tenant_id?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -507,6 +577,82 @@ export type Database = {
           monto?: number
         }
         Relationships: []
+      }
+      intentos_pago: {
+        Row: {
+          cotizacion_id: string
+          created_at: string
+          estado: string
+          id: string
+          idempotency_key: string
+          metodo: string
+          monto: number
+          motivo: string | null
+          payment_id: string | null
+          propina: number
+          proveedor: string | null
+          referencia_externa: string | null
+          resuelto_at: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          cotizacion_id: string
+          created_at?: string
+          estado?: string
+          id?: string
+          idempotency_key: string
+          metodo: string
+          monto: number
+          motivo?: string | null
+          payment_id?: string | null
+          propina?: number
+          proveedor?: string | null
+          referencia_externa?: string | null
+          resuelto_at?: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          cotizacion_id?: string
+          created_at?: string
+          estado?: string
+          id?: string
+          idempotency_key?: string
+          metodo?: string
+          monto?: number
+          motivo?: string | null
+          payment_id?: string | null
+          propina?: number
+          proveedor?: string | null
+          referencia_externa?: string | null
+          resuelto_at?: string | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intentos_pago_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intentos_pago_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intentos_pago_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_activities: {
         Row: {
@@ -1166,6 +1312,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          alerta: string | null
           branch_id: string
           cancelled_reason: string | null
           confirmed_at: string | null
@@ -1187,6 +1334,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          alerta?: string | null
           branch_id: string
           cancelled_reason?: string | null
           confirmed_at?: string | null
@@ -1208,6 +1356,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          alerta?: string | null
           branch_id?: string
           cancelled_reason?: string | null
           confirmed_at?: string | null
@@ -1337,6 +1486,7 @@ export type Database = {
           external_reference: string | null
           id: string
           idempotency_key: string | null
+          intento_id: string | null
           method: string
           order_id: string | null
           provider: string
@@ -1344,11 +1494,13 @@ export type Database = {
           refunded_amount: number
           session_id: string | null
           settlement_id: string | null
+          staff_id: string | null
           status: string
           table_id: string | null
           tenant_id: string
           tip_amount: number
           updated_at: string
+          user_id: string | null
           wallet: string | null
         }
         Insert: {
@@ -1359,6 +1511,7 @@ export type Database = {
           external_reference?: string | null
           id?: string
           idempotency_key?: string | null
+          intento_id?: string | null
           method?: string
           order_id?: string | null
           provider?: string
@@ -1366,11 +1519,13 @@ export type Database = {
           refunded_amount?: number
           session_id?: string | null
           settlement_id?: string | null
+          staff_id?: string | null
           status?: string
           table_id?: string | null
           tenant_id: string
           tip_amount?: number
           updated_at?: string
+          user_id?: string | null
           wallet?: string | null
         }
         Update: {
@@ -1381,6 +1536,7 @@ export type Database = {
           external_reference?: string | null
           id?: string
           idempotency_key?: string | null
+          intento_id?: string | null
           method?: string
           order_id?: string | null
           provider?: string
@@ -1388,11 +1544,13 @@ export type Database = {
           refunded_amount?: number
           session_id?: string | null
           settlement_id?: string | null
+          staff_id?: string | null
           status?: string
           table_id?: string | null
           tenant_id?: string
           tip_amount?: number
           updated_at?: string
+          user_id?: string | null
           wallet?: string | null
         }
         Relationships: [
@@ -1415,6 +1573,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
             referencedColumns: ["id"]
           },
           {
@@ -2293,6 +2458,37 @@ export type Database = {
         Args: { _motivo?: string; _table_id: string }
         Returns: Json
       }
+      confirmar_pago: {
+        Args: {
+          _aprobado: boolean
+          _correo?: string
+          _intento_id: string
+          _monto_cobrado: number
+          _payload?: Json
+          _proveedor: string
+          _referencia: string
+        }
+        Returns: Json
+      }
+      cotizar: {
+        Args: {
+          _items?: Json
+          _notas?: string
+          _order_ids?: string[]
+          _qr_token: string
+        }
+        Returns: Json
+      }
+      crear_cotizacion: {
+        Args: {
+          _items?: Json
+          _notas?: string
+          _order_ids?: string[]
+          _qr_token: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       crear_pedido_mozo: {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
@@ -2339,6 +2535,16 @@ export type Database = {
         Returns: boolean
       }
       reiniciar_demo: { Args: never; Returns: Json }
+      reservar_intento_pago: {
+        Args: {
+          _cotizacion_id: string
+          _idempotency_key: string
+          _metodo: string
+          _propina?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       sa_activar_local: {
         Args: { _activo: boolean; _tenant_id: string }
         Returns: undefined

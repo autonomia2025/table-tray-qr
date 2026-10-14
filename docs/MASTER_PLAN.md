@@ -50,7 +50,16 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | 1.9 | Precios por el servidor y pedido manual del mozo por el servidor (cierra la inserción provisoria de pedidos) | ✅ |
 | 1.10 | Compuerta de seguridad: barrido final de reglas y funciones, ataques del diagnóstico, asesor de Supabase; auditoría automática en cada cambio | ✅ |
 
-## Fase 2 — Núcleo de la plata 🔨 (siguiente)
+## Fase 2 — Núcleo de la plata 🔨
+
+| Paso | Qué | Estado |
+|---|---|---|
+| 2.A | Cotización con precio congelado, intento reservado antes de cobrar y confirmación atómica (`confirmar_pago`); pago tardío y producto agotado según política; mozo de la mesa en cada pago | ✅ |
+| 2.B | "Pagar al mozo" (efectivo o POS) y "Agregar a mi cuenta" en cuenta abierta | ⏳ |
+| 2.C | Caja del cajero y reembolsos atómicos | ⏳ |
+| 2.D | Día de negocio y cierre de caja con conciliación automática | ⏳ |
+| 2.E | Compuerta de pruebas de plata | ⏳ |
+
 
 Cotización con precio congelado → intento de pago reservado antes de cobrar → confirmación atómica (`confirmar_pago`) → checkout → **"Pagar al mozo"** (efectivo o POS: el mozo cobra, lo registra y recién ahí va a cocina) → caja con permisos del cajero → reembolsos → día de negocio y **cierre de caja con conciliación automática** (al cerrar, el sistema cuadra solo lo cobrado en la app, el efectivo y el POS registrados y los reembolsos, y marca las diferencias; el cierre queda bloqueado) → compuerta de pruebas de plata (pago repetido, pagos simultáneos, pago tardío, reembolso doble, dos personas pagando lo último).
 

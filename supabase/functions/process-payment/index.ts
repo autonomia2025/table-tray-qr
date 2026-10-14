@@ -1,8 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, UUID_RE } from "../_shared/http.ts";
-import { charge, PROVIDER_NAME, type PaymentMethod } from "../_shared/provider.ts";
+import { charge, refund, PROVIDER_NAME, type PaymentMethod } from "../_shared/provider.ts";
 
 const METHODS: PaymentMethod[] = ["apple_pay", "google_pay", "card", "cash"];
+
+/** Los mensajes de la base vienen en español para el comensal; si llega algo técnico, uno genérico. */
+function mensajeComensal(mensaje?: string): string {
+  if (!mensaje || /[a-z]+_[a-z]+|violates|permission|function|syntax/i.test(mensaje)) {
+    return "No pudimos procesar tu pedido. Intenta de nuevo.";
+  }
+  return mensaje;
+}
 
 interface CartModifierIn {
   groupName?: string;
@@ -40,249 +48,136 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
 
     const tableToken = typeof body?.table_token === "string" ? body.table_token.trim() : "";
+    const cotizacionId = typeof body?.cotizacion_id === "string" && UUID_RE.test(body.cotizacion_id) ? body.cotizacion_id : null;
     const orderId = typeof body?.order_id === "string" ? body.order_id : null;
+    const orderIds: string[] = Array.isArray(body?.order_ids)
+      ? body.order_ids.filter((x: unknown) => typeof x === "string" && UUID_RE.test(x)).slice(0, 50)
+      : [];
     const method: PaymentMethod = METHODS.includes(body?.method) ? body.method : "card";
     const tipRaw = Number.isFinite(body?.tip_amount) ? Math.round(body.tip_amount) : 0;
     const email = correoVerificado;
+    // La clave única del pago la manda la app; si no viene, cada llamada es un intento distinto.
     const idempotencyKey =
-      typeof body?.idempotency_key === "string" && body.idempotency_key.length <= 100
+      typeof body?.idempotency_key === "string" && body.idempotency_key.length >= 8 && body.idempotency_key.length <= 100
         ? body.idempotency_key
-        : null;
+        : crypto.randomUUID();
     const redeemRewardId = typeof body?.redeem_reward_id === "string" ? body.redeem_reward_id : null;
     const cartItems: CartItemIn[] = Array.isArray(body?.cart_items) ? body.cart_items.slice(0, 50) : [];
     const orderNotes =
       typeof body?.order_notes === "string" ? body.order_notes.trim().slice(0, 300) : "";
-    const isCartCheckout = cartItems.length > 0;
 
     if (!tableToken || tableToken.length > 200) return json({ error: "Mesa inválida" }, 400);
     if (orderId && !UUID_RE.test(orderId)) return json({ error: "Pedido inválido" }, 400);
     if (tipRaw < 0 || tipRaw > 5_000_000) return json({ error: "Propina inválida" }, 400);
+    if (method === "cash") return json({ error: "El efectivo se le paga al mozo." }, 400);
 
-    /* ---------- idempotencia ---------- */
-    if (idempotencyKey) {
-      const { data: existing } = await admin
-        .from("payments")
-        .select("*")
-        .eq("idempotency_key", idempotencyKey)
-        .maybeSingle();
-      if (existing) return json({ payment: existing, duplicate: true, approved: existing.status === "approved" });
-    }
-
-    /* ---------- mesa ---------- */
     const { data: table } = await admin
       .from("tables")
-      .select("id, number, tenant_id, branch_id, status")
+      .select("id, number, tenant_id, branch_id")
       .eq("qr_token", tableToken)
       .maybeSingle();
     if (!table) return json({ error: "QR de mesa no válido" }, 404);
 
-    /* ---------- sesión (se crea si hace falta en checkout) ---------- */
-    let { data: session } = await admin
-      .from("table_sessions")
-      .select("id, paid_amount, total_amount")
-      .eq("table_id", table.id)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (!session && isCartCheckout) {
-      const { data: created } = await admin
-        .from("table_sessions")
-        .insert({
-          tenant_id: table.tenant_id,
-          table_id: table.id,
-          branch_id: table.branch_id,
-          opened_at: new Date().toISOString(),
-          is_active: true,
-          total_amount: 0,
-        })
-        .select("id, paid_amount, total_amount")
+    /* ---------- 1. Cotización: el precio congelado (fase 2.A) ---------- */
+    let cotizacion = cotizacionId;
+    // Un pago repetido con la misma clave usa la cotización de la primera vez (no se cotiza de nuevo).
+    if (!cotizacion) {
+      const { data: previo } = await admin
+        .from("intentos_pago")
+        .select("cotizacion_id, user_id")
+        .eq("idempotency_key", idempotencyKey)
         .maybeSingle();
-      // Si otro comensal la abrió en el mismo instante (una sola sesión activa por mesa), se usa esa.
-      session = created ?? (await admin
-        .from("table_sessions")
-        .select("id, paid_amount, total_amount")
-        .eq("table_id", table.id)
-        .eq("is_active", true)
-        .maybeSingle()).data;
-      if (!session) return json({ error: "No se pudo abrir la sesión de mesa" }, 500);
+      if (previo && previo.user_id === comensal.id) cotizacion = previo.cotizacion_id;
     }
-
-    if (!session) return json({ error: "No hay una sesión activa en esta mesa" }, 404);
-
-    /* ---------- monto calculado en el servidor ---------- */
-    let amount = 0;
-    let pricedItems: Array<{
-      menu_item_id: string;
-      menu_item_name: string;
-      unit_price: number;
-      quantity: number;
-      subtotal: number;
-      selected_modifiers: unknown;
-      item_notes: string | null;
-    }> = [];
-    let targetOrders: Array<{ id: string }> = [];
-
-    if (isCartCheckout) {
-      // Precios desde la base (fase 1.9): una sola función para el comensal y el mozo.
-      // Valida opciones inventadas u obligatorias, agotados, horarios y que el local esté abierto.
-      const { data: precios, error: precioErr } = await admin.rpc("calcular_precios", {
-        _tenant_id: table.tenant_id,
-        _branch_id: table.branch_id,
-        _items: cartItems.slice(0, 50).map((ci) => ({
-          menu_item_id: ci.menu_item_id,
-          quantity: ci.quantity,
-          modifiers: Array.isArray(ci.modifiers)
-            ? ci.modifiers.slice(0, 20).map((m) => ({ groupName: m?.groupName, modifierName: m?.modifierName }))
-            : [],
-          notes: typeof ci.notes === "string" ? ci.notes : null,
-        })),
+    if (!cotizacion) {
+      const { data: cot, error: cotErr } = await admin.rpc("crear_cotizacion", {
+        _user_id: comensal.id,
+        _qr_token: tableToken,
+        _items: cartItems.length
+          ? cartItems.map((ci) => ({
+              menu_item_id: ci.menu_item_id,
+              quantity: ci.quantity,
+              modifiers: Array.isArray(ci.modifiers)
+                ? ci.modifiers.slice(0, 20).map((m) => ({ groupName: m?.groupName, modifierName: m?.modifierName }))
+                : [],
+              notes: typeof ci.notes === "string" ? ci.notes : null,
+            }))
+          : null,
+        _order_ids: orderIds.length ? orderIds : orderId ? [orderId] : null,
+        _notas: orderNotes || null,
       });
-      if (precioErr || !precios) {
-        // Los mensajes de la base vienen en español y pensados para el comensal.
-        const mensaje = precioErr?.message && !/[a-z]+_[a-z]+|violates|permission|function/i.test(precioErr.message)
-          ? precioErr.message
-          : "No pudimos calcular tu pedido. Intenta de nuevo.";
-        return json({ error: mensaje }, 409);
-      }
-      const resultado = precios as { total: number; items: typeof pricedItems };
-      pricedItems = resultado.items;
-      amount = resultado.total;
-    } else {
-      const { data: sessionOrders } = await admin
-        .from("orders")
-        .select("id, total_amount, payment_status, status")
-        .eq("session_id", session.id)
-        .neq("status", "cancelled");
-
-      const orders = sessionOrders ?? [];
-      const pending = orderId
-        ? orders.filter((o) => o.id === orderId && o.payment_status !== "paid")
-        : orders.filter((o) => o.payment_status !== "paid");
-
-      targetOrders = pending;
-      amount = pending.reduce((s, o) => s + (o.total_amount || 0), 0);
+      if (cotErr || !cot) return json({ error: mensajeComensal(cotErr?.message) }, 409);
+      cotizacion = (cot as { id: string }).id;
     }
 
-    if (amount <= 0) return json({ error: "No hay saldo pendiente en esta mesa" }, 400);
+    /* ---------- 2. Reservar el intento ANTES de cobrar (regla 4) ---------- */
+    const { data: reserva, error: resErr } = await admin.rpc("reservar_intento_pago", {
+      _cotizacion_id: cotizacion,
+      _user_id: comensal.id,
+      _idempotency_key: idempotencyKey,
+      _metodo: method,
+      _propina: tipRaw,
+    });
+    if (resErr || !reserva) return json({ error: mensajeComensal(resErr?.message) }, 409);
+    const intento = reserva as { id: string; estado: string; repetido: boolean; monto: number; propina: number; payment_id?: string };
 
-    const tip = Math.min(Math.max(tipRaw, 0), amount * 2);
-
-    /* ---------- cobro ---------- */
-    const reference = crypto.randomUUID();
-    const result = await charge({ amount, tip, method, reference, email });
-
-    /* ---------- crear pedido pagado (checkout) ---------- */
-    let createdOrder: { id: string; order_number: number } | null = null;
-    if (isCartCheckout && result.approved) {
-      // Número de pedido sin choques entre pedidos simultáneos (fase 1.9).
-      const { data: numero, error: numErr } = await admin.rpc("siguiente_numero_pedido", { _branch_id: table.branch_id });
-      if (numErr || !numero) {
-        console.error("order number error", numErr);
-        return json({ error: "No se pudo crear el pedido" }, 500);
+    if (intento.repetido) {
+      // Mismo pago repetido: se responde lo de antes, sin cobrar otra vez.
+      if (intento.estado === "aprobado" && intento.payment_id) {
+        const { data: previo } = await admin.from("payments").select("*").eq("id", intento.payment_id).single();
+        const { data: ped } = previo?.order_id
+          ? await admin.from("orders").select("id, order_number").eq("id", previo.order_id).single()
+          : { data: null };
+        return json({ payment: previo, duplicate: true, approved: true, order: ped, table_number: table.number });
       }
-
-      const { data: order, error: oErr } = await admin
-        .from("orders")
-        .insert({
-          tenant_id: table.tenant_id,
-          session_id: session.id,
-          table_id: table.id,
-          branch_id: table.branch_id,
-          order_number: numero as number,
-          status: "confirmed",
-          source: "customer_qr",
-          total_amount: amount,
-          notes: orderNotes || null,
-          confirmed_at: new Date().toISOString(),
-          payment_status: "paid",
-          paid_at: new Date().toISOString(),
-          user_id: comensal?.id ?? null,
-        })
-        .select("id, order_number")
-        .single();
-
-      if (oErr || !order) {
-        console.error("order insert error", oErr);
-        return json({ error: "No se pudo crear el pedido" }, 500);
-      }
-      createdOrder = order;
-
-      const { error: iErr } = await admin.from("order_items").insert(
-        pricedItems.map((p) => ({ ...p, tenant_id: table.tenant_id, order_id: order.id })),
-      );
-      if (iErr) console.error("order_items insert error", iErr);
-
-      await admin.from("tables").update({ status: "occupied" }).eq("id", table.id);
-      // El total de la sesión lo recalcula la base al crear el pedido (fase 1.5).
-
-      // popularidad
-      const counts = new Map<string, number>();
-      for (const p of pricedItems) {
-        counts.set(p.menu_item_id, (counts.get(p.menu_item_id) || 0) + p.quantity);
-      }
-      for (const [id, qty] of counts) {
-        const { data: mi } = await admin
-          .from("menu_items")
-          .select("total_orders")
-          .eq("id", id)
-          .maybeSingle();
-        if (mi) {
-          await admin
-            .from("menu_items")
-            .update({ total_orders: (mi.total_orders || 0) + qty })
-            .eq("id", id);
-        }
-      }
+      if (intento.estado === "reservado") return json({ error: "Tu pago se está procesando. Espera un momento." }, 409);
+      return json({ error: intento.estado === "rechazado" ? "Pago rechazado" : "Este pago fue devuelto", duplicate: true }, 402);
     }
 
-    const { data: payment, error: payErr } = await admin
-      .from("payments")
-      .insert({
-        tenant_id: table.tenant_id,
-        branch_id: table.branch_id,
-        session_id: session.id,
-        table_id: table.id,
-        order_id: createdOrder?.id ?? orderId,
-        amount,
-        tip_amount: tip,
-        method,
-        wallet: method === "apple_pay" || method === "google_pay" ? method : null,
-        status: result.approved ? "approved" : "failed",
-        provider: PROVIDER_NAME,
-        external_reference: result.externalReference,
-        provider_payload: result.payload,
-        customer_email: email || null,
-        idempotency_key: idempotencyKey,
-      })
-      .select("*")
-      .single();
+    /* ---------- 3. Cobro ---------- */
+    const result = await charge({ amount: intento.monto, tip: intento.propina, method, reference: intento.id, email });
 
-    if (payErr || !payment) {
-      console.error("payment insert error", payErr);
-      return json({ error: "No se pudo registrar el pago" }, 500);
+    /* ---------- 4. Confirmación atómica: pedido, pago, mesa y sesión juntos ---------- */
+    const { data: conf, error: confErr } = await admin.rpc("confirmar_pago", {
+      _intento_id: intento.id,
+      _aprobado: result.approved,
+      _monto_cobrado: result.approved ? intento.monto : 0,
+      _proveedor: PROVIDER_NAME,
+      _referencia: result.externalReference,
+      _payload: result.payload,
+      _correo: email || null,
+    });
+    if (confErr || !conf) {
+      // El cobro ya ocurrió pero no se pudo registrar: el intento queda "reservado" y se puede
+      // confirmar después con la misma clave (el aviso de la pasarela lo resuelve en la fase 4).
+      console.error("confirmar_pago error", confErr);
+      return json({ error: "Tu pago quedó en revisión. No lo vuelvas a intentar: te avisaremos." }, 500);
     }
+    const confirmacion = conf as {
+      estado: string; nuevo: boolean; payment_id?: string; order_id?: string; order_number?: number;
+      motivo?: string; reembolsar?: number;
+    };
 
-    if (!result.approved) {
-      return json({ payment, approved: false, error: result.declineReason ?? "Pago rechazado" }, 402);
+    if (confirmacion.estado === "rechazado") {
+      return json({ approved: false, error: result.declineReason ?? "Pago rechazado" }, 402);
     }
-
-    /* ---------- marcar pedidos y sesión ---------- */
-    if (!isCartCheckout) {
-      const paidIds = targetOrders.map((o) => o.id);
-      if (paidIds.length) {
-        await admin.from("orders").update({ payment_status: "paid", paid_at: new Date().toISOString() }).in("id", paidIds);
+    if (confirmacion.estado === "reembolsado") {
+      // Monto que no calza o ya pagado por otra persona: se devuelve automáticamente.
+      if (confirmacion.reembolsar && confirmacion.reembolsar > 0) {
+        await refund(result.externalReference, confirmacion.reembolsar);
       }
+      return json({ approved: false, refunded: true, error: confirmacion.motivo ?? "Te devolvimos el dinero" }, 409);
     }
 
-    const newPaid = (session.paid_amount || 0) + amount;
-    await admin
-      .from("table_sessions")
-      .update({ paid_amount: newPaid, tip_amount: tip > 0 ? tip : undefined })
-      .eq("id", session.id);
+    const { data: payment } = await admin.from("payments").select("*").eq("id", confirmacion.payment_id!).single();
+    const amount = intento.monto;
+    const createdOrder = confirmacion.order_number
+      ? { id: confirmacion.order_id!, order_number: confirmacion.order_number }
+      : null;
 
     /* ---------- lealtad ---------- */
     let loyalty: Record<string, unknown> | null = null;
-    if (email) {
+    if (email && confirmacion.nuevo && payment) {
       const { data: programs } = await admin
         .from("loyalty_programs")
         .select("*")

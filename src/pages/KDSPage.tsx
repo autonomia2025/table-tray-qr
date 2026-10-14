@@ -26,6 +26,8 @@ interface KDSOrder {
   confirmed_at: string | null;
   kitchen_accepted_at: string | null;
   notes: string | null;
+  /** Aviso del servidor para cocina (por ejemplo, producto agotado después de pagado). */
+  alerta: string | null;
   table_number: number;
   table_name: string | null;
   payment_status: string;
@@ -71,7 +73,7 @@ function playNewOrderSound() {
 async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
   const { data: o } = await supabase
     .from("orders")
-    .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id, payment_status")
+    .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, alerta, table_id, payment_status")
     .eq("id", orderId)
     .maybeSingle();
   if (!o) return null;
@@ -94,6 +96,7 @@ async function fetchOrderWithItems(orderId: string): Promise<KDSOrder | null> {
     confirmed_at: o.confirmed_at,
     kitchen_accepted_at: o.kitchen_accepted_at,
     notes: o.notes,
+    alerta: o.alerta ?? null,
     table_number: table?.number || 0,
     table_name: table?.name || null,
     payment_status: o.payment_status || "unpaid",
@@ -223,6 +226,14 @@ function OrderCard({
           </div>
         ))}
       </div>
+
+      {/* Aviso del servidor: se pagó con un producto que se agotó mientras tanto */}
+      {order.alerta && (
+        <div className="mx-4 mb-3 rounded-lg border border-red-500/60 bg-red-500/15 px-3 py-2">
+          <p className="text-sm font-bold text-red-300">🚨 {order.alerta}</p>
+          <p className="text-xs text-red-200/80">Se respeta el pedido: avisa al encargado.</p>
+        </div>
+      )}
 
       {/* General notes */}
       {order.notes && (
@@ -542,7 +553,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
       const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from("orders")
-        .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, table_id, payment_status")
+        .select("id, order_number, status, confirmed_at, kitchen_accepted_at, notes, alerta, table_id, payment_status")
         .eq("branch_id", branchId)
         .in("status", ["confirmed", "in_kitchen", "ready"])
         .gte("confirmed_at", fourHoursAgo)
@@ -578,6 +589,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           confirmed_at: o.confirmed_at,
           kitchen_accepted_at: o.kitchen_accepted_at,
           notes: o.notes,
+    alerta: o.alerta ?? null,
           table_number: t?.number || 0,
           table_name: t?.name || null,
           payment_status: o.payment_status || "unpaid",

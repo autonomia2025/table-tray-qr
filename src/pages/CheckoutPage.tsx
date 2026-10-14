@@ -17,6 +17,8 @@ import BloqueSellos from "@/components/comensal/BloqueSellos";
 import CuentaComensal from "@/components/comensal/CuentaComensal";
 import { useSesion } from "@/contexts/SesionContext";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { mensajeAmigable } from "@/lib/pedidos";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
 import { useTableSession } from "@/hooks/useTableSession";
@@ -48,7 +50,7 @@ export default function CheckoutPage() {
   const items = useCartStore((s) => s.items);
   const addItem = useCartStore((s) => s.addItem);
   const clearCart = useCartStore((s) => s.clearCart);
-  const subtotal = useCartStore((s) => s.getTotalPrice());
+  const subtotalCarrito = useCartStore((s) => s.getTotalPrice());
 
   const [orderNotes, setOrderNotes] = useState("");
   const [tipIdx, setTipIdx] = useState(1);
@@ -61,6 +63,47 @@ export default function CheckoutPage() {
   const idemRef = useRef(crypto.randomUUID());
 
   const wallets = useMemo(() => detectWallets(), []);
+
+  /* ---------- precio congelado (fase 2.A): el servidor cotiza y lo asegura por 10 minutos ---------- */
+  const lineas = useMemo(
+    () =>
+      items.map((i) => ({
+        menu_item_id: i.menuItemId,
+        quantity: i.quantity,
+        modifiers: i.selectedModifiers.map((m) => ({ groupName: m.groupName, modifierName: m.modifierName })),
+        notes: i.itemNotes || null,
+      })),
+    [items],
+  );
+  const [cotizacion, setCotizacion] = useState<{ id: string; subtotal: number; expira_at: string } | null>(null);
+  const [errorCotizacion, setErrorCotizacion] = useState("");
+  const cotizar = async () => {
+    if (!token || lineas.length === 0) return null;
+    const { data, error } = await supabase.rpc("cotizar", {
+      _qr_token: token,
+      _items: lineas as unknown as Json,
+      _notas: orderNotes.trim() || null,
+    });
+    if (error || !data) {
+      setCotizacion(null);
+      setErrorCotizacion(mensajeAmigable(error?.message ?? ""));
+      return null;
+    }
+    const c = data as { id: string; subtotal: number; expira_at: string };
+    setCotizacion(c);
+    setErrorCotizacion("");
+    return c;
+  };
+  useEffect(() => {
+    if (!perfil || !token || lineas.length === 0) return;
+    const t = setTimeout(() => { cotizar(); }, 400);
+    return () => clearTimeout(t);
+    // Se vuelve a cotizar si cambia el carrito, la nota o la sesión del comensal
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfil?.user_id, token, lineas, orderNotes]);
+
+  // Lo que se cobra es lo cotizado por el servidor; mientras cotiza, se muestra el del carrito.
+  const subtotal = cotizacion?.subtotal ?? subtotalCarrito;
   const tipAmount = Math.round(subtotal * (TIP_OPTIONS[tipIdx] / 100));
   const total = subtotal + tipAmount;
 
@@ -141,23 +184,30 @@ export default function CheckoutPage() {
         }
       }
 
+      // Si el precio asegurado venció (más de 10 minutos), se cotiza de nuevo antes de cobrar.
+      let cot = cotizacion;
+      if (!cot || new Date(cot.expira_at).getTime() < Date.now() + 15_000) {
+        cot = await cotizar();
+        if (!cot) {
+          setPaying(false);
+          return;
+        }
+        if (cot.subtotal !== subtotal) {
+          setErrorMsg("El precio de tu pedido se actualizó. Revisa el total y vuelve a pagar.");
+          setPaying(false);
+          return;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("process-payment", {
         body: {
           table_token: token,
+          cotizacion_id: cot.id,
           method,
           tip_amount: tipAmount,
-          order_notes: orderNotes.trim() || null,
-          idempotency_key: `${idemRef.current}-${subtotal}-${tipAmount}`,
+          // La misma clave para el mismo pago: si se repite (doble toque, mala señal), no se cobra dos veces.
+          idempotency_key: `${idemRef.current}-${cot.id}-${tipAmount}`,
           redeem_reward_id: redeemRewardId,
-          cart_items: items.map((i) => ({
-            menu_item_id: i.menuItemId,
-            quantity: i.quantity,
-            modifiers: i.selectedModifiers.map((m) => ({
-              groupName: m.groupName,
-              modifierName: m.modifierName,
-            })),
-            notes: i.itemNotes || null,
-          })),
         },
       });
 
@@ -447,10 +497,10 @@ export default function CheckoutPage() {
               onElegirPremio={setRedeemRewardId}
             />
 
-            {errorMsg && (
+            {(errorMsg || errorCotizacion) && (
               <div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <p className="text-xs text-destructive">{errorMsg}</p>
+                <p className="text-xs text-destructive">{errorMsg || errorCotizacion}</p>
               </div>
             )}
 
@@ -467,7 +517,12 @@ export default function CheckoutPage() {
         <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background px-4 py-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <div className="mx-auto max-w-md">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Total con propina</span>
+              <span className="flex flex-col text-sm text-muted-foreground">
+                Total con propina
+                {cotizacion && !errorCotizacion && (
+                  <span className="text-[11px]">🔒 Precio asegurado por 10 minutos</span>
+                )}
+              </span>
               <span className="text-lg font-bold" style={{ color: primaryColor }}>
                 {formatCLP(total)}
               </span>
@@ -475,7 +530,7 @@ export default function CheckoutPage() {
 
             {wallets.applePay && (
               <button
-                disabled={paying}
+                disabled={paying || !!errorCotizacion}
                 onClick={() => handlePay("apple_pay")}
                 className="mb-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground py-4 text-base font-semibold text-background disabled:opacity-60"
               >
@@ -486,7 +541,7 @@ export default function CheckoutPage() {
 
             {wallets.googlePay && (
               <button
-                disabled={paying}
+                disabled={paying || !!errorCotizacion}
                 onClick={() => handlePay("google_pay")}
                 className="mb-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-foreground py-4 text-base font-semibold text-background disabled:opacity-60"
               >
@@ -496,7 +551,7 @@ export default function CheckoutPage() {
             )}
 
             <button
-              disabled={paying}
+              disabled={paying || !!errorCotizacion}
               onClick={() => handlePay("card")}
               className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-60"
               style={{ backgroundColor: primaryColor }}

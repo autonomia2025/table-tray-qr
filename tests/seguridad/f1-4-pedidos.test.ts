@@ -117,7 +117,8 @@ describe.skipIf(!hayCredenciales)("pedidos", () => {
     const del = await dueno.from("order_events").delete().eq("order_id", p.id).select("id");
     expect(del.data ?? []).toHaveLength(0);
     const { count } = await dueno.from("order_events").select("id", { count: "exact", head: true }).eq("order_id", p.id);
-    expect(count).toBe(1);
+    // El de la creación (pagado con la app, fase 2.A) y el de la cocina: ni uno más ni uno menos.
+    expect(count).toBe(2);
   });
 
   it("un comensal no puede cambiar estados", async () => {

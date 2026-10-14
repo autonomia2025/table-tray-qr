@@ -4,6 +4,47 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 2.A: núcleo del pago ✅
+**Antes:** `process-payment` cobraba primero y después escribía el pedido y el pago por separado. Si algo fallaba entremedio podía quedar un cobro sin pedido o un pedido sin pago. El precio no se congelaba, y dos personas pagando lo mismo a la vez podían cobrar dos veces.
+
+**Ahora, en cuatro pasos:**
+1. **Cotización** (`cotizaciones`, `cotizar`, `crear_cotizacion`):
+   - el servidor calcula el precio con `calcular_precios` y lo congela por 10 minutos;
+   - en "pagar lo pendiente", toma por defecto **solo los pedidos del propio comensal** (cada persona paga lo suyo, regla 8).
+2. **Intento reservado antes de cobrar** (`intentos_pago`, `reservar_intento_pago`): la clave única queda guardada antes de llamar al medio de pago.
+   - El mismo pago repetido (doble toque, mala señal) responde lo de antes y no cobra otra vez.
+   - No se puede empezar a pagar con una cotización vencida ni con otro pago en curso.
+3. **Cobro** (simulado; la pasarela real llega en la fase 4).
+4. **Confirmación atómica** (`confirmar_pago`): pedido, productos, pago, sesión, mesa y popularidad se escriben juntos o no se escribe nada.
+   - Es idempotente: si la pasarela avisa dos veces, no se duplica nada.
+   - **Pago tardío** con el monto correcto: se respeta el precio congelado.
+   - **Monto que no calza:** se devuelve automáticamente.
+   - **Dos personas pagando lo mismo** de la mesa: a la segunda se le devuelve la plata.
+   - **Producto agotado** mientras alguien pagaba: se respeta el pedido y `orders.alerta` lo avisa en la cocina con "🚨".
+   - **Cada pago guarda el mozo que atendía la mesa** (`payments.staff_id`), para el informe de propinas por mozo y turno (brief 7). También guarda quién pagó (`user_id`).
+
+**App:**
+- **Pago del comensal:** al abrir el pago, el servidor cotiza y la pantalla muestra **"🔒 Precio asegurado por 10 minutos"** con el total del servidor.
+  - Si algo se agotó o una opción no es válida, avisa antes de pagar y no deja pagar.
+  - Si el precio venció, cotiza de nuevo y avisa si cambió.
+  - La clave del pago es la misma para el mismo intento.
+- **Cocina:** muestra la alerta de producto agotado después de pagado.
+- `process-payment` reescrito sobre los cuatro pasos (y publicado). Sigue aceptando el pedido directo del carrito, que cotiza en el servidor.
+
+**Pruebas:**
+- `tests/seguridad/f2a-pago.test.ts`: 9 pruebas.
+  - La cotización congela, es solo del comensal y nadie la escribe.
+  - **Si el dueño sube el precio después de cotizar, se cobra el congelado.**
+  - **El mismo pago 5 veces al mismo tiempo: un solo cobro.**
+  - **Dos pagos de la misma cotización a la vez: uno solo.**
+  - **Dos personas pagando lo mismo: a la segunda se le devuelve.**
+  - Producto agotado durante el pago: se respeta, con alerta.
+  - Mozo y propina en el pago.
+  - En la base desechable: cotización vencida rechazada; **pago tardío** respetado e idempotente; **monto que no calza** devuelto sin crear pago.
+- **Base desechable:** 111 de seguridad y 55 de navegador. **Base de pruebas:** 104 de seguridad (más 7 que solo corren en la desechable).
+
+---
+
 ## 2026-10-13 — Fase 1.10: compuerta de seguridad ✅ · Fase 1 terminada
 **Barrido completo antes de tocar la plata.** El estado de partida era bueno: todas las tablas con reglas de acceso, y las únicas lecturas públicas son la carta, la marca, los planes y las funciones globales, a propósito. Se cerró lo que quedaba:
 - **Pagos, reembolsos y cierres:** antes los veía cualquier miembro del local (también cocina y mozos), con el correo del cliente. Ahora solo dueño, administrador, encargado y caja (y Tablio). El navegador no puede escribirlos (regla 2 del brief).
