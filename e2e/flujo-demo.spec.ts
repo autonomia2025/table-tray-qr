@@ -46,5 +46,6 @@ test("cocina recibe el pedido y lo avanza hasta entregado", async ({ page }) => 
   await enCocina.getByRole("button", { name: "LISTO" }).click();
   const listo = page.locator("div").filter({ hasText: `#${numeroPedido}` }).filter({ has: page.getByRole("button", { name: /ENTREGADO/ }) }).last();
   await listo.getByRole("button", { name: /ENTREGADO/ }).click();
-  await expect(page.getByRole("button", { name: /ENTREGADO/ }).and(page.locator(`xpath=//*[contains(., "#${numeroPedido}")]//button`))).toHaveCount(0);
+  // La tarjeta de este pedido desaparece (otras pruebas en paralelo pueden tener sus propios pedidos listos)
+  await expect(page.locator("div.mb-3").filter({ hasText: `#${numeroPedido}` })).toHaveCount(0, { timeout: 10_000 });
 });
