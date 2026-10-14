@@ -12,6 +12,7 @@ import MenuSkeleton from "@/components/menu/MenuSkeleton";
 import BotonCuenta from "@/components/comensal/BotonCuenta";
 import { useComensalEnMesa, useTableSession } from "@/hooks/useTableSession";
 import { loDeSiempre } from "@/lib/mesaEnVivo";
+import { manifiestoDelLocal } from "@/lib/push";
 import { formatCLP } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
@@ -242,6 +243,11 @@ export default function MenuPage() {
   }, [searchQuery, categories]);
 
   const primaryColor = tenant?.primary_color || "#E8531D";
+
+  // Si instala la app desde la carta, lleva el nombre del local y abre esta mesa (fase 3.4b)
+  useEffect(() => {
+    if (tenant?.name && tableToken && slug) manifiestoDelLocal(tenant.name, `/${slug}/menu?t=${tableToken}`);
+  }, [tenant?.name, tableToken, slug]);
 
   if (isLoading || !tenant) return <MenuSkeleton />;
 

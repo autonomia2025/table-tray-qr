@@ -20,6 +20,11 @@ export async function cambiarEstadoPedido(
     _motivo: opciones.motivo ?? null,
   });
   if (error) return { ok: false, error: mensajeAmigable(error.message) };
+  // Lo que quedó listo se avisa al celular del comensal, aunque lo tenga bloqueado (fase 3.4b).
+  // No se espera: si el aviso falla, el pedido igual avanzó.
+  if (estado === "ready") {
+    supabase.functions.invoke("avisar-listo", { body: { order_id: pedidoId } }).catch(() => undefined);
+  }
   return { ok: true, estado: (data as { estado: string }).estado };
 }
 

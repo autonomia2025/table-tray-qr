@@ -20,6 +20,9 @@ verify_jwt = false
 [functions.refund-payment]
 verify_jwt = false
 
+[functions.avisar-listo]
+verify_jwt = false
+
 [functions.register-seller]
 verify_jwt = false
 

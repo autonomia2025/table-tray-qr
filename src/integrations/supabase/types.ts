@@ -1293,6 +1293,7 @@ export type Database = {
       }
       order_items: {
         Row: {
+          avisado_at: string | null
           created_at: string | null
           delivered_at: string | null
           delivered_by: string | null
@@ -1312,6 +1313,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          avisado_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
           delivered_by?: string | null
@@ -1331,6 +1333,7 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          avisado_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
           delivered_by?: string | null
@@ -2107,6 +2110,47 @@ export type Database = {
           },
         ]
       }
+      suscripciones_push: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          tenant_id: string
+          usado_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          tenant_id: string
+          usado_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          tenant_id?: string
+          usado_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suscripciones_push_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       table_events: {
         Row: {
           accion: string
@@ -2773,6 +2817,15 @@ export type Database = {
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
       get_tenant_id: { Args: never; Returns: string }
+      guardar_suscripcion_push: {
+        Args: {
+          _auth: string
+          _endpoint: string
+          _p256dh: string
+          _qr_token: string
+        }
+        Returns: Json
+      }
       has_backoffice_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean

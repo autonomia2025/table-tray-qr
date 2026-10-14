@@ -20,6 +20,8 @@ import {
 import type { Json } from "@/integrations/supabase/types";
 import { miMesaEnVivo, otraRonda, ponerAlias, resumenPorEstacion, type MesaEnVivo } from "@/lib/mesaEnVivo";
 import { Repeat, Users } from "lucide-react";
+import AvisosCelular from "@/components/comensal/AvisosCelular";
+import { manifiestoDelLocal } from "@/lib/push";
 
 /* ---------- types ---------- */
 interface OrderItem {
@@ -125,9 +127,6 @@ export default function TrackingPage() {
   const [alias, setAlias] = useState("");
   const [repitiendo, setRepitiendo] = useState(false);
   const listosAvisados = useRef<Set<string> | null>(null);
-  const [permisoAviso, setPermisoAviso] = useState<string>(() => {
-    try { return "Notification" in window ? Notification.permission : "unsupported"; } catch { return "unsupported"; }
-  });
   const recargarEnVivo = useCallback(async () => {
     if (!tableToken) return;
     const r = await miMesaEnVivo(tableToken);
@@ -254,6 +253,11 @@ export default function TrackingPage() {
       supabase.removeChannel(channel);
     };
   }, [session?.id, recargarEnVivo]);
+
+  // Si instala la app desde aquí, lleva el nombre del local y abre esta mesa (fase 3.4b)
+  useEffect(() => {
+    if (tenant?.name && tableToken && slug) manifiestoDelLocal(tenant.name, `/${slug}/menu?t=${tableToken}`);
+  }, [tenant?.name, tableToken, slug]);
 
   // Carga la mesa en vivo y la refresca cada 30 s (el tiempo estimado baja solo)
   useEffect(() => {
@@ -549,9 +553,6 @@ export default function TrackingPage() {
     recargarEnVivo();
   };
 
-  const pedirPermisoAviso = async () => {
-    try { setPermisoAviso(await Notification.requestPermission()); } catch { setPermisoAviso("unsupported"); }
-  };
 
   const modifiersLabel = (mods: Json) => {
     if (!Array.isArray(mods) || mods.length === 0) return null;
@@ -667,10 +668,8 @@ export default function TrackingPage() {
               </p>
             )}
 
-            {permisoAviso === "default" && !["ready", "delivered"].includes(currentOrder.status) && (
-              <button type="button" onClick={pedirPermisoAviso} className="mx-auto mt-3 block text-xs font-semibold underline-offset-2 hover:underline" style={{ color: primaryColor }}>
-                🔔 Avísame cuando esté listo
-              </button>
+            {!["ready", "delivered"].includes(currentOrder.status) && (
+              <AvisosCelular tokenMesa={tableToken} color={primaryColor} />
             )}
 
             <AnimatePresence>

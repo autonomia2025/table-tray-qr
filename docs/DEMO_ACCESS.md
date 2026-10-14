@@ -56,7 +56,10 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - toca "En tu mesa" para ponerte un nombre.
 
     Cuando la barra deja lista el agua, el comensal recibe el aviso y lee "Ya está listo: Agua mineral. Sigue en Cocina: Barros Luco". "Otra ronda" copia el pedido al carrito. Si pides lo mismo en dos visitas, la tercera vez la carta te ofrece "⭐ Lo de siempre" arriba.
-13. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
+13. **Aviso con el celular bloqueado (pruébalo en tu teléfono):**
+    - **Android (Chrome):** abre el link de una mesa (por ejemplo la mesa 1), pide y paga. En el seguimiento toca "🔔 Avísame cuando esté listo, aunque bloquee el celular" y acepta. Bloquea el teléfono. Con la cuenta de cocina, en el KDS, acepta y marca LISTO: llega "Demo Tablio · Ya está listo: …". Al tocarlo se abre tu pedido. Arriba también aparece "📲 Instalar la app".
+    - **iPhone (iOS 16.4 o más nuevo):** en Safari abre el link de la mesa, toca Compartir → "Agregar a inicio", abre Tablio desde el ícono nuevo y sigue los mismos pasos. Apple solo entrega avisos a la app instalada.
+14. Con la cuenta del dueño, muestra Caja (el pago quedó registrado) y Reportes.
 
 ## Experiencia del comensal (invitado o cliente)
 

@@ -4,6 +4,44 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 3.4b: app instalable y aviso con el celular bloqueado ✅
+**Qué es:** el comensal puede pedir que le avisen cuando su pedido esté listo y el aviso le llega aunque tenga el celular bloqueado. Además, Tablio se instala en el celular sin pasar por la tienda de apps.
+- Usa el estándar de los navegadores (Web Push). No requiere cuentas externas ni costo.
+- Los avisos los entregan los servicios que ya traen Google, Apple y Mozilla en sus navegadores.
+
+**Cómo funciona:**
+- **App instalable:**
+  - manifiesto (`public/manifest.webmanifest`) e íconos con la marca;
+  - etiquetas para iPhone en `index.html`;
+  - en la carta y el seguimiento, la app instalada lleva **el nombre del local y abre directo esa mesa**;
+  - en Android aparece "📲 Instalar la app".
+- **Archivo de avisos (`public/sw.js`):** recibe el aviso, muestra la notificación y, al tocarla, abre el pedido. No guarda nada en caché, así que la app siempre se carga fresca.
+- **Migración `20261014100000_avisos_push.sql`:**
+  - `suscripciones_push`: la dirección de aviso de cada celular, ligada a su identidad; cada uno ve y borra solo las suyas, y el personal no las ve;
+  - `guardar_suscripcion_push`: solo para quien está en la mesa, solo direcciones seguras (`https`) y máximo 5 por persona;
+  - `order_items.avisado_at`: para no avisar dos veces lo mismo.
+- **Función `avisar-listo`:**
+  - la llama la pantalla de cocina al marcar algo listo; solo la cocina, el encargado o el dueño pueden usarla;
+  - envía "Ya está listo: Agua mineral. El mozo te lo trae." a cada celular del comensal;
+  - si un celular ya no acepta avisos, olvida esa dirección.
+- **Cifrado y firma propios** (`supabase/functions/_shared/webpush.ts`, según los estándares RFC 8291 y 8292, solo con las herramientas de cifrado del servidor). La librería `npm:web-push` botaba el servidor de funciones con una clave inválida, así que la reemplacé.
+- **Claves de avisos (VAPID):** la privada se generó y se guardó directo en Supabase, sin mostrarse. La pública está en `src/lib/push.ts`.
+- **En pantalla:** "🔔 Avísame cuando esté listo, aunque bloquee el celular" y "Te avisaremos aunque bloquees el celular". En iPhone sin instalar, explica cómo agregarla a inicio (Apple solo avisa a apps instaladas).
+
+**Pruebas:**
+- `tests/seguridad/f3-4b-cifrado.test.ts`: lo que cifra el servidor lo descifra el "celular" con la receta oficial; la firma VAPID es válida; claves inválidas dan un error normal.
+- `tests/seguridad/f3-4b-avisos.test.ts`:
+  - cada uno guarda y ve solo su dirección de aviso;
+  - el personal no las ve;
+  - solo la cocina dispara el aviso;
+  - lo listo se avisa una sola vez.
+- `e2e/app-instalable.spec.ts`: manifiesto, íconos y archivo de avisos publicados; desde la mesa, la app lleva el nombre del local y abre esa mesa; el seguimiento ofrece los avisos.
+- **Entrega real** (`e2e/avisos-reales.spec.ts`, con `AVISOS_REALES=1`, fuera de la integración continua porque usa internet): un Firefox de verdad se suscribe al servicio de Mozilla, la cocina marca listo y **el aviso llega** con su texto. Probado en la base desechable y en la app publicada.
+- **Base desechable:** 161 de 161 de seguridad y 63 de 63 de navegador.
+- **Base de pruebas:** 145 de seguridad (más 16 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 3.4: la mesa en vivo para el comensal ✅
 **Antes:**
 - El seguimiento decía siempre "Listo en aprox. 10-15 min", sin importar el plato ni la cocina.
