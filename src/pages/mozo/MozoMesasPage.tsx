@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
-import { cambiarEstadoPedido } from '@/lib/pedidos';
+import { cambiarEstadoPedido, registrarCobroMozo } from '@/lib/pedidos';
 import { supabase } from '@/integrations/supabase/client';
 import { atenderLlamado, cerrarMesa, tomarMesa, transferirMesa } from "@/lib/mesa";
 import { formatCLP } from '@/lib/format';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Clock, Receipt } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface TableData {
   id: string;
@@ -45,6 +46,7 @@ interface OrderWithItems {
   order_number: number;
   status: string;
   total_amount: number;
+  payment_status: string | null;
   items: { menu_item_name: string; quantity: number }[];
 }
 
@@ -154,6 +156,8 @@ export default function MozoMesasPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [otherWaiters, setOtherWaiters] = useState<{ id: string; name: string }[]>([]);
   const [confirmBillTable, setConfirmBillTable] = useState<TableData | null>(null);
+  // Cobro en la mesa (fase 2.B): efectivo o POS
+  const [cobro, setCobro] = useState<{ metodo: 'cash' | 'pos'; propina: string; recibido: string } | null>(null);
   const prevUrgentRef = useRef(0);
 
   const fetchTables = useCallback(async () => {
@@ -367,7 +371,7 @@ export default function MozoMesasPage() {
 
     const { data: ordersData } = await supabase
       .from('orders')
-      .select('id, order_number, status, total_amount')
+      .select('id, order_number, status, total_amount, payment_status')
       .eq('session_id', session.id)
       .in('status', ['confirmed', 'in_kitchen', 'ready', 'delivered'])
       .order('confirmed_at', { ascending: true });
@@ -509,6 +513,15 @@ export default function MozoMesasPage() {
                     {actionLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Voy en camino'}
                   </Button>
                 )}
+                {e === 'por_cobrar' && puedoCerrar(t) && (
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
+                    onClick={(ev) => { ev.stopPropagation(); openSheet(t); }}
+                  >
+                    Cobrar
+                  </Button>
+                )}
                 {e === 'cuenta' && puedoCerrar(t) && (
                   <Button
                     size="sm"
@@ -589,6 +602,29 @@ export default function MozoMesasPage() {
             </div>
           )}
 
+          {/* Por cobrar: pedidos que se pagan al mozo (efectivo o POS) */}
+          {(() => {
+            const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled');
+            if (!selectedTable || pendientes.length === 0) return null;
+            const totalPendiente = pendientes.reduce((acc, o) => acc + o.total_amount, 0);
+            return (
+              <div className="mb-4 rounded-xl border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/40">
+                <p className="text-sm font-bold text-foreground">💳 Por cobrar: {formatCLP(totalPendiente)}</p>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  {pendientes.length} pedido{pendientes.length > 1 ? 's' : ''} · en prepago pasan a cocina al registrar el cobro
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button className="h-11 bg-amber-500 text-white hover:bg-amber-600" onClick={() => setCobro({ metodo: 'cash', propina: '', recibido: '' })}>
+                    💵 Efectivo
+                  </Button>
+                  <Button className="h-11 bg-amber-500 text-white hover:bg-amber-600" onClick={() => setCobro({ metodo: 'pos', propina: '', recibido: '' })}>
+                    💳 POS
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Acciones: primero la del estado de la mesa; al final, las de respaldo */}
           <div className="space-y-2">
             {selectedTable && estadoSeleccionado === 'listo' && (
@@ -649,6 +685,70 @@ export default function MozoMesasPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Registrar un cobro en efectivo o POS */}
+      <Dialog open={!!cobro} onOpenChange={(o) => { if (!o) setCobro(null); }}>
+        <DialogContent className="rounded-2xl">
+          {(() => {
+            if (!cobro || !selectedTable) return null;
+            const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled');
+            const totalPendiente = pendientes.reduce((acc, o) => acc + o.total_amount, 0);
+            const propina = Math.max(0, Math.round(Number(cobro.propina) || 0));
+            const recibido = cobro.recibido ? Math.round(Number(cobro.recibido) || 0) : null;
+            const vuelto = recibido !== null ? recibido - totalPendiente - propina : null;
+            const registrar = async () => {
+              setActionLoading('cobro');
+              const r = await registrarCobroMozo(pendientes.map(o => o.id), cobro.metodo, propina, cobro.metodo === 'cash' ? recibido : null);
+              setActionLoading(null);
+              if (r.ok === false) {
+                toast({ title: 'No se pudo registrar el cobro', description: r.error, variant: 'destructive' });
+                return;
+              }
+              toast({
+                title: `✅ Cobrado ${formatCLP(r.total + propina)}`,
+                description: r.vuelto !== null && r.vuelto > 0 ? `Vuelto: ${formatCLP(r.vuelto)}` : 'Los pedidos pasan a cocina.',
+              });
+              setCobro(null);
+              openSheet(selectedTable);
+              fetchTables();
+            };
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{cobro.metodo === 'cash' ? '💵 Cobro en efectivo' : '💳 Cobro con POS'} · Mesa {selectedTable.number}</DialogTitle>
+                  <DialogDescription>Total de los pedidos: {formatCLP(totalPendiente)}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground" htmlFor="cobro-propina">Propina (opcional)</label>
+                    <Input id="cobro-propina" type="number" inputMode="numeric" placeholder="$0" value={cobro.propina}
+                      onChange={(e) => setCobro({ ...cobro, propina: e.target.value })} />
+                  </div>
+                  {cobro.metodo === 'cash' && (
+                    <div>
+                      <label className="text-xs text-muted-foreground" htmlFor="cobro-recibido">Recibido en efectivo (opcional)</label>
+                      <Input id="cobro-recibido" type="number" inputMode="numeric" placeholder={String(totalPendiente + propina)} value={cobro.recibido}
+                        onChange={(e) => setCobro({ ...cobro, recibido: e.target.value })} />
+                      {vuelto !== null && (
+                        <p className={`mt-1 text-sm font-semibold ${vuelto < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                          {vuelto < 0 ? `Faltan ${formatCLP(-vuelto)}` : `Vuelto: ${formatCLP(vuelto)}`}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-base font-bold">Total a cobrar: {formatCLP(totalPendiente + propina)}</p>
+                </div>
+                <DialogFooter>
+                  <Button className="h-12 w-full" disabled={actionLoading === 'cobro' || (vuelto !== null && vuelto < 0)} onClick={registrar}>
+                    {actionLoading === 'cobro' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Registrar cobro
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Transfer dialog */}
       <Dialog open={transferOpen} onOpenChange={setTransferOpen}>

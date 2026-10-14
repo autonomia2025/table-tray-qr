@@ -1318,6 +1318,7 @@ export type Database = {
           confirmed_at: string | null
           created_at: string | null
           delivered_at: string | null
+          forma_pago: string | null
           id: string
           kitchen_accepted_at: string | null
           notes: string | null
@@ -1340,6 +1341,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          forma_pago?: string | null
           id?: string
           kitchen_accepted_at?: string | null
           notes?: string | null
@@ -1362,6 +1364,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          forma_pago?: string | null
           id?: string
           kitchen_accepted_at?: string | null
           notes?: string | null
@@ -2520,6 +2523,15 @@ export type Database = {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
         Returns: Json
       }
+      pedir_sin_pagar: {
+        Args: {
+          _forma: string
+          _items: Json
+          _notas?: string
+          _qr_token: string
+        }
+        Returns: Json
+      }
       puede_asignar_rol: {
         Args: { _rol: string; _tenant_id: string }
         Returns: boolean
@@ -2529,6 +2541,15 @@ export type Database = {
       registrar_acceso_soporte: {
         Args: { _id: string; _tipo: string }
         Returns: undefined
+      }
+      registrar_cobro_mozo: {
+        Args: {
+          _metodo: string
+          _order_ids: string[]
+          _propina?: number
+          _recibido?: number
+        }
+        Returns: Json
       }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }

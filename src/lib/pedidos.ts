@@ -64,3 +64,45 @@ export async function crearPedidoMozo(
   const r = data as { order_id: string; order_number: number; total: number; espera_pago: boolean };
   return { ok: true, pedidoId: r.order_id, numero: r.order_number, total: r.total, esperaPago: r.espera_pago };
 }
+
+/**
+ * Pedir sin pagar en la app (fase 2.B): "Pagar al mozo" (efectivo o POS) o, en locales con cuenta
+ * abierta, "Agregar a mi cuenta". El servidor calcula el precio y numera el pedido.
+ */
+export async function pedirSinPagar(
+  qrToken: string,
+  lineas: LineaPedido[],
+  forma: "mozo" | "cuenta",
+  notas?: string,
+): Promise<
+  | { ok: true; pedidoId: string; numero: number; total: number; aCocina: boolean }
+  | { ok: false; error: string }
+> {
+  const { data, error } = await supabase.rpc("pedir_sin_pagar", {
+    _qr_token: qrToken,
+    _items: lineas as unknown as Json,
+    _forma: forma,
+    _notas: notas ?? null,
+  });
+  if (error) return { ok: false, error: mensajeAmigable(error.message) };
+  const r = data as { order_id: string; order_number: number; total: number; a_cocina: boolean };
+  return { ok: true, pedidoId: r.order_id, numero: r.order_number, total: r.total, aCocina: r.a_cocina };
+}
+
+/** El mozo (o la caja) registra un cobro en efectivo o POS. En prepago, recién ahí pasa a cocina. */
+export async function registrarCobroMozo(
+  pedidoIds: string[],
+  metodo: "cash" | "pos",
+  propina = 0,
+  recibido?: number | null,
+): Promise<{ ok: true; total: number; vuelto: number | null } | { ok: false; error: string }> {
+  const { data, error } = await supabase.rpc("registrar_cobro_mozo", {
+    _order_ids: pedidoIds,
+    _metodo: metodo,
+    _propina: propina,
+    _recibido: recibido ?? null,
+  });
+  if (error) return { ok: false, error: mensajeAmigable(error.message) };
+  const r = data as { total: number; vuelto: number | null };
+  return { ok: true, total: r.total, vuelto: r.vuelto };
+}

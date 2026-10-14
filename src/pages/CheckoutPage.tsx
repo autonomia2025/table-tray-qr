@@ -18,7 +18,7 @@ import CuentaComensal from "@/components/comensal/CuentaComensal";
 import { useSesion } from "@/contexts/SesionContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import { mensajeAmigable } from "@/lib/pedidos";
+import { mensajeAmigable, pedirSinPagar } from "@/lib/pedidos";
 import { formatCLP } from "@/lib/format";
 import { useCartStore } from "@/store/cartStore";
 import { useTableSession } from "@/hooks/useTableSession";
@@ -60,6 +60,8 @@ export default function CheckoutPage() {
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [paid, setPaid] = useState<PaidResult | null>(null);
+  // Pedido enviado sin pagar en la app ("Pagar al mozo" o "Agregar a mi cuenta", fase 2.B)
+  const [sinPagar, setSinPagar] = useState<{ numero: number; total: number; forma: "mozo" | "cuenta"; aCocina: boolean } | null>(null);
   const idemRef = useRef(crypto.randomUUID());
 
   const wallets = useMemo(() => detectWallets(), []);
@@ -122,6 +124,17 @@ export default function CheckoutPage() {
   });
 
   const primaryColor = tenant?.primary_color || "#E8531D";
+
+  // Cuenta abierta: permite "Agregar a mi cuenta" y pagar al final.
+  const { data: modoPago } = useQuery({
+    queryKey: ["checkout-modo-pago", table?.branch_id],
+    queryFn: async () => {
+      const { data } = await supabase.from("branches").select("payment_mode").eq("id", table!.branch_id).maybeSingle();
+      return data?.payment_mode ?? "prepaid";
+    },
+    enabled: !!table?.branch_id,
+    staleTime: Infinity,
+  });
 
   /* ---------- upsell ---------- */
   const { data: upsells = [] } = useQuery({
@@ -242,6 +255,20 @@ export default function CheckoutPage() {
     }
   };
 
+  const pedirSinPagarEnApp = async (forma: "mozo" | "cuenta") => {
+    if (paying || !token || lineas.length === 0) return;
+    setErrorMsg("");
+    setPaying(true);
+    const r = await pedirSinPagar(token, lineas, forma, orderNotes.trim() || undefined);
+    setPaying(false);
+    if (r.ok === false) {
+      setErrorMsg(r.error);
+      return;
+    }
+    setSinPagar({ numero: r.numero, total: r.total, forma, aCocina: r.aCocina });
+    clearCart();
+  };
+
   const qs = token ? `?t=${token}` : "";
 
   /* ---------- estados ---------- */
@@ -253,6 +280,41 @@ export default function CheckoutPage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Escanea otra vez el QR que está sobre tu mesa para pedir y pagar.
         </p>
+      </div>
+    );
+  }
+
+  if (sinPagar) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md text-center">
+          <CheckCircle2 className="mx-auto h-14 w-14" style={{ color: primaryColor }} />
+          <h1 className="mt-4 text-xl font-bold text-foreground">
+            {sinPagar.forma === "cuenta" ? "¡Agregado a tu cuenta!" : "¡Pedido enviado!"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pedido #{String(sinPagar.numero).padStart(3, "0")} · {formatCLP(sinPagar.total)}
+          </p>
+          <div className="mt-5 rounded-2xl border border-border bg-card p-5 text-left">
+            <p className="text-sm text-card-foreground">
+              {sinPagar.forma === "cuenta"
+                ? "Ya está en preparación. Lo pagas al final, desde la app o con el mozo."
+                : sinPagar.aCocina
+                  ? "Ya va a la cocina. El mozo pasará a cobrarte en efectivo o con tarjeta."
+                  : "El mozo viene a cobrarte en efectivo o con tarjeta. Apenas pagues, tu pedido pasa a la cocina."}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(`/${slug}/tracking${qs}`)}
+            className="mt-6 w-full rounded-2xl py-4 text-base font-semibold text-white"
+            style={{ backgroundColor: primaryColor }}
+          >
+            Ver estado de mi pedido
+          </button>
+          <button onClick={() => navigate(`/${slug}/menu${qs}`)} className="mt-3 text-sm text-muted-foreground underline">
+            Pedir algo más
+          </button>
+        </motion.div>
       </div>
     );
   }
@@ -559,6 +621,26 @@ export default function CheckoutPage() {
               {paying ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
               Pagar con tarjeta
             </button>
+
+            {/* Respaldo para quien prefiere pagar "a la antigua" (lo principal es pagar ahora) */}
+            <div className="mt-3 flex flex-col items-center gap-1.5">
+              <button
+                disabled={paying || !!errorCotizacion}
+                onClick={() => pedirSinPagarEnApp("mozo")}
+                className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+              >
+                💵 Prefiero pagarle al mozo (efectivo o tarjeta)
+              </button>
+              {modoPago === "open_tab" && (
+                <button
+                  disabled={paying || !!errorCotizacion}
+                  onClick={() => pedirSinPagarEnApp("cuenta")}
+                  className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  🧾 Agregar a mi cuenta y pagar al final
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

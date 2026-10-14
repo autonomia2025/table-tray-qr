@@ -36,6 +36,8 @@ interface Order {
   total_amount: number;
   confirmed_at: string | null;
   notes: string | null;
+  payment_status?: string | null;
+  forma_pago?: string | null;
   items: OrderItem[];
 }
 
@@ -160,7 +162,7 @@ export default function TrackingPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("orders")
-        .select("id, order_number, status, total_amount, confirmed_at, notes")
+        .select("id, order_number, status, total_amount, confirmed_at, notes, payment_status, forma_pago")
         .eq("session_id", session!.id)
         .order("confirmed_at", { ascending: true });
 
@@ -193,6 +195,8 @@ export default function TrackingPage() {
         total_amount: o.total_amount,
         confirmed_at: o.confirmed_at,
         notes: o.notes,
+        payment_status: o.payment_status,
+        forma_pago: o.forma_pago,
         items: itemsByOrder.get(o.id) || [],
       }));
     },
@@ -218,9 +222,11 @@ export default function TrackingPage() {
           filter: `session_id=eq.${session.id}`,
         },
         (payload) => {
-          const updated = payload.new as { id: string; status: string };
+          const updated = payload.new as { id: string; status: string; payment_status?: string | null };
           setOrders((prev) =>
-            prev.map((o) => (o.id === updated.id ? { ...o, status: updated.status } : o))
+            prev.map((o) => (o.id === updated.id
+              ? { ...o, status: updated.status, payment_status: updated.payment_status ?? o.payment_status }
+              : o))
           );
         }
       )
@@ -446,7 +452,10 @@ export default function TrackingPage() {
     );
   }
 
-  const currentStatusInfo = STATUS_MAP[currentOrder.status] || STATUS_MAP.confirmed;
+  // Pedido que se paga al mozo y todavía no se cobra (fase 2.B)
+  const porPagarAlMozo = (o: Order) => o.forma_pago === "mozo" && o.payment_status !== "paid" && o.status === "confirmed";
+  const POR_PAGAR = { label: "💳 Por pagar al mozo", sublabel: "El mozo viene a cobrarte. Apenas pagues, pasa a la cocina.", color: "text-amber-600", step: 0 };
+  const currentStatusInfo = porPagarAlMozo(currentOrder) ? POR_PAGAR : STATUS_MAP[currentOrder.status] || STATUS_MAP.confirmed;
 
   const modifiersLabel = (mods: Json) => {
     if (!Array.isArray(mods) || mods.length === 0) return null;
@@ -729,7 +738,7 @@ export default function TrackingPage() {
 
             <div className="space-y-2 mb-4">
               {orders.map((order) => {
-                const statusInfo = STATUS_MAP[order.status] || STATUS_MAP.confirmed;
+                const statusInfo = porPagarAlMozo(order) ? POR_PAGAR : STATUS_MAP[order.status] || STATUS_MAP.confirmed;
                 const isExpanded = expandedOrders.has(order.id);
                 const isCurrentHighlight = order.id === currentOrder.id;
 

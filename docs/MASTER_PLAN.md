@@ -55,7 +55,7 @@ Cada dominio se cierra completo de una vez: funciones del servidor, reglas de ac
 | Paso | Qué | Estado |
 |---|---|---|
 | 2.A | Cotización con precio congelado, intento reservado antes de cobrar y confirmación atómica (`confirmar_pago`); pago tardío y producto agotado según política; mozo de la mesa en cada pago | ✅ |
-| 2.B | "Pagar al mozo" (efectivo o POS) y "Agregar a mi cuenta" en cuenta abierta | ⏳ |
+| 2.B | "Pagar al mozo" (efectivo o POS) y "Agregar a mi cuenta" en cuenta abierta | ✅ |
 | 2.C | Caja del cajero y reembolsos atómicos | ⏳ |
 | 2.D | Día de negocio y cierre de caja con conciliación automática | ⏳ |
 | 2.E | Compuerta de pruebas de plata | ⏳ |

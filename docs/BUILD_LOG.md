@@ -4,6 +4,47 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-14 — Fase 2.B: pagar al mozo y cuenta abierta ✅
+**Decisión del fundador (1 de octubre):** al pagar, el comensal puede elegir "Pagar al mozo" (efectivo o POS) o, en locales con cuenta abierta, "Agregar a mi cuenta". Es un respaldo: lo principal sigue siendo pagar en la app.
+
+**Base (migración `20261014020000_pagar_al_mozo.sql`):**
+- **`pedir_sin_pagar(código, productos, forma)`:** el comensal pide sin pagar en la app.
+  - El precio sale de `calcular_precios` y la base numera el pedido.
+  - **"mozo":** queda por cobrar. **En prepago no pasa a cocina** hasta que se cobre (regla 1).
+  - **"cuenta":** solo en locales con cuenta abierta; va directo a cocina y se paga al final.
+  - Contra el abuso: máximo 3 pedidos esperando al mozo por persona, y solo quien está en la mesa.
+- **`registrar_cobro_mozo(pedidos, efectivo|pos, propina, recibido)`:** el mozo (en sus mesas o en las libres), la caja, el encargado o el dueño registran el cobro.
+  - Queda como pago, con quién cobró (`staff_id`) y la propina.
+  - Calcula el vuelto, y rechaza un monto recibido que no alcanza o una propina absurda.
+  - Bloquea los pedidos: **dos personas no registran el mismo cobro**.
+  - Deja el registro en el historial del pedido.
+- **`orders.forma_pago`** (app, mozo, cuenta): cómo eligió pagar cada pedido.
+
+**App:**
+- **Pago del comensal:** bajo "Pagar con tarjeta", en texto secundario, "💵 Prefiero pagarle al mozo (efectivo o tarjeta)" y, en cuenta abierta, "🧾 Agregar a mi cuenta y pagar al final". Cada uno lleva a su pantalla de confirmación.
+- **Seguimiento:** el pedido muestra "💳 Por pagar al mozo" hasta que se cobre, y cambia solo cuando el mozo registra el cobro.
+- **Mozo:**
+  - la tarjeta "💳 Por cobrar" trae el botón "Cobrar";
+  - en el detalle, la caja "Por cobrar" muestra el total con "💵 Efectivo" y "💳 POS";
+  - el cobro pide propina y recibido, muestra el vuelto (o lo que falta) y registra.
+- **Pagar lo pendiente al final** (cuenta abierta): cada comensal paga solo lo suyo (cotización tipo "pedidos" de la 2.A).
+
+**Pruebas:**
+- `tests/seguridad/f2b-pagar-al-mozo.test.ts`: 5 pruebas.
+  - Pagar al mozo en prepago: no pasa a cocina hasta cobrar; después sí, con vuelto, registro y sin doble cobro.
+  - **Dos personas registrando el mismo cobro a la vez: uno solo.**
+  - Permisos (cocina, invitado y mesa de otro mozo no; caja sí) y montos válidos.
+  - Tope de 3 pedidos esperando.
+  - Cuenta abierta: no en prepago; en cuenta abierta va a cocina, y **cada uno paga lo suyo al final**.
+- `e2e/pagar-al-mozo.spec.ts`, con tres pantallas a la vez:
+  - el comensal elige "pagarle al mozo" y queda "Por pagar al mozo";
+  - la cocina lo ve "esperando pago";
+  - el mozo cobra en efectivo con vuelto;
+  - el comensal ve "Recibido ✓" y la cocina lo recibe para preparar.
+- **Base desechable:** 116 de seguridad y 56 de navegador. **Base de pruebas:** 109 de seguridad (más 7 que solo corren en la desechable).
+
+---
+
 ## 2026-10-14 — Fase 2.A: núcleo del pago ✅
 **Antes:** `process-payment` cobraba primero y después escribía el pedido y el pago por separado. Si algo fallaba entremedio podía quedar un cobro sin pedido o un pedido sin pago. El precio no se congelaba, y dos personas pagando lo mismo a la vez podían cobrar dos veces.
 
