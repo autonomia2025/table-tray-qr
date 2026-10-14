@@ -3,7 +3,8 @@ import { cuenta, entrar, foto, linkMesa, reembolsarUltimoPagoWebpay } from "./ap
 
 // Fase 4.1 — Webpay de punta a punta contra el ambiente de pruebas de Transbank: el dueño conecta su
 // pasarela, el cliente paga en Webpay con la tarjeta de prueba y vuelve a Tablio con su pedido pagado.
-// Depende de Transbank: se corre a pedido (PAGOS_REALES=1), no en cada cambio.
+// Depende de Transbank: se corre a pedido y SOLA (conecta la pasarela del demo, y mientras tanto las
+// demás pruebas, que pagan simulado, no funcionan):  PAGOS_REALES=1 bunx playwright test e2e/webpay.spec.ts
 test.skip(!process.env.PAGOS_REALES, "Se corre a pedido: PAGOS_REALES=1 (usa el ambiente de pruebas de Transbank)");
 test.skip(!cuenta("owner"), "Falta privado/DEMO_CREDENCIALES.md");
 test.skip(({ isMobile }) => isMobile, "Se prueba una vez");

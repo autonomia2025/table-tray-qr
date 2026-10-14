@@ -55,7 +55,7 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
   - sin pasarela y sin ser demo, no se cobra;
   - el dueño no puede activar lo simulado;
   - el dueño de otro local no conecta.
-- `e2e/webpay.spec.ts` (a pedido, `PAGOS_REALES=1`), de punta a punta:
+- `e2e/webpay.spec.ts` (a pedido y sola, `PAGOS_REALES=1 bunx playwright test e2e/webpay.spec.ts`), de punta a punta. Si corre junto a las demás, conecta la pasarela del demo y las que pagan simulado fallan; pasó así una vez en la app publicada y, solas, pasan.
   - el dueño conecta con las claves de prueba;
   - el cliente paga en Webpay con la tarjeta y el banco de prueba de Transbank y vuelve con "¡Pago listo!" y el comprobante;
   - el dueño devuelve el pago por Transbank.
