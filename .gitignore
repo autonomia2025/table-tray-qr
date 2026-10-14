@@ -49,3 +49,6 @@ supabase/.temp/
 # Base desechable de pruebas
 .pruebas-local/
 supabase/.branches/
+
+# Fotos de los recorridos por fase (se publican en el informe, no van al repositorio)
+e2e/recorridos/fase-*/
