@@ -31,7 +31,7 @@ Los pedidos de antes del 1 de octubre vienen del sistema anterior y no se revisa
 - Pagar varios pedidos juntos y reembolsar todo: todos quedan reembolsados (el error de arriba).
 - Un reembolso que la pasarela rechaza libera la reserva y se puede volver a intentar; confirmar dos veces no cambia nada.
 - Un reembolso al mismo tiempo que el cierre de caja: el cierre no cambia después.
-- **La auditoría sí detecta descuadres:** se descuadra a propósito, dentro de una transacción que después se deshace, de 7 maneras distintas, y tiene que encontrar las 7.
+- **La auditoría sí detecta descuadres:** se descuadra a propósito, dentro de una transacción que después se deshace (un reembolso inventado, un cobro duplicado con monto alterado, un pedido en cocina sin pagar, otro "pagado" sin pago y un cierre falseado), y tiene que dar las 7 alarmas que corresponden.
 - Después de todo, la auditoría sale vacía en toda la base.
 
 Con estas pruebas, los casos del plan quedan cubiertos entre las pruebas de f2a a f2e: pago repetido, pagos al mismo tiempo, pago tardío, reembolso doble y dos personas pagando lo último.
