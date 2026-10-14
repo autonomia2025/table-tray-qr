@@ -32,6 +32,7 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
   - el objetivo vuelve a 5 minutos.
 - **Base desechable:** 153 de 153 de seguridad y 60 de 60 de navegador.
 - **Base de pruebas:** 137 de seguridad (más 16 que solo corren en la desechable).
+- **Arreglo de una prueba antigua:** la integración continua falló una vez. La prueba antigua de cocina (`flujo-demo`) revisaba que no quedara ningún botón "ENTREGADO" en toda la pantalla. En GitHub las pruebas corren de a dos, y la prueba nueva deja un plato listo esperando a propósito, así que la antigua veía un botón ajeno. Ahora revisa solo la tarjeta de su pedido.
 
 ---
 
