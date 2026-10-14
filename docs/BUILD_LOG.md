@@ -4,6 +4,64 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 4.1: pasarelas por local, con Webpay (Transbank) completo ✅
+**Decisión del fundador:** cada local conecta la pasarela que quiera, la plata va directo a su cuenta y Tablio nunca la toca (regla 9).
+
+**Base** (`20261015010000_conexiones_pago.sql`):
+- **`conexiones_pago`:**
+  - una pasarela activa por sucursal;
+  - la clave del local se guarda **cifrada en la bóveda (Vault)**;
+  - la columna de la clave no se puede leer desde el navegador, ni siquiera por el dueño;
+  - la tabla la ven dueño, administrador y encargado.
+- **Conectar y desconectar:**
+  - `_guardar_conexion_pago` la usa solo el servidor, después de probar las claves;
+  - `desconectar_pago` borra la clave de la bóveda;
+  - las dos quedan en `audit_logs`.
+- **Regla nueva de seguridad:**
+  - hasta hoy todo cobro con la app era simulado;
+  - ahora un local **sin pasarela no cobra con la app**: el cliente ve "Este local todavía no recibe pagos con la app" y puede pagarle al mozo;
+  - lo simulado queda solo en locales marcados `branches.pagos_simulados` (el demo y "Local Ajeno"), que nadie cambia desde el navegador.
+- **Funciones para el comensal:**
+  - `pasarela_de_mesa`: con qué paga en esa mesa, sin claves;
+  - `resultado_intento`: cómo terminó su pago; solo lo ve quien pagó.
+
+**Funciones del servidor:**
+- **`_shared/pasarelas/transbank.ts`:** Webpay Plus REST v1.2. Crea, confirma (si ya estaba confirmado, consulta el estado), devuelve y prueba claves. Crear una transacción no cobra nada.
+- **`conectar-pago`:**
+  - solo dueño o administrador;
+  - valida el formato (código de comercio de 12 números);
+  - prueba las claves con Transbank y recién entonces las guarda;
+  - tiene un atajo "claves de prueba de Transbank" para el ambiente de pruebas.
+- **`process-payment`:** con Transbank, reserva el intento (regla 4), crea la transacción por consumo más propina y responde a dónde mandar al cliente.
+- **`pago-retorno`:** Webpay devuelve aquí al cliente.
+  - **Si pagó:** se confirma con Transbank y en la base (`confirmar_pago`, idempotente: recargar no cobra ni registra dos veces). Si el monto no calza o alguien ya pagó lo mismo, se devuelve solo.
+  - **Si anuló o se le acabó el tiempo:** queda rechazado.
+  - **Al final:** vuelve a su pantalla. La dirección de la app viaja codificada, porque Webpay vuelve a codificar la dirección de regreso, y solo se aceptan las de Tablio, así que no se puede usar para mandar a otro sitio.
+- **`refund-payment`:** devuelve por la misma conexión con la que se cobró.
+
+**Pantallas:**
+- **Sucursal → "Cómo te pagan con la app":** estado de la conexión, conectar Webpay (cobrar de verdad o ambiente de pruebas) y desconectar. Mercado Pago aparece como "muy pronto".
+- **Pago y pagar la cuenta:**
+  - con Webpay, un botón "Pagar con Webpay" (débito, crédito o prepago) que lleva a Webpay, y a la vuelta "Confirmando tu pago…" y "¡Pago listo!" con el comprobante de Transbank;
+  - sin pasarela, el aviso y "pagarle al mozo";
+  - en el demo, como antes (simulado).
+
+**Pruebas:**
+- `tests/seguridad/f4-1-pasarelas.test.ts`, contra el ambiente de pruebas real de Transbank:
+  - solo dueño o administrador conectan, y claves malas o mal escritas no se guardan;
+  - la clave no se puede leer;
+  - el cliente va a Webpay, y volver sin pagar o anulando deja el intento rechazado sin pago;
+  - la vuelta nunca lleva fuera de la app, y otra persona no ve el pago;
+  - sin pasarela y sin ser demo, no se cobra;
+  - el dueño no puede activar lo simulado;
+  - el dueño de otro local no conecta.
+- `e2e/webpay.spec.ts` (a pedido, `PAGOS_REALES=1`), de punta a punta:
+  - el dueño conecta con las claves de prueba;
+  - el cliente paga en Webpay con la tarjeta y el banco de prueba de Transbank y vuelve con "¡Pago listo!" y el comprobante;
+  - el dueño devuelve el pago por Transbank.
+
+---
+
 ## 2026-10-14 — Propinas: 10% sugerido y propinas por pagar al equipo ✅
 **Contexto:** conversación con el fundador sobre la plata (fase 4) e investigación de la ley chilena. El artículo 64 del Código del Trabajo dice cuatro cosas:
 - la cuenta debe sugerir al menos 10% de propina;

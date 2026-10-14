@@ -108,6 +108,16 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
   - para el contador: la propina dentro del comprobante en línea, y el modelo de emisión en el SII;
   - para el abogado: el rol de Tablio en la Ley 21.719.
 
+| Paso | Qué | Estado |
+|---|---|---|
+| 4.1 | Pasarelas conectadas por cada local, con Transbank (Webpay) completo: conectar con claves probadas y cifradas, pago con redirección y vuelta, devolución por la pasarela; un local real sin pasarela no cobra con la app (lo simulado solo en el demo) | ✅ |
+| 4.2 | Mercado Pago con un botón (conexión con su cuenta). Necesita la aplicación de Tablio en Mercado Pago, que crea el fundador | ⏳ |
+| 4.3 | Boleta electrónica para efectivo y transferencia, a nombre de cada local y enviada por correo (proveedor de boletas) | ⏳ |
+| 4.4 | Avisos de la pasarela (pagos que vuelven tarde o no vuelven) y conciliación al cerrar la caja contra lo que la pasarela deposita | ⏳ |
+| 4.5 | Privacidad (Ley 21.719): consentimiento, descarga y borrado de datos, retención | ⏳ |
+| 4.6 | Excepciones de la caja (pago sin pedido, monto que no calza, boleta fallida) y correos con Resend | ⏳ |
+| 4.7 | Compuerta de la fase 4 | ⏳ |
+
 
 Pasarela real y su receptor de avisos (webhooks) · **conciliación automática contra lo que la pasarela deposita** (al cerrar la caja, decisión del fundador del 13 de octubre) · boleta electrónica (una por venta) · privacidad Ley 21.719 (consentimiento, borrado, retención; bloqueante: estará vigente al lanzar) · excepciones del cajero (pago sin pedido, monto que no calza, boleta fallida) · correos con Resend.
 

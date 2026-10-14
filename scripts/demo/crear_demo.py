@@ -151,7 +151,7 @@ def local_ajeno(sql: list[str], claves: dict) -> None:
     )
     sql.append(f"INSERT INTO public.tenants (id, name, slug, email, plan_status, is_active) VALUES ('{t}', 'Local Ajeno', 'local-ajeno', 'ajeno@{DOMINIO}', 'active', true);")
     sql.append(ins("public.restaurants", {"id": r, "tenant_id": t, "name": "Local Ajeno"}))
-    sql.append(ins("public.branches", {"id": b, "tenant_id": t, "restaurant_id": r, "name": "Única", "payment_mode": "prepaid"}))
+    sql.append(ins("public.branches", {"id": b, "tenant_id": t, "restaurant_id": r, "name": "Única", "payment_mode": "prepaid", "pagos_simulados": True}))
     sql.append(ins("public.menus", {"id": m, "tenant_id": t, "branch_id": b, "name": "Carta", "is_active": True}))
     sql.append(ins("public.categories", {"id": c, "tenant_id": t, "menu_id": m, "name": "Bebidas", "emoji": "🥤", "sort_order": 0, "is_visible": True}))
     sql.append(ins("public.menu_items", {"id": uid("ajeno-item"), "tenant_id": t, "category_id": c, "name": "Agua", "price": 1500, "status": "available"}))
@@ -239,7 +239,7 @@ def main() -> None:
     sql.append(ins("public.branches", {
         "id": BRANCH, "tenant_id": TENANT, "restaurant_id": RESTAURANT, "name": "Barrio Italia",
         "address": "Av. Italia 1234, Providencia", "city": "Santiago", "phone": "+56 2 2345 6789",
-        "is_open": True, "payment_mode": "prepaid",
+        "is_open": True, "payment_mode": "prepaid", "pagos_simulados": True,
     }))
     sql.append(ins("public.menus", {"id": MENU, "tenant_id": TENANT, "branch_id": BRANCH, "name": "Carta Principal", "is_active": True}))
     # Estaciones: "Cocina" la crea sola la base (predeterminada); las bebidas van a "Barra" (fase 3.2)

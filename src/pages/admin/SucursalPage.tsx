@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import EstacionesSucursal from "@/components/admin/EstacionesSucursal";
+import PagosSucursal from "@/components/admin/PagosSucursal";
 
 interface TableData {
   id: string;
@@ -149,6 +150,8 @@ export default function SucursalPage() {
           <div><Label>Mensaje de bienvenida</Label><Textarea value={tenantForm.welcome_message} onChange={(e) => setTenantForm((p) => ({ ...p, welcome_message: e.target.value }))} /></div>
         </CardContent>
       </Card>
+
+      {branchId && <PagosSucursal branchId={branchId} />}
 
       <Card className="mb-6">
         <CardHeader><CardTitle>Sucursal</CardTitle></CardHeader>

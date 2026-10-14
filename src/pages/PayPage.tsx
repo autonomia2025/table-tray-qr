@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { mensajeError } from "@/lib/errores";
 import SelectorPropina from "@/components/comensal/SelectorPropina";
 import { PROPINA_SUGERIDA, montoPropina, type Propina } from "@/lib/propina";
+import { esperarResultado, irAPasarela, pasarelaDeMesa, type Redireccion } from "@/lib/pagos";
 
 
 interface PaidResult {
@@ -27,7 +28,7 @@ interface PaidResult {
 export default function PayPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const storeToken = useCartStore((s) => s.tableToken);
   const tableToken = searchParams.get("t") || storeToken || "";
   // Identidad del comensal en su mesa: sin esto no puede ver sus pedidos (fase 1.4).
@@ -38,6 +39,37 @@ export default function PayPage() {
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [paid, setPaid] = useState<PaidResult | null>(null);
+
+  // Cómo cobra este local (fase 4.1) y la vuelta desde la pasarela
+  const { data: pasarela } = useQuery({
+    queryKey: ["pasarela-mesa", tableToken],
+    queryFn: () => pasarelaDeMesa(tableToken),
+    enabled: !!tableToken,
+    staleTime: 60_000,
+  });
+  const proveedor = pasarela?.proveedor ?? null;
+  const intentoVuelta = searchParams.get("intento");
+  const [confirmando, setConfirmando] = useState(!!intentoVuelta);
+  useEffect(() => {
+    if (!intentoVuelta) return;
+    let vigente = true;
+    esperarResultado(intentoVuelta).then((r) => {
+      if (!vigente) return;
+      setConfirmando(false);
+      const siguientes = new URLSearchParams(searchParams);
+      siguientes.delete("intento");
+      setSearchParams(siguientes, { replace: true });
+      if (r?.estado === "aprobado") {
+        setPaid({ amount: r.monto, tip: r.propina, method: "card", reference: r.referencia ?? "" });
+      } else {
+        setErrorMsg(r?.estado === "reservado"
+          ? "Tu pago todavía se está confirmando. Si se te cobró, no lo repitas."
+          : r?.motivo && r.estado === "reembolsado" ? r.motivo : "El pago no se completó y no se te cobró nada. Puedes intentarlo de nuevo.");
+      }
+    });
+    return () => { vigente = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intentoVuelta]);
   const idemRef = useRef(crypto.randomUUID());
 
   const wallets = useMemo(() => detectWallets(), []);
@@ -116,7 +148,7 @@ export default function PayPage() {
     setPaying(true);
 
     try {
-      if (method !== "card") {
+      if (method !== "card" && proveedor === "simulado") {
         const res = await requestWalletPayment(method, total, `${tenant?.name ?? "Mesa"} · Mesa ${table?.number ?? ""}`);
         if (res.outcome === "cancelled") {
           setPaying(false);
@@ -130,9 +162,16 @@ export default function PayPage() {
           method,
           tip_amount: tipAmount,
           idempotency_key: `${idemRef.current}-${subtotal}-${tipAmount}`,
+          volver_a: "pay",
         },
       });
 
+      // Pasarela real (Webpay): el cliente paga en su página y vuelve aquí con el resultado
+      const pendiente = data as { pendiente?: boolean; redirigir?: Redireccion } | null;
+      if (pendiente?.pendiente && pendiente.redirigir) {
+        irAPasarela(pendiente.redirigir);
+        return;
+      }
       if (error) {
         const detail = await (error as { context?: Response })?.context?.text?.().catch(() => null);
         console.error("process-payment failed:", detail || error.message);
@@ -169,6 +208,16 @@ export default function PayPage() {
         <button onClick={() => navigate(`/${slug}/menu`)} className="mt-6 text-sm underline text-muted-foreground">
           Volver al menú
         </button>
+      </div>
+    );
+  }
+
+  if (confirmando) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: primaryColor }} />
+        <p className="text-base font-semibold text-foreground">Confirmando tu pago…</p>
+        <p className="text-sm text-muted-foreground">No cierres esta página.</p>
       </div>
     );
   }
@@ -317,7 +366,29 @@ export default function PayPage() {
 
             {/* Botones de pago */}
             <div className="space-y-2.5">
-              {wallets.applePay && (
+              {proveedor === null && pasarela !== undefined && (
+                <p className="rounded-xl bg-muted p-3 text-center text-sm text-foreground">
+                  Este local todavía no recibe pagos con la app. Pídele la cuenta al mozo.
+                </p>
+              )}
+              {proveedor === "transbank" && (
+                <>
+                  <button
+                    onClick={() => handlePay("card")}
+                    disabled={paying}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-60"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {paying ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                    Pagar con Webpay
+                  </button>
+                  <p className="text-center text-[11px] text-muted-foreground">
+                    Débito, crédito o prepago. Te llevamos a Webpay (Transbank) y vuelves aquí.
+                    {pasarela?.prueba ? " · Ambiente de pruebas: no se cobra plata real." : ""}
+                  </p>
+                </>
+              )}
+              {proveedor === "simulado" && wallets.applePay && (
                 <button
                   onClick={() => handlePay("apple_pay")}
                   disabled={paying}
@@ -327,7 +398,7 @@ export default function PayPage() {
                   Pagar con Apple Pay
                 </button>
               )}
-              {wallets.googlePay && (
+              {proveedor === "simulado" && wallets.googlePay && (
                 <button
                   onClick={() => handlePay("google_pay")}
                   disabled={paying}
@@ -337,15 +408,17 @@ export default function PayPage() {
                   Pagar con Google Pay
                 </button>
               )}
-              <button
-                onClick={() => handlePay("card")}
-                disabled={paying}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-60"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {paying ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-                Pagar con tarjeta
-              </button>
+              {proveedor === "simulado" && (
+                <button
+                  onClick={() => handlePay("card")}
+                  disabled={paying}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-semibold text-white disabled:opacity-60"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {paying ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                  Pagar con tarjeta
+                </button>
+              )}
             </div>
 
             <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">

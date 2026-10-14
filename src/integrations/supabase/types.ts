@@ -235,6 +235,7 @@ export type Database = {
           objetivo_pedido_min: number
           objetivo_retiro_min: number
           opening_hours: Json | null
+          pagos_simulados: boolean
           payment_mode: string
           pedir_codigo: string
           phone: string | null
@@ -254,6 +255,7 @@ export type Database = {
           objetivo_pedido_min?: number
           objetivo_retiro_min?: number
           opening_hours?: Json | null
+          pagos_simulados?: boolean
           payment_mode?: string
           pedir_codigo?: string
           phone?: string | null
@@ -273,6 +275,7 @@ export type Database = {
           objetivo_pedido_min?: number
           objetivo_retiro_min?: number
           opening_hours?: Json | null
+          pagos_simulados?: boolean
           payment_mode?: string
           pedir_codigo?: string
           phone?: string | null
@@ -483,6 +486,69 @@ export type Database = {
           },
         ]
       }
+      conexiones_pago: {
+        Row: {
+          ambiente: string
+          branch_id: string
+          conectado_por: string | null
+          conectado_por_nombre: string | null
+          created_at: string
+          desconectado_at: string | null
+          estado: string
+          etiqueta: string
+          id: string
+          proveedor: string
+          secreto_id: string | null
+          tenant_id: string
+          verificado_at: string | null
+        }
+        Insert: {
+          ambiente: string
+          branch_id: string
+          conectado_por?: string | null
+          conectado_por_nombre?: string | null
+          created_at?: string
+          desconectado_at?: string | null
+          estado?: string
+          etiqueta: string
+          id?: string
+          proveedor: string
+          secreto_id?: string | null
+          tenant_id: string
+          verificado_at?: string | null
+        }
+        Update: {
+          ambiente?: string
+          branch_id?: string
+          conectado_por?: string | null
+          conectado_por_nombre?: string | null
+          created_at?: string
+          desconectado_at?: string | null
+          estado?: string
+          etiqueta?: string
+          id?: string
+          proveedor?: string
+          secreto_id?: string | null
+          tenant_id?: string
+          verificado_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conexiones_pago_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conexiones_pago_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracion_tablio: {
         Row: {
           clave: string
@@ -653,6 +719,7 @@ export type Database = {
       }
       intentos_pago: {
         Row: {
+          conexion_id: string | null
           cotizacion_id: string
           created_at: string
           estado: string
@@ -667,9 +734,11 @@ export type Database = {
           referencia_externa: string | null
           resuelto_at: string | null
           tenant_id: string
+          token_externo: string | null
           user_id: string
         }
         Insert: {
+          conexion_id?: string | null
           cotizacion_id: string
           created_at?: string
           estado?: string
@@ -684,9 +753,11 @@ export type Database = {
           referencia_externa?: string | null
           resuelto_at?: string | null
           tenant_id: string
+          token_externo?: string | null
           user_id: string
         }
         Update: {
+          conexion_id?: string | null
           cotizacion_id?: string
           created_at?: string
           estado?: string
@@ -701,9 +772,17 @@ export type Database = {
           referencia_externa?: string | null
           resuelto_at?: string | null
           tenant_id?: string
+          token_externo?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "intentos_pago_conexion_id_fkey"
+            columns: ["conexion_id"]
+            isOneToOne: false
+            referencedRelation: "conexiones_pago"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "intentos_pago_cotizacion_id_fkey"
             columns: ["cotizacion_id"]
@@ -2905,6 +2984,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _anotar_token_intento: {
+        Args: {
+          _conexion_id: string
+          _intento_id: string
+          _proveedor: string
+          _token: string
+        }
+        Returns: undefined
+      }
       _anular_sellos_pago: { Args: { _payment_id: string }; Returns: undefined }
       _codigo_premio: { Args: { _tenant_id: string }; Returns: string }
       _codigo_presencia: { Args: never; Returns: string }
@@ -2916,6 +3004,7 @@ export type Database = {
         Args: { _branch_id: string; _dia: string }
         Returns: Json
       }
+      _credenciales_conexion: { Args: { _conexion_id: string }; Returns: Json }
       _desempeno_mozo: {
         Args: {
           _branch_id: string
@@ -2923,6 +3012,21 @@ export type Database = {
           _hasta: string
           _staff_id: string
         }
+        Returns: Json
+      }
+      _guardar_conexion_pago: {
+        Args: {
+          _ambiente: string
+          _branch_id: string
+          _etiqueta: string
+          _proveedor: string
+          _secreto: Json
+          _user_id: string
+        }
+        Returns: Json
+      }
+      _intento_de_retorno: {
+        Args: { _orden: string; _token: string }
         Returns: Json
       }
       _mas_dias_habiles: {
@@ -2954,6 +3058,7 @@ export type Database = {
         }
       }
       _minutos_plato: { Args: { _menu_item_id: string }; Returns: number }
+      _pasarela_sucursal: { Args: { _branch_id: string }; Returns: Json }
       _presente: {
         Args: { _session_id: string; _user_id: string }
         Returns: boolean
@@ -2990,6 +3095,10 @@ export type Database = {
           propina: number
           staff_id: string
         }[]
+      }
+      _puede_configurar_pagos: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
       }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _sellos_pago: {
@@ -3135,6 +3244,7 @@ export type Database = {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
       }
+      desconectar_pago: { Args: { _conexion_id: string }; Returns: undefined }
       dia_abierto: {
         Args: { _branch_id: string; _dia: string }
         Returns: string
@@ -3199,6 +3309,7 @@ export type Database = {
         }
         Returns: Json
       }
+      pasarela_de_mesa: { Args: { _qr_token: string }; Returns: Json }
       pedir_cuenta: {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
         Returns: Json
@@ -3266,6 +3377,7 @@ export type Database = {
         }
         Returns: Json
       }
+      resultado_intento: { Args: { _intento_id: string }; Returns: Json }
       resumen_caja: {
         Args: { _branch_id: string; _dia?: string }
         Returns: Json

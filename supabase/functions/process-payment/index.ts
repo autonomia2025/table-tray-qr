@@ -1,6 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, UUID_RE } from "../_shared/http.ts";
 import { charge, refund, PROVIDER_NAME, type PaymentMethod } from "../_shared/provider.ts";
+import * as transbank from "../_shared/pasarelas/transbank.ts";
+import { appPermitida, codificarApp, urlFunciones } from "../_shared/urls.ts";
+
+interface Pasarela {
+  proveedor: "simulado" | "transbank" | "mercadopago";
+  ambiente?: transbank.Ambiente;
+  conexion_id?: string;
+  credenciales?: Record<string, string>;
+}
 
 const METHODS: PaymentMethod[] = ["apple_pay", "google_pay", "card", "cash"];
 
@@ -77,6 +86,19 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!table) return json({ error: "QR de mesa no válido" }, 404);
 
+    /* ---------- 0. Cómo cobra este local (fase 4.1): su pasarela, simulado (demo) o nada ---------- */
+    const { data: pas } = await admin.rpc("_pasarela_sucursal", { _branch_id: table.branch_id });
+    const pasarela = pas as Pasarela | null;
+    if (!pasarela) {
+      return json({ error: "Este local todavía no recibe pagos con la app. Pídele la cuenta al mozo." }, 409);
+    }
+    if (pasarela.proveedor === "mercadopago") {
+      return json({ error: "Este medio de pago todavía no está disponible. Pídele la cuenta al mozo." }, 409);
+    }
+    // Para volver a la app después de pagar en la pasarela (solo a la app de Tablio)
+    const app = appPermitida(req.headers.get("Origin")) ?? appPermitida(Deno.env.get("URL_APP"));
+    const volverA = body?.volver_a === "pay" ? "pay" : "checkout";
+
     /* ---------- 1. Cotización: el precio congelado (fase 2.A) ---------- */
     let cotizacion = cotizacionId;
     // Un pago repetido con la misma clave usa la cotización de la primera vez (no se cotiza de nuevo).
@@ -129,11 +151,45 @@ Deno.serve(async (req) => {
           : { data: null };
         return json({ payment: previo, duplicate: true, approved: true, order: ped, table_number: table.number });
       }
-      if (intento.estado === "reservado") return json({ error: "Tu pago se está procesando. Espera un momento." }, 409);
+      if (intento.estado === "reservado") {
+        // Ya salió a la pasarela y no terminó: se le vuelve a mostrar la misma página de pago
+        const { data: it } = await admin.from("intentos_pago").select("token_externo").eq("id", intento.id).single();
+        if (it?.token_externo && pasarela.proveedor === "transbank") {
+          return json({ approved: false, pendiente: true, intento_id: intento.id,
+            redirigir: { url: transbank.urlFormulario(pasarela.ambiente!), campos: { token_ws: it.token_externo } } });
+        }
+        return json({ error: "Tu pago se está procesando. Espera un momento." }, 409);
+      }
       return json({ error: intento.estado === "rechazado" ? "Pago rechazado" : "Este pago fue devuelto", duplicate: true }, 402);
     }
 
-    /* ---------- 3. Cobro ---------- */
+    /* ---------- 3a. Pasarela real: el cliente paga en la página de la pasarela ---------- */
+    if (pasarela.proveedor === "transbank") {
+      if (!app) return json({ error: "No pudimos abrir el pago. Vuelve a abrir la carta desde el QR." }, 400);
+      try {
+        const cred = pasarela.credenciales as unknown as transbank.CredTransbank;
+        const retorno = `${urlFunciones()}/pago-retorno?a=${codificarApp(app)}&v=${volverA}`;
+        const { token: tbk, url } = await transbank.crear(pasarela.ambiente!, cred, {
+          ordenCompra: transbank.ordenDeIntento(intento.id),
+          sesion: comensal.id,
+          monto: intento.monto + intento.propina,
+          retorno,
+        });
+        await admin.rpc("_anotar_token_intento", {
+          _intento_id: intento.id, _conexion_id: pasarela.conexion_id, _proveedor: "transbank", _token: tbk,
+        });
+        return json({ approved: false, pendiente: true, intento_id: intento.id, redirigir: { url, campos: { token_ws: tbk } } });
+      } catch (e) {
+        console.error("transbank crear", e instanceof Error ? e.message : e);
+        // No se cobró nada: el intento se cierra para que pueda volver a intentarlo
+        await admin.rpc("confirmar_pago", {
+          _intento_id: intento.id, _aprobado: false, _monto_cobrado: 0, _proveedor: "transbank", _referencia: null, _payload: {},
+        });
+        return json({ error: "No pudimos conectar con Webpay. Intenta de nuevo en un momento." }, 502);
+      }
+    }
+
+    /* ---------- 3. Cobro (simulado: locales de demostración) ---------- */
     const result = await charge({ amount: intento.monto, tip: intento.propina, method, reference: intento.id, email });
 
     /* ---------- 4. Confirmación atómica: pedido, pago, mesa y sesión juntos ---------- */

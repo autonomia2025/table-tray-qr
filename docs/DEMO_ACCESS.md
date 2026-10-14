@@ -72,6 +72,13 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 
 20. **Propinas:** al pagar, el 10% viene marcado; se puede elegir 15%, 20%, otro monto o "sin propina". En Caja → "Propinas del equipo", el dueño ve cuánto le debe a cada mozo y hasta cuándo tiene plazo (7 días hábiles), y registra el pago. La mozo lo ve en Perfil → "Mis propinas". El demo trae pagadas las semanas anteriores y pendientes los últimos días.
 
+21. **Pagar con Webpay de prueba:**
+    - con el dueño, en Sucursal → "Cómo te pagan con la app" → Webpay (Transbank) → "Probar con las claves de prueba de Transbank";
+    - desde una mesa, "Pagar con Webpay" → Tarjetas → `4051 8856 0044 6623`, vencimiento cualquier fecha futura, CVV `123` → Pagar;
+    - en el banco de prueba, RUT `11.111.111-1` y clave `123` → Aceptar → vuelves a Tablio con "¡Pago listo!" y el comprobante TBK;
+    - es el ambiente de pruebas de Transbank: no se cobra plata real;
+    - al terminar, "Desconectar" (el demo vuelve a pagos simulados). Reiniciar el demo también lo desconecta.
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.

@@ -84,3 +84,21 @@ export async function entrarComoCliente(page: Page) {
     if (!window.localStorage.getItem(k)) window.localStorage.setItem(k, v);
   }, [llave, JSON.stringify(data.session)] as const);
 }
+
+/** Devuelve completo el último pago con Webpay del demo, como lo haría el dueño desde Caja (fase 4.1). */
+export async function reembolsarUltimoPagoWebpay(): Promise<{ status: number; estado: string | null }> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = baseDeDatos();
+  const dueno = createClient(url, clave, { auth: { persistSession: false } });
+  const c = cuenta("owner")!;
+  const { data: sesion } = await dueno.auth.signInWithPassword({ email: c.correo, password: c.clave });
+  const { data: pago } = await dueno.from("payments").select("id").eq("branch_id", SUCURSAL_DEMO).eq("provider", "transbank")
+    .order("created_at", { ascending: false }).limit(1).single();
+  const r = await fetch(`${url}/functions/v1/refund-payment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: clave, Authorization: `Bearer ${sesion.session!.access_token}` },
+    body: JSON.stringify({ payment_id: pago!.id, reason: "Prueba de devolución por Webpay" }),
+  });
+  const { data: despues } = await dueno.from("payments").select("status").eq("id", pago!.id).single();
+  return { status: r.status, estado: despues?.status ?? null };
+}

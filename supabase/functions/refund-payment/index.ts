@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, json, UUID_RE } from "../_shared/http.ts";
 import { refund as providerRefund } from "../_shared/provider.ts";
+import * as transbank from "../_shared/pasarelas/transbank.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -42,9 +43,24 @@ Deno.serve(async (req) => {
     let ok = true;
     let referencia: string | null = null;
     if (r.devolucion === "pasarela") {
-      const resultado = await providerRefund(r.referencia_pago, r.monto);
-      ok = resultado.ok;
-      referencia = resultado.externalReference;
+      const { data: pago } = await admin.from("payments").select("provider, provider_payload").eq("id", paymentId).single();
+      const datos = (pago?.provider_payload ?? {}) as { conexion_id?: string; token?: string };
+      if (pago?.provider === "transbank") {
+        // Por la misma conexión con la que se cobró (fase 4.1)
+        const { data: c } = await admin.rpc("_credenciales_conexion", { _conexion_id: datos.conexion_id ?? null });
+        const conexion = c as { ambiente: transbank.Ambiente; credenciales: transbank.CredTransbank | null } | null;
+        if (conexion?.credenciales && datos.token) {
+          const resultado = await transbank.devolver(conexion.ambiente, conexion.credenciales, datos.token, r.monto);
+          ok = resultado.ok;
+          referencia = resultado.referencia;
+        } else {
+          ok = false; // la pasarela se desconectó: la devolución queda en revisión y se hace en el local
+        }
+      } else {
+        const resultado = await providerRefund(r.referencia_pago, r.monto);
+        ok = resultado.ok;
+        referencia = resultado.externalReference;
+      }
     }
 
     /* 3. Confirmar: pago, pedidos, sesión y auditoría juntos. */
