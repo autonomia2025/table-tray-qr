@@ -62,6 +62,8 @@ test("la caja cuadra sola, exige explicar las diferencias y el cierre queda bloq
   await page.getByLabel("Efectivo contado").fill(String(esperado));
   await expect(filaEfectivo.getByText("Cuadra")).toBeVisible();
   await expect(page.getByRole("button", { name: "Cerrar caja del día" })).toBeEnabled();
+  await page.getByText("Propinas por mozo").scrollIntoViewIfNeeded();
+  await foto(page, "62-cierre-cuadra-y-propinas");
 
   // El cierre en sí se prueba en un día pasado (así el demo sigue abierto hoy)
   const dia = `20${10 + Math.floor(Math.random() * 15)}-0${1 + Math.floor(Math.random() * 9)}-1${Math.floor(Math.random() * 9)}`;
@@ -70,14 +72,14 @@ test("la caja cuadra sola, exige explicar las diferencias y el cierre queda bloq
   await page.getByLabel("Efectivo contado").fill("0");
   await page.getByRole("button", { name: "Cerrar caja del día" }).click();
   await expect(page.getByText("¿Cerrar la caja del día?")).toBeVisible();
-  await foto(page, "62-cierre-confirmar");
+  await foto(page, "64-cierre-confirmar");
   await page.getByRole("button", { name: "Cerrar caja", exact: true }).click();
   await expect(page.getByText("Caja cerrada · no se puede cambiar")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByLabel("Efectivo contado")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cerrar caja del día" })).toHaveCount(0);
   await expect(page.getByRole("cell", { name: dia })).toBeVisible();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await foto(page, "63-cierre-bloqueado");
+  await page.getByRole("heading", { name: "Caja", exact: true }).scrollIntoViewIfNeeded();
+  await foto(page, "65-cierre-bloqueado");
 });
 
 test("el mozo no puede entrar a la caja", async ({ page }) => {
