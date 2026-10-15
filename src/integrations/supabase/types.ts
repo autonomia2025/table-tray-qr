@@ -2398,6 +2398,41 @@ export type Database = {
           },
         ]
       }
+      permisos_rol: {
+        Row: {
+          actualizado_por: string | null
+          permiso: string
+          permitido: boolean
+          rol: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          actualizado_por?: string | null
+          permiso: string
+          permitido: boolean
+          rol: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          actualizado_por?: string | null
+          permiso?: string
+          permitido?: boolean
+          rol?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permisos_rol_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pines_personal: {
         Row: {
           actualizado_at: string
@@ -3440,6 +3475,18 @@ export type Database = {
       }
       _anular_sellos_pago: { Args: { _payment_id: string }; Returns: undefined }
       _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
+      _catalogo_permisos: {
+        Args: never
+        Returns: {
+          accion: string
+          descripcion: string
+          nombre: string
+          orden: number
+          permiso: string
+          por_defecto: string[]
+          posibles: string[]
+        }[]
+      }
       _chequeo_salud: { Args: never; Returns: Json }
       _codigo_premio: { Args: { _tenant_id: string }; Returns: string }
       _codigo_presencia: { Args: never; Returns: string }
@@ -3477,6 +3524,10 @@ export type Database = {
           monto: number
           token: string
         }[]
+      }
+      _exigir_permiso: {
+        Args: { _permiso: string; _tenant_id: string }
+        Returns: undefined
       }
       _gestiona_sucursal: { Args: { _branch_id: string }; Returns: string }
       _guardar_conexion_pago: {
@@ -3560,6 +3611,10 @@ export type Database = {
         }[]
       }
       _pasarela_sucursal: { Args: { _branch_id: string }; Returns: Json }
+      _permiso_posible: {
+        Args: { _permiso: string; _rol: string }
+        Returns: boolean
+      }
       _presente: {
         Args: { _session_id: string; _user_id: string }
         Returns: boolean
@@ -3634,6 +3689,10 @@ export type Database = {
       }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _revisar_salud: { Args: never; Returns: string }
+      _rol_puede: {
+        Args: { _permiso: string; _rol: string; _tenant_id: string }
+        Returns: boolean
+      }
       _sellos_pago: {
         Args: {
           _payment_id: string
@@ -3847,6 +3906,15 @@ export type Database = {
       excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
       guardar_consentimiento: { Args: { _promociones: boolean }; Returns: Json }
+      guardar_permiso_rol: {
+        Args: {
+          _permiso: string
+          _permitido: boolean
+          _rol: string
+          _tenant_id: string
+        }
+        Returns: Json
+      }
       guardar_suscripcion_push: {
         Args: {
           _auth: string
@@ -3934,6 +4002,7 @@ export type Database = {
         }
         Returns: Json
       }
+      permisos_del_local: { Args: { _tenant_id: string }; Returns: Json }
       premios_en_mesa: { Args: { _table_id: string }; Returns: Json }
       premios_por_entregar: { Args: { _tenant_id: string }; Returns: Json }
       primeros_pasos: { Args: { _branch_id: string }; Returns: Json }
@@ -4043,6 +4112,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      tiene_permiso: {
+        Args: { _permiso: string; _tenant_id: string }
+        Returns: boolean
       }
       tiene_rol: {
         Args: { _roles: string[]; _tenant_id: string }

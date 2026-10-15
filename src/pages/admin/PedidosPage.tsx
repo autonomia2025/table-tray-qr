@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Clock, ChefHat, Check, Truck, XCircle, AlertTriangle, Receipt } from "lucide-react";
 import { textoPedido, textoPedidoPlural } from "@/lib/estados";
+import { usePermiso } from "@/hooks/usePermiso";
 
 interface OrderRow {
   id: string;
@@ -98,6 +99,7 @@ function textoOpciones(opciones: unknown): string {
 
 export default function PedidosPage() {
   const { branchId, tenantId } = useAdmin();
+  const puede = usePermiso(tenantId);
   const { toast } = useToast();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [tableMap, setTableMap] = useState<TableMap>({});
@@ -292,7 +294,7 @@ export default function PedidosPage() {
         <p className="text-xs text-destructive mt-1 truncate">📝 {order.notes}</p>
       )}
       <p className="text-sm font-semibold mt-2">{formatCLP(order.total_amount)}</p>
-      {(order.status === 'confirmed' || order.status === 'in_kitchen') && (
+      {(order.status === 'confirmed' || order.status === 'in_kitchen') && puede("anular_pedidos") && (
         <button
           onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id, order.order_number); }}
           className="text-[11px] text-destructive underline mt-1"
@@ -401,9 +403,11 @@ export default function PedidosPage() {
           <DialogFooter className="flex gap-2">
             {selectedOrder && ["confirmed", "in_kitchen", "ready"].includes(selectedOrder.status ?? "") && (
               <>
-                <Button variant="destructive" size="sm" onClick={() => { setCancelOrder(selectedOrder); setSelectedOrder(null); }}>
-                  Cancelar
-                </Button>
+                {puede("anular_pedidos") && (
+                  <Button variant="destructive" size="sm" onClick={() => { setCancelOrder(selectedOrder); setSelectedOrder(null); }}>
+                    Cancelar
+                  </Button>
+                )}
                 <Button size="sm" disabled={actionLoading} onClick={() => advanceStatus(selectedOrder)}>
                   {selectedOrder.status === "confirmed" ? "Enviar a cocina" : selectedOrder.status === "in_kitchen" ? "Marcar listo" : "Marcar entregado"}
                 </Button>

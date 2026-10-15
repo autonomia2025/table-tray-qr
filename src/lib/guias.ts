@@ -76,6 +76,7 @@ export const GUIAS: Record<RolGuia, Guia> = {
       { titulo: "La carta", texto: "En Menú usa «Pegar carta» para cargarla entera de una vez. Después agrega fotos, opciones y a qué estación va cada categoría." },
       { titulo: "Mesas y QR", texto: "En QR imprime las tarjetas de cada mesa con «Imprimir tarjetas». Cada mesa tiene además un código de 4 números que prueba que el cliente está en el local." },
       { titulo: "Tu equipo", texto: "En Equipo invita a mozos, caja y cocina con un enlace. Desactivar a alguien le quita el acceso al instante. Ahí también ves turnos, desempeño y metas, y activas una tablet compartida con «Activar este dispositivo como tablet»." },
+      { titulo: "Qué puede hacer cada rol", texto: "En Equipo → Permisos por rol eliges, por ejemplo, si la caja ve los reportes o si el encargado puede devolver plata. Lo que quitas se bloquea al tiro, aunque alguien tenga la app abierta." },
       { titulo: "Cómo te pagan", texto: "En Sucursal conecta tu Webpay: la plata va directo a tu cuenta. Anota también tus datos para transferir y si quieres el recordatorio de boleta." },
       { titulo: "La caja y los reportes", texto: "La caja cuadra sola y se cierra cada día. En Reportes ves ventas, platos, horas y zonas." },
       { titulo: "Los sellos", texto: "En Lealtad defines cuántas visitas dan un premio. Los sellos se suman solos al pagar." },

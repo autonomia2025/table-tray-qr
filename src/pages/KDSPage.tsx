@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { textoPedidoPlural } from "@/lib/estados";
 import GuiaRapida from "@/components/GuiaRapida";
+import { usePermiso } from "@/hooks/usePermiso";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
@@ -544,6 +545,8 @@ export default function KDSPage() {
 
 function KDSBoard({ branchId }: { branchId: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { perfil } = useSesion();
+  const puede = usePermiso(perfil?.locales.find((l) => l.branch_id === branchId)?.tenant_id ?? perfil?.locales[0]?.tenant_id);
   const [orders, setOrders] = useState<KDSOrder[]>([]);
   // Hora de la última vez que la pantalla supo de la base (carga o aviso en vivo)
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
@@ -1022,7 +1025,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={newOrders}
           column="new"
           onAction={handleAction}
-          onDisableItem={handleDisableItem}
+          onDisableItem={puede("marcar_agotado") ? handleDisableItem : undefined}
           groupedNewItems={groupedNewItems}
           nombreEstacion={nombreEstacion}
         />
@@ -1034,7 +1037,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
           orders={kitchenOrders}
           column="kitchen"
           onAction={handleAction}
-          onDisableItem={handleDisableItem}
+          onDisableItem={puede("marcar_agotado") ? handleDisableItem : undefined}
           nombreEstacion={nombreEstacion}
         />
         <KDSColumn

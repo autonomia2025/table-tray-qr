@@ -22,6 +22,7 @@ import PropinasPorPagar from "@/components/admin/PropinasPorPagar";
 import ConciliacionPasarela from "@/components/admin/ConciliacionPasarela";
 import BoletasPendientes from "@/components/admin/BoletasPendientes";
 import CortesCaja from "@/components/admin/CortesCaja";
+import { usePermiso } from "@/hooks/usePermiso";
 import { marcarBoleta } from "@/lib/boletas";
 import ExcepcionesCaja from "@/components/admin/ExcepcionesCaja";
 import { excepcionesCaja, type Excepcion } from "@/lib/excepciones";
@@ -129,6 +130,7 @@ function AvisosCierre({ resumen, excepciones }: { resumen: ResumenCaja; excepcio
 
 export default function CajaPage() {
   const { tenantId, branchId } = useAdmin();
+  const puede = usePermiso(tenantId);
   const { toast } = useToast();
 
   // El día de negocio (por defecto, el de hoy según la hora de corte de la sucursal).
@@ -408,7 +410,7 @@ export default function CajaPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    {(p.status === "approved" || p.status === "partially_refunded") && (
+                    {(p.status === "approved" || p.status === "partially_refunded") && puede("reembolsar") && (
                       <Button size="sm" variant="ghost" onClick={() => { setRefundTarget(p); setRefundAmount(""); setRefundReason(""); }}>
                         <Undo2 className="mr-1 h-4 w-4" /> Reembolsar
                       </Button>
@@ -430,7 +432,7 @@ export default function CajaPage() {
           {/* Boletas de efectivo y transferencia (fase 4.3) */}
           {branchId && <BoletasPendientes branchId={branchId} alCambiar={load} />}
           {/* Cortes de turno (fase 6.2) */}
-          {branchId && resumen && <CortesCaja branchId={branchId} resumen={resumen} recargar={load} />}
+          {branchId && resumen && <CortesCaja branchId={branchId} resumen={resumen} recargar={load} puedeCortar={puede("cerrar_caja")} />}
           {resumen && (
             <>
               {diaCerrado && resumen.cierre && (
@@ -561,7 +563,10 @@ export default function CajaPage() {
                     </p>
                   )}
 
-                  {!diaCerrado && (
+                  {!diaCerrado && !puede("cerrar_caja") && (
+                    <p className="text-sm text-muted-foreground">Tu rol no cierra la caja. Si lo necesitas, pídeselo al dueño del local.</p>
+                  )}
+                  {!diaCerrado && puede("cerrar_caja") && (
                     <>
                       <div>
                         <Label className="text-xs">

@@ -4,6 +4,36 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 6.3: permisos finos por rol ✅
+**Qué hace:** en Equipo → Permisos por rol, el dueño (o el administrador) elige qué puede hacer el encargado, la caja, el mozo y la cocina. Son 8 permisos:
+- cobrar en el local;
+- tomar pedidos a mano;
+- anular pedidos;
+- devolver plata;
+- cortes y cierre de caja;
+- ver reportes;
+- editar la carta;
+- marcar agotados.
+
+De fábrica queda todo como antes.
+
+**Cómo está protegido:**
+- Lo hace cumplir la base, no la pantalla: cada función y cada regla de acceso pregunta `tiene_permiso`. Si a alguien le quitan un permiso, queda bloqueado al tiro, aunque tenga la app abierta.
+- Hay combinaciones que no existen. Por ejemplo, devolver plata o cerrar la caja no se le puede dar al mozo ni a la cocina, porque la plata la ven solo dueño, administrador, encargado y caja.
+- Cada cambio queda registrado: quién, qué rol, qué permiso, antes y después.
+- El reinicio del demo deja todo de fábrica.
+
+**Pruebas:**
+- `tests/seguridad/f6-3-permisos.test.ts` revisa:
+  - que solo el dueño o el administrador vean y cambien los permisos;
+  - que nadie escriba la tabla directo;
+  - las combinaciones prohibidas;
+  - los permisos de fábrica de cada rol;
+  - que la base bloquee lo que se quita (cobrar, cortes, cierre, agotar) y deje lo que se da (reportes, anular, editar la carta).
+- `e2e/permisos.spec.ts` recorre el panel del dueño y la pantalla de la caja.
+
+---
+
 ## 2026-10-15 — Fase 6.2: varios cierres de caja al día ✅
 **Qué hace:** cuando la caja cambia de manos (turno mañana y turno noche), la cajera que se va hace un **corte de turno**:
 - cuenta el efectivo de su tramo y lo anota;

@@ -15,6 +15,7 @@ import { Plus, Pencil, Loader2, Users, Link2, Copy, Check, Mail } from "lucide-r
 import TurnosEquipo from "@/components/admin/TurnosEquipo";
 import DesempenoEquipo from "@/components/admin/DesempenoEquipo";
 import TabletsEquipo from "@/components/admin/TabletsEquipo";
+import PermisosRoles from "@/components/admin/PermisosRoles";
 
 interface StaffRow {
   id: string;
@@ -229,6 +230,8 @@ export default function EquipoPage() {
       )}
 
       {branchId && <TabletsEquipo branchId={branchId} staff={staff} />}
+
+      {tenantId && <PermisosRoles tenantId={tenantId} />}
 
       <DesempenoEquipo branchId={branchId} tenantId={tenantId} />
 

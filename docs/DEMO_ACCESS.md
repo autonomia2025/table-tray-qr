@@ -102,6 +102,7 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - en la tablet, cada mozo toca su nombre y escribe su PIN; al terminar, "Cambiar de mozo". Tras 4 minutos sin uso, vuelve sola a pedir el PIN;
     - desde Equipo se desactiva una tablet o se borra el PIN de alguien.
 28. **Cortes de turno (varios cierres al día):** como cajera, en Caja → "Cierre de caja", toca "Hacer corte de turno", ponle nombre (por ejemplo "Turno mañana"), escribe el efectivo contado y "Guardar corte". Lo que se cobre después es del turno siguiente; al cerrar el día se cuenta solo desde el último corte y el cierre suma todos.
+29. **Permisos por rol:** como dueño, en Equipo → "Permisos por rol", activa "Ver reportes" para Cajero y desactiva "Devolver plata". Al volver a entrar como cajera, verás Inicio y Reportes en el menú y ya no el botón "Reembolsar". Para dejarlo como venía, vuelve a mover los interruptores (o usa el reinicio del demo).
 
 ## Experiencia del comensal (invitado o cliente)
 

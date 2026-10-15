@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Clock, Receipt } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { usePermiso } from '@/hooks/usePermiso';
 
 interface TableData {
   id: string;
@@ -167,7 +168,8 @@ function playAlert() {
 
 export default function MozoMesasPage() {
   const navigate = useNavigate();
-  const { branchId, staffId } = useWaiters();
+  const { branchId, staffId, tenantId } = useWaiters();
+  const puede = usePermiso(tenantId);
   const { turno, cargando: cargandoTurno, recargar: recargarTurno } = useMiTurno(branchId);
   const [abriendoTurno, setAbriendoTurno] = useState(false);
   const { toast } = useToast();
@@ -702,7 +704,7 @@ export default function MozoMesasPage() {
                     {actionLoading === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Voy en camino'}
                   </Button>
                 )}
-                {e === 'por_cobrar' && puedoCerrar(t) && (
+                {e === 'por_cobrar' && puedoCerrar(t) && puede('cobrar') && (
                   <Button
                     size="sm"
                     className="w-full h-8 text-xs bg-amber-500 hover:bg-amber-600 text-white"
@@ -888,7 +890,7 @@ export default function MozoMesasPage() {
             )}
 
             {/* Respaldo: para quien prefiere pedir "a la antigua" (lo principal es que pidan y paguen con el QR) */}
-            {selectedTable && puedoCerrar(selectedTable) && (
+            {selectedTable && puedoCerrar(selectedTable) && puede('tomar_pedidos') && (
               <div className="pt-3 mt-1 border-t border-border">
                 <button
                   onClick={() => navigate(`/mozo/pedido-manual/${selectedTable.id}`)}

@@ -7,7 +7,7 @@ import { inicioPanel, puedeVer, type SeccionLocal } from "@/lib/roles";
  * solo las secciones de su rol (src/lib/roles.ts). Mozo y cocina tienen sus propias pantallas.
  */
 export default function AdminGuard() {
-  const { isLoading, isAuthenticated, role, branchId } = useAdmin();
+  const { isLoading, isAuthenticated, role, branchId, permisos } = useAdmin();
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
 
@@ -24,8 +24,8 @@ export default function AdminGuard() {
   if (role === "kitchen") return <Navigate to={branchId ? `/kds?branch=${branchId}` : "/kds"} replace />;
 
   const seccion = location.pathname.split("/")[3] as SeccionLocal | undefined;
-  if (seccion && !puedeVer(role, seccion)) {
-    return <Navigate to={`/admin/${slug}/${inicioPanel(role)}`} replace />;
+  if (seccion && !puedeVer(role, seccion, permisos)) {
+    return <Navigate to={`/admin/${slug}/${inicioPanel(role, permisos)}`} replace />;
   }
 
   return <Outlet />;

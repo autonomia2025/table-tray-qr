@@ -16,7 +16,13 @@ export interface LocalDelPerfil {
   branch_id: string | null;
   staff_id: string | null;
   staff_nombre: string | null;
+  /** Lo que su rol puede hacer en este local (fase 6.3; el dueño lo ajusta y la base lo hace cumplir). */
+  permisos?: Permiso[];
 }
+
+/** Permisos finos (fase 6.3). El catálogo vive en la base (_catalogo_permisos). */
+export type Permiso =
+  | "cobrar" | "tomar_pedidos" | "anular_pedidos" | "reembolsar" | "cerrar_caja" | "ver_reportes" | "editar_carta" | "marcar_agotado";
 
 export interface Perfil {
   user_id: string;
@@ -53,12 +59,20 @@ export const SECCIONES_POR_ROL: Record<RolLocal, SeccionLocal[]> = {
   kitchen: ["kds"],
 };
 
-export const puedeVer = (rol: RolLocal | "superadmin", seccion: SeccionLocal) =>
-  rol === "superadmin" || SECCIONES_POR_ROL[rol]?.includes(seccion);
+/** Secciones que dependen de un permiso (fase 6.3): aparecen o desaparecen según lo que el dueño ajustó. */
+const SECCION_CON_PERMISO: Partial<Record<SeccionLocal, Permiso>> = { inicio: "ver_reportes", reportes: "ver_reportes", menu: "editar_carta" };
+
+/** Sin la lista de permisos (todavía cargando), se usan las secciones del rol. */
+export const puedeVer = (rol: RolLocal | "superadmin", seccion: SeccionLocal, permisos?: Permiso[]) => {
+  if (rol === "superadmin" || rol === "owner" || rol === "admin") return true;
+  const permiso = SECCION_CON_PERMISO[seccion];
+  if (permiso && permisos) return permisos.includes(permiso);
+  return !!SECCIONES_POR_ROL[rol]?.includes(seccion);
+};
 
 /** Primera sección del panel para cada rol. */
-export const inicioPanel = (rol: RolLocal | "superadmin"): SeccionLocal =>
-  rol === "cashier" ? "caja" : "inicio";
+export const inicioPanel = (rol: RolLocal | "superadmin", permisos?: Permiso[]): SeccionLocal =>
+  rol === "cashier" ? "caja" : puedeVer(rol, "inicio", permisos) ? "inicio" : "mesas";
 
 /** Roles que pueden abrir la pantalla de cocina (KDS). */
 export const ROLES_KDS: RolLocal[] = ["owner", "admin", "manager", "kitchen"];
@@ -79,6 +93,6 @@ export function destinoTrasLogin(perfil: Perfil | null): string {
   switch (local.rol) {
     case "waiter": return "/mozo/mesas";
     case "kitchen": return local.branch_id ? `/kds?branch=${local.branch_id}` : "/kds";
-    default: return `/admin/${local.slug}/${inicioPanel(local.rol)}`;
+    default: return `/admin/${local.slug}/${inicioPanel(local.rol, local.permisos)}`;
   }
 }

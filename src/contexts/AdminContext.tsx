@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { registrarAccesoSoporte } from "@/lib/soporte";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSesion } from "@/contexts/SesionContext";
-import type { RolLocal } from "@/lib/roles";
+import type { Permiso, RolLocal } from "@/lib/roles";
 
 /**
  * Panel del local (/admin/:slug). Se apoya en la sesión única (mi_perfil):
@@ -20,6 +20,8 @@ interface AdminContextType {
   slug: string;
   role: RolLocal | "superadmin" | "";
   userId: string;
+  /** Lo que su rol puede hacer (fase 6.3); vacío = dueño, administrador o superadmin (todo). */
+  permisos?: Permiso[];
   isLoading: boolean;
   isAuthenticated: boolean;
   isImpersonating: boolean;
@@ -100,6 +102,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         slug,
         role,
         userId: perfil.user_id,
+        permisos: soporte ? undefined : local?.permisos,
       });
       setIsImpersonating(soporte);
       if (soporte) registrarAccesoSoporte("local", tenantId);

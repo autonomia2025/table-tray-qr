@@ -20,7 +20,7 @@ function Diferencia({ valor }: { valor: number | null }) {
   return <span className="font-semibold text-destructive">{valor < 0 ? `Faltan ${formatCLP(-valor)}` : `Sobran ${formatCLP(valor)}`}</span>;
 }
 
-export default function CortesCaja({ branchId, resumen, recargar }: { branchId: string; resumen: ResumenCaja; recargar: () => void }) {
+export default function CortesCaja({ branchId, resumen, recargar, puedeCortar = true }: { branchId: string; resumen: ResumenCaja; recargar: () => void; puedeCortar?: boolean }) {
   const { toast } = useToast();
   const [abierto, setAbierto] = useState(false);
   const [efectivo, setEfectivo] = useState("");
@@ -46,7 +46,7 @@ export default function CortesCaja({ branchId, resumen, recargar }: { branchId: 
     recargar();
   };
 
-  if (resumen.cerrado && cortes.length === 0) return null;
+  if ((resumen.cerrado || !puedeCortar) && cortes.length === 0) return null;
   return (
     <div className="mb-4 rounded-2xl border bg-card p-4" data-testid="cortes-caja">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -54,7 +54,7 @@ export default function CortesCaja({ branchId, resumen, recargar }: { branchId: 
           <p className="flex items-center gap-1.5 font-semibold text-foreground"><Scissors className="h-4 w-4 text-primary" /> Cortes de turno</p>
           <p className="text-xs text-muted-foreground">Cuenta la caja al cambio de turno. El cierre del día suma todos los cortes.</p>
         </div>
-        {!resumen.cerrado && !abierto && <Button size="sm" variant="outline" onClick={() => setAbierto(true)}>Hacer corte de turno</Button>}
+        {!resumen.cerrado && !abierto && puedeCortar && <Button size="sm" variant="outline" onClick={() => setAbierto(true)}>Hacer corte de turno</Button>}
       </div>
 
       {cortes.length > 0 && (
