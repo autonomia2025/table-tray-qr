@@ -342,15 +342,32 @@ export default function MozoMesasPage() {
 
   useEffect(() => {
     fetchTables();
+    // Con mucho movimiento llegan varios avisos por segundo: se juntan en una sola recarga (fase 5.3)
+    let espera: ReturnType<typeof setTimeout> | null = null;
+    const pronto = () => {
+      if (espera) return;
+      espera = setTimeout(() => { espera = null; fetchTables(); }, 800);
+    };
     const channel = supabase
       .channel('mozo-mesas-full')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'table_sessions', filter: `branch_id=eq.${branchId}` }, () => fetchTables())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tables', filter: `branch_id=eq.${branchId}` }, pronto)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `branch_id=eq.${branchId}` }, pronto)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bill_requests', filter: `branch_id=eq.${branchId}` }, pronto)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'waiter_calls', filter: `branch_id=eq.${branchId}` }, pronto)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'table_sessions', filter: `branch_id=eq.${branchId}` }, pronto)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Si un aviso en vivo se pierde (corte de red o un peak), la pantalla se pone al día sola
+    const respaldo = setInterval(() => { if (document.visibilityState === 'visible') pronto(); }, 20_000);
+    const alMirar = () => { if (document.visibilityState === 'visible') pronto(); };
+    document.addEventListener('visibilitychange', alMirar);
+    window.addEventListener('online', pronto);
+    return () => {
+      supabase.removeChannel(channel);
+      if (espera) clearTimeout(espera);
+      clearInterval(respaldo);
+      document.removeEventListener('visibilitychange', alMirar);
+      window.removeEventListener('online', pronto);
+    };
   }, [branchId, fetchTables]);
 
   // Aviso sonoro cuando aparece algo que hacer (llamado, comida lista, cuenta, cobro)

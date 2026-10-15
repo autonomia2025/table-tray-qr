@@ -32,6 +32,10 @@ interface CartItemIn {
   notes?: string;
 }
 
+// Con el servidor ocupado (un peak), se le pide al cliente reintentar: nunca se le dice algo falso
+// ("QR no válido", "este local no cobra con la app") por una consulta que no alcanzó a responder.
+const OCUPADO = "Hay mucho movimiento en este momento. Intenta de nuevo en unos segundos.";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -43,8 +47,12 @@ Deno.serve(async (req) => {
 
     // Quién paga (fase 1.3): invitado o cliente, según su sesión. Sin sesión, nadie.
     const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
-    const { data: quien } = token ? await admin.auth.getUser(token) : { data: { user: null } };
+    const { data: quien, error: errQuien } = token ? await admin.auth.getUser(token) : { data: { user: null }, error: null };
     const comensal = quien?.user ?? null;
+    // Si no se pudo consultar la sesión (servidor ocupado), no es que la persona no tenga sesión (fase 5.3)
+    if (!comensal && errQuien && !(errQuien.status && errQuien.status >= 400 && errQuien.status < 500)) {
+      return json({ error: OCUPADO }, 503);
+    }
     // Fase 1.10: todo pago queda ligado a una persona (invitado o cliente). Todo comensal tiene sesión.
     if (!comensal) return json({ error: "Abre la carta desde el QR de tu mesa para pagar." }, 401);
     // Los sellos solo se suman a clientes registrados, con el correo verificado de su cuenta.
@@ -79,15 +87,17 @@ Deno.serve(async (req) => {
     if (tipRaw < 0 || tipRaw > 5_000_000) return json({ error: "Propina inválida" }, 400);
     if (method === "cash") return json({ error: "El efectivo se le paga al mozo." }, 400);
 
-    const { data: table } = await admin
+    const { data: table, error: errMesa } = await admin
       .from("tables")
       .select("id, number, tenant_id, branch_id")
       .eq("qr_token", tableToken)
       .maybeSingle();
+    if (errMesa) return json({ error: OCUPADO }, 503);
     if (!table) return json({ error: "QR de mesa no válido" }, 404);
 
     /* ---------- 0. Cómo cobra este local (fase 4.1): su pasarela, simulado (demo) o nada ---------- */
-    const { data: pas } = await admin.rpc("_pasarela_sucursal", { _branch_id: table.branch_id });
+    const { data: pas, error: errPas } = await admin.rpc("_pasarela_sucursal", { _branch_id: table.branch_id });
+    if (errPas) return json({ error: OCUPADO }, 503);
     const pasarela = pas as Pasarela | null;
     if (!pasarela) {
       return json({ error: "Este local todavía no recibe pagos con la app. Pídele la cuenta al mozo." }, 409);

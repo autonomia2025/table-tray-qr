@@ -4,6 +4,21 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 5.3: prueba de carga ✅
+`bun run carga` simula un viernes lleno: un local de 40 mesas, comensales que piden y pagan en rondas, 10 pantallas en vivo y una cocina avanzando pedidos. Resultados y cómo leerlos en `docs/PRUEBA_CARGA.md`.
+
+**Resumen:**
+- Con 50 comensales (unos 350 pagos por minuto, varias veces el peak real) no hubo ni un error de pago.
+- Con 150, todo resulta pero más lento.
+- Con 300 entrando a la vez, este computador se satura.
+- En todos los casos las auditorías de la plata quedaron vacías.
+
+**Lo que encontró y se corrigió:**
+1. **Bloqueos mutuos en la misma mesa** (pago mientras alguien llama al mozo, pide la cuenta o pide sin pagar; y el cobro del mozo). Todas las funciones toman ahora primero la mesa, después la visita y después los pedidos (`20261015110000_orden_bloqueos`). La prueba `f5-3-mesa-llena` lo provoca a propósito.
+2. **Mensajes falsos bajo carga** en `process-payment`. Con el servidor ocupado ya no dice "QR no válido", "este local no recibe pagos" ni "abre la carta desde el QR", sino "Hay mucho movimiento… intenta de nuevo".
+3. **La pantalla del mozo recargaba todo con cada aviso.** Ahora junta los avisos (como máximo una recarga por segundo) y se pone al día sola cada 20 segundos.
+4. **La cocina se pone al día cada 15 segundos** (antes 30) si pierde un aviso en vivo.
+
 ## 2026-10-15 — Fase 5.2: primeros pasos del dueño y pegar la carta ✅
 Un local recién activado no tenía guía: el dueño entraba a un panel vacío. Ahora:
 

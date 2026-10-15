@@ -697,7 +697,8 @@ function KDSBoard({ branchId }: { branchId: string }) {
     if (initialOrders) setOrders(initialOrders);
   }, [initialOrders]);
 
-  // Si se corta internet, al volver se recupera todo: al reconectar, al volver a la pestaña y cada 30 s.
+  // Si se corta internet, al volver se recupera todo: al reconectar, al volver a la pestaña y cada 15 s
+  // (también cubre un aviso en vivo perdido en un peak; prueba de carga, fase 5.3).
   const recargarRef = useRef(fetchOrders);
   recargarRef.current = fetchOrders;
   const estuvoDesconectado = useRef(false);
@@ -709,7 +710,7 @@ function KDSBoard({ branchId }: { branchId: string }) {
     window.addEventListener("online", alVolver);
     window.addEventListener("offline", alCaer);
     document.addEventListener("visibilitychange", alMirar);
-    const id = setInterval(recargar, 30_000);
+    const id = setInterval(recargar, 15_000);
     return () => {
       window.removeEventListener("online", alVolver);
       window.removeEventListener("offline", alCaer);
