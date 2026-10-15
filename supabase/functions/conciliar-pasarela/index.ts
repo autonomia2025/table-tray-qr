@@ -31,7 +31,8 @@ Deno.serve(async (req) => {
     const { data } = await admin.rpc("_pagos_pasarela_dia", { _branch_id: sucursal, _dia: dia });
     const pagos = (data ?? []) as PagoDia[];
     const credenciales = new Map<string, { ambiente: transbank.Ambiente; credenciales: transbank.CredTransbank | null } | null>();
-    const resultado: { pago_id: string; referencia: string | null; monto: number; calza: boolean; detalle: string }[] = [];
+    // "transitorio": Transbank no respondió; no es una diferencia, se vuelve a intentar
+    const resultado: { pago_id: string; referencia: string | null; monto: number; calza: boolean; detalle: string; transitorio?: boolean }[] = [];
 
     for (const p of pagos) {
       const total = p.monto + p.propina;
@@ -65,12 +66,14 @@ Deno.serve(async (req) => {
         }
         resultado.push({ pago_id: p.id, referencia: p.referencia, monto: total, calza, detalle });
       } catch (e) {
-        resultado.push({ pago_id: p.id, referencia: p.referencia, monto: total, calza: false, detalle: "Transbank no respondió: vuelve a intentar en un momento" });
+        resultado.push({ pago_id: p.id, referencia: p.referencia, monto: total, calza: false, detalle: "Transbank no respondió: vuelve a intentar en un momento", transitorio: true });
         console.error("conciliar", p.id, e instanceof Error ? e.message : e);
       }
     }
 
     const diferencias = resultado.filter((x) => !x.calza).length;
+    // Lo que no calza queda en las excepciones de la caja hasta que alguien lo revise (fase 4.6)
+    await admin.rpc("_anotar_conciliacion", { _branch_id: sucursal, _dia: dia, _resultados: resultado });
     const { data: b } = await admin.from("branches").select("tenant_id").eq("id", sucursal).single();
     await admin.from("audit_logs").insert({
       tenant_id: b?.tenant_id, user_id: quien.user.id, action: "conciliacion_pasarela", entity_type: "branch", entity_id: sucursal,

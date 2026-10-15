@@ -4,6 +4,34 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 4.6: excepciones de la caja ✅ (los correos esperan el dominio)
+El brief pide que la caja gestione las excepciones: pago sin pedido, monto que no calza y boleta fallida. Ahora hay una sola bandeja, en Caja → Excepciones, con un aviso en el Inicio y en el cierre de caja.
+
+**Qué muestra la bandeja y cómo se resuelve cada caso:**
+- **Cobro sin pedido por devolver.** Se puede pedir "Revisar con la pasarela" o anotar "Lo devolví de otra forma", con una explicación.
+- **Reembolso que la pasarela rechazó.** Se reintenta o se descarta, con motivo.
+- **Monto que no calza con Transbank.** Queda guardado desde la conciliación hasta que alguien lo marca revisado, con una explicación. Si después calza, se cierra solo.
+- **Boleta de un día anterior sin marcar.** Se marca entregada (con su número) o "no se pudo entregar", con motivo.
+- **Pago que salió a Webpay y no se ha confirmado.** Se puede pedir "Revisar con la pasarela".
+- Todo lo que se resuelve a mano queda en la auditoría.
+
+**Hueco cerrado.** Cuando la app devolvía un cobro sola (otra persona ya había pagado lo mismo, o el monto no calzaba), no revisaba si la pasarela lo devolvió. Si fallaba, el cliente quedaba cobrado sin pedido y nadie se enteraba. Ahora:
+- se guarda cuánto se cobró y si la devolución resultó;
+- la revisión automática de cada 5 minutos la reintenta hasta 6 veces, y antes pregunta a Transbank cómo está el cobro, para no devolver dos veces;
+- si sigue fallando, aparece en la bandeja;
+- la auditoría de la plata lo marca si pasa más de 7 días sin resolver.
+
+**Pruebas:**
+- `tests/seguridad/f4-6-excepciones.test.ts` revisa:
+  - que la devolución automática quede anotada;
+  - cada tipo de excepción, con su resolución;
+  - que la explicación sea obligatoria;
+  - quién ve y quién no (mozo, cocina, comensal, sin sesión, otro local);
+  - que nadie escriba las diferencias desde el navegador;
+  - que la auditoría detecte una devolución olvidada.
+- `e2e/excepciones.spec.ts` recorre la bandeja de punta a punta.
+- **La compuerta sirvió:** detectó un cierre de caja que cambió, provocado por la propia prueba nueva. Se corrigió la prueba.
+
 ## 2026-10-15 — Fase 4.3 (etapa 1): transferencia y boleta del local ✅
 La boleta siempre es del local, con su RUT; Tablio nunca la emite a su nombre. Con la app o con POS no hace falta: el comprobante del pago vale como boleta (si el local lo declara en el SII). En efectivo y transferencia, el local la emite con su sistema de siempre, y Tablio se encarga de que no se olvide:
 - **Transferencia como medio de cobro.** El mozo y la caja cobran en efectivo, POS o transferencia.

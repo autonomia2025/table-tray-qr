@@ -68,7 +68,9 @@ Deno.serve(async (req) => {
         const confirmacion = conf as { estado: string; reembolsar?: number } | null;
         // Monto que no calza o algo que ya pagó otra persona: se devuelve solo
         if (ok && confirmacion?.estado === "reembolsado" && (confirmacion.reembolsar ?? 0) > 0) {
-          await transbank.devolver(conexion.ambiente, conexion.credenciales, tokenPago, cobrado);
+          const devuelto = await transbank.devolver(conexion.ambiente, conexion.credenciales, tokenPago, cobrado);
+          // Queda anotado si resultó (fase 4.6): si falló, la revisión automática lo reintenta
+          await admin.rpc("_anotar_devolucion_intento", { _intento_id: it.id, _ok: devuelto.ok, _referencia: devuelto.referencia });
         }
       }
     }

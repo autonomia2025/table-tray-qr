@@ -86,6 +86,8 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - en Caja → Cierre de caja aparecen las boletas por entregar de los últimos 7 días y la fila "Transferencia" en el cuadre (se revisa en la cartola, no se cuenta en el cajón);
     - con la app o con POS no se pide boleta: el comprobante del pago vale como boleta si el local lo declara en el SII.
 
+23. **Excepciones de la caja:** en Caja → Excepciones (con un número cuando hay algo pendiente) aparece lo que la app no pudo resolver sola. Por ejemplo: un cobro sin pedido que la pasarela no devolvió, una diferencia con Transbank, una boleta de ayer sin marcar o un reembolso rechazado. Cada una tiene su botón; lo que se resuelve a mano pide escribir qué pasó. El Inicio del dueño y el cierre de caja avisan cuántas hay. En el demo normalmente está vacía ("Todo en orden").
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.

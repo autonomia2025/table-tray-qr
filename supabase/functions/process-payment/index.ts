@@ -219,7 +219,9 @@ Deno.serve(async (req) => {
     if (confirmacion.estado === "reembolsado") {
       // Monto que no calza o ya pagado por otra persona: se devuelve automáticamente.
       if (confirmacion.reembolsar && confirmacion.reembolsar > 0) {
-        await refund(result.externalReference, confirmacion.reembolsar);
+        const devuelto = await refund(result.externalReference, confirmacion.reembolsar);
+        // Queda anotado si resultó (fase 4.6): si no, la caja lo ve en sus excepciones
+        await admin.rpc("_anotar_devolucion_intento", { _intento_id: intento.id, _ok: devuelto.ok, _referencia: devuelto.externalReference });
       }
       return json({ approved: false, refunded: true, error: confirmacion.motivo ?? "Te devolvimos el dinero" }, 409);
     }

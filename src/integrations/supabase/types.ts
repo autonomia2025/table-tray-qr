@@ -690,6 +690,76 @@ export type Database = {
           },
         ]
       }
+      diferencias_pasarela: {
+        Row: {
+          actualizada_at: string
+          branch_id: string
+          created_at: string
+          detalle: string
+          dia: string
+          estado: string
+          id: string
+          monto: number
+          nota: string | null
+          payment_id: string
+          revisada_at: string | null
+          revisada_por: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actualizada_at?: string
+          branch_id: string
+          created_at?: string
+          detalle: string
+          dia: string
+          estado?: string
+          id?: string
+          monto: number
+          nota?: string | null
+          payment_id: string
+          revisada_at?: string | null
+          revisada_por?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actualizada_at?: string
+          branch_id?: string
+          created_at?: string
+          detalle?: string
+          dia?: string
+          estado?: string
+          id?: string
+          monto?: number
+          nota?: string | null
+          payment_id?: string
+          revisada_at?: string | null
+          revisada_por?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diferencias_pasarela_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diferencias_pasarela_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diferencias_pasarela_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -749,11 +819,18 @@ export type Database = {
           conexion_id: string | null
           cotizacion_id: string
           created_at: string
+          devolucion_at: string | null
+          devolucion_estado: string | null
+          devolucion_intentos: number
+          devolucion_nota: string | null
+          devolucion_referencia: string | null
+          devolucion_resuelta_por: string | null
           estado: string
           id: string
           idempotency_key: string
           metodo: string
           monto: number
+          monto_devolver: number | null
           motivo: string | null
           payment_id: string | null
           propina: number
@@ -768,11 +845,18 @@ export type Database = {
           conexion_id?: string | null
           cotizacion_id: string
           created_at?: string
+          devolucion_at?: string | null
+          devolucion_estado?: string | null
+          devolucion_intentos?: number
+          devolucion_nota?: string | null
+          devolucion_referencia?: string | null
+          devolucion_resuelta_por?: string | null
           estado?: string
           id?: string
           idempotency_key: string
           metodo: string
           monto: number
+          monto_devolver?: number | null
           motivo?: string | null
           payment_id?: string | null
           propina?: number
@@ -787,11 +871,18 @@ export type Database = {
           conexion_id?: string | null
           cotizacion_id?: string
           created_at?: string
+          devolucion_at?: string | null
+          devolucion_estado?: string | null
+          devolucion_intentos?: number
+          devolucion_nota?: string | null
+          devolucion_referencia?: string | null
+          devolucion_resuelta_por?: string | null
           estado?: string
           id?: string
           idempotency_key?: string
           metodo?: string
           monto?: number
+          monto_devolver?: number | null
           motivo?: string | null
           payment_id?: string | null
           propina?: number
@@ -1933,6 +2024,7 @@ export type Database = {
           boleta_folio: string | null
           boleta_marcada_at: string | null
           boleta_marcada_por: string | null
+          boleta_nota: string | null
           branch_id: string
           created_at: string
           customer_email: string | null
@@ -1965,6 +2057,7 @@ export type Database = {
           boleta_folio?: string | null
           boleta_marcada_at?: string | null
           boleta_marcada_por?: string | null
+          boleta_nota?: string | null
           branch_id: string
           created_at?: string
           customer_email?: string | null
@@ -1997,6 +2090,7 @@ export type Database = {
           boleta_folio?: string | null
           boleta_marcada_at?: string | null
           boleta_marcada_por?: string | null
+          boleta_nota?: string | null
           branch_id?: string
           created_at?: string
           customer_email?: string | null
@@ -2137,6 +2231,9 @@ export type Database = {
           payment_id: string
           reason: string
           resuelto_at: string | null
+          revisado_at: string | null
+          revisado_nota: string | null
+          revisado_por: string | null
           status: string
           tenant_id: string
         }
@@ -2153,6 +2250,9 @@ export type Database = {
           payment_id: string
           reason: string
           resuelto_at?: string | null
+          revisado_at?: string | null
+          revisado_nota?: string | null
+          revisado_por?: string | null
           status?: string
           tenant_id: string
         }
@@ -2169,6 +2269,9 @@ export type Database = {
           payment_id?: string
           reason?: string
           resuelto_at?: string | null
+          revisado_at?: string | null
+          revisado_nota?: string | null
+          revisado_por?: string | null
           status?: string
           tenant_id?: string
         }
@@ -3023,6 +3126,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _anotar_conciliacion: {
+        Args: { _branch_id: string; _dia: string; _resultados: Json }
+        Returns: number
+      }
+      _anotar_devolucion_intento: {
+        Args: { _intento_id: string; _ok: boolean; _referencia?: string }
+        Returns: undefined
+      }
       _anotar_token_intento: {
         Args: {
           _conexion_id: string
@@ -3053,6 +3164,15 @@ export type Database = {
           _staff_id: string
         }
         Returns: Json
+      }
+      _devoluciones_por_reintentar: {
+        Args: { _branch_id?: string }
+        Returns: {
+          conexion_id: string
+          id: string
+          monto: number
+          token: string
+        }[]
       }
       _guardar_conexion_pago: {
         Args: {
@@ -3335,6 +3455,7 @@ export type Database = {
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
+      excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
       guardar_consentimiento: { Args: { _promociones: boolean }; Returns: Json }
       guardar_suscripcion_push: {
@@ -3458,6 +3579,16 @@ export type Database = {
           _motivo: string
           _payment_id: string
           _user_id: string
+        }
+        Returns: Json
+      }
+      resolver_excepcion: {
+        Args: {
+          _accion: string
+          _folio?: string
+          _id: string
+          _nota?: string
+          _tipo: string
         }
         Returns: Json
       }

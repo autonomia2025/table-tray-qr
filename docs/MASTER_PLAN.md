@@ -118,7 +118,7 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 | 4.3 | Boleta para efectivo y transferencia, siempre a nombre de cada local. **Etapa 1 (hecha):** la transferencia como medio de cobro del mozo y la caja (con los datos del local para transferir y su propia fila en el cuadre); al cobrar en efectivo o transferencia se marca "Entregué la boleta" (con su número, opcional); lo que falta queda en "Boletas por entregar" del mozo y de la caja, y como aviso al cerrar. **Etapa 2:** proveedor de boletas conectado por cada local (como las pasarelas), enviada por correo o al celular | 🔨 etapa 1 ✅ |
 | 4.4 | Pagos que no vuelven (revisión automática cada 5 minutos) y conciliación al cerrar la caja contra la pasarela (cada pago con Webpay contra Transbank); claves guardadas 120 días tras desconectar, solo para revisiones y devoluciones | ✅ |
 | 4.5 | Privacidad (Ley 21.719): consentimiento aparte para promociones, ver y descargar mis datos, borrar mi cuenta (la plata del local queda sin el nombre), invitados que no vuelven en 90 días se borran solos, política de privacidad. Falta la revisión de un abogado | ✅ |
-| 4.6 | Excepciones de la caja (pago sin pedido, monto que no calza, boleta fallida) y correos con Resend | ⏳ |
+| 4.6 | Excepciones de la caja: una bandeja (Caja → Excepciones) con cobro sin pedido por devolver, reembolso rechazado, monto que no calza con Transbank, boleta de un día anterior sin marcar y pago sin confirmar; se resuelven con explicación y quedan en la auditoría. Las devoluciones automáticas quedan anotadas y se reintentan solas. **Falta:** los correos con Resend (esperan el dominio) | 🔨 caja ✅ · correos ⏳ |
 | 4.7 | Compuerta de la fase 4 | ⏳ |
 
 

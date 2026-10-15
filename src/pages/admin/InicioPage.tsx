@@ -6,6 +6,7 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { formatCLP } from "@/lib/format";
 import { historiaDelLocal, nombreDia, variacion, type Historia } from "@/lib/reportes";
 import { fechaLarga, propinasPorPagar, type PropinasPorPagar } from "@/lib/propinasEquipo";
+import { excepcionesCaja } from "@/lib/excepciones";
 
 // Inicio del dueño (fase 3.6, brief 5.5): cuenta en palabras simples cómo le fue al local, en vez de
 // mostrar veinte gráficos. Los datos los calcula la base (historia_del_local).
@@ -26,6 +27,7 @@ export default function InicioPage() {
   const [h, setH] = useState<Historia | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [propinas, setPropinas] = useState<PropinasPorPagar | null>(null);
+  const [excepciones, setExcepciones] = useState(0);
 
   useEffect(() => {
     if (!branchId) return;
@@ -34,6 +36,7 @@ export default function InicioPage() {
       else setH(r.dato);
     });
     propinasPorPagar(branchId).then(setPropinas);
+    excepcionesCaja(branchId).then((l) => setExcepciones(l?.length ?? 0));
   }, [branchId]);
 
   if (error) return <p className="text-sm text-muted-foreground">{error}</p>;
@@ -64,6 +67,7 @@ export default function InicioPage() {
     const proximo = [...propinas.pendientes].sort((a, b) => a.vence.localeCompare(b.vence))[0];
     alertas.push(<>Le debes <strong>{formatCLP(porPagar)}</strong> en propinas al equipo. El primer plazo vence el {fechaLarga(proximo.vence)} (<Link className="underline" to={`/admin/${slug}/caja`}>Caja → Propinas del equipo</Link>).</>);
   }
+  if (excepciones > 0) alertas.push(<>Hay <strong>{excepciones} {excepciones === 1 ? "excepción" : "excepciones"} de caja</strong> esperando a alguien (por ejemplo, un cobro por devolver o una boleta sin marcar). Revísalas en <Link className="underline" to={`/admin/${slug}/caja`}>Caja → Excepciones</Link>.</>);
   if (h.alertas && h.alertas.perdido_7_dias > 0) alertas.push(<>Esta semana perdiste <strong>{formatCLP(h.alertas.perdido_7_dias)}</strong> en mesas que se fueron sin pagar.</>);
 
   const accesos = [

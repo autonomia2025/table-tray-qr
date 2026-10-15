@@ -22,6 +22,8 @@ import PropinasPorPagar from "@/components/admin/PropinasPorPagar";
 import ConciliacionPasarela from "@/components/admin/ConciliacionPasarela";
 import BoletasPendientes from "@/components/admin/BoletasPendientes";
 import { marcarBoleta } from "@/lib/boletas";
+import ExcepcionesCaja from "@/components/admin/ExcepcionesCaja";
+import { excepcionesCaja, type Excepcion } from "@/lib/excepciones";
 
 interface PaymentRow {
   id: string;
@@ -35,7 +37,7 @@ interface PaymentRow {
   customer_email: string | null;
   table_id: string | null;
   settlement_id: string | null;
-  boleta_estado: "pendiente" | "entregada" | null;
+  boleta_estado: "pendiente" | "entregada" | "no_entregada" | null;
   boleta_folio: string | null;
 }
 
@@ -90,9 +92,12 @@ function Diferencia({ valor }: { valor: number | null }) {
 }
 
 // Lo que conviene revisar antes de cerrar (no impide cerrar).
-function AvisosCierre({ resumen }: { resumen: ResumenCaja }) {
+function AvisosCierre({ resumen, excepciones }: { resumen: ResumenCaja; excepciones: number }) {
   const { avisos } = resumen;
   const lista: string[] = [];
+  if (excepciones) {
+    lista.push(`${excepciones} ${excepciones === 1 ? "excepción espera" : "excepciones esperan"} a alguien de la caja (pestaña Excepciones).`);
+  }
   if (avisos.por_cobrar.cantidad) {
     lista.push(`${avisos.por_cobrar.cantidad} ${avisos.por_cobrar.cantidad === 1 ? "pedido" : "pedidos"} sin cobrar (${formatCLP(avisos.por_cobrar.monto)}): cóbralos o anúlalos antes de cerrar.`);
   }
@@ -138,6 +143,7 @@ export default function CajaPage() {
   const [posContado, setPosContado] = useState("");
   const [confirmarCierre, setConfirmarCierre] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [excepciones, setExcepciones] = useState<Excepcion[] | null>(null);
 
   const [refundTarget, setRefundTarget] = useState<PaymentRow | null>(null);
   const [refundAmount, setRefundAmount] = useState("");
@@ -147,6 +153,7 @@ export default function CajaPage() {
   const load = useCallback(async () => {
     if (!branchId) return;
     setLoading(true);
+    excepcionesCaja(branchId).then(setExcepciones);
     const r = await resumenCaja(branchId, date);
     if (r.ok === false) {
       setLoading(false);
@@ -268,7 +275,7 @@ export default function CajaPage() {
         Propina: p.tip_amount,
         Reembolsado: p.refunded_amount,
         Estado: textoPago(p.status),
-        Boleta: p.boleta_estado === "entregada" ? (p.boleta_folio ? `N° ${p.boleta_folio}` : "Entregada") : p.boleta_estado === "pendiente" ? "Pendiente" : "",
+        Boleta: p.boleta_estado === "entregada" ? (p.boleta_folio ? `N° ${p.boleta_folio}` : "Entregada") : p.boleta_estado === "pendiente" ? "Pendiente" : p.boleta_estado === "no_entregada" ? "No entregada" : "",
         Comprobante: p.external_reference ?? "",
         Email: p.customer_email ?? "",
       })),
@@ -305,6 +312,12 @@ export default function CajaPage() {
           <TabsTrigger value="conciliacion">Cierre de caja</TabsTrigger>
           <TabsTrigger value="reembolsos">Reembolsos</TabsTrigger>
           <TabsTrigger value="propinas">Propinas del equipo</TabsTrigger>
+          <TabsTrigger value="excepciones">
+            Excepciones
+            {!!excepciones?.length && (
+              <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[11px] font-bold leading-5 text-white" aria-label={`${excepciones.length} por revisar`}>{excepciones.length}</span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* ---------- INGRESOS ---------- */}
@@ -428,7 +441,7 @@ export default function CajaPage() {
               )}
 
               {!diaCerrado && (
-                <AvisosCierre resumen={resumen} />
+                <AvisosCierre resumen={resumen} excepciones={excepciones?.length ?? 0} />
               )}
 
               <Card className="mb-4">
@@ -679,6 +692,11 @@ export default function CajaPage() {
         {/* ---------- PROPINAS DEL EQUIPO ---------- */}
         <TabsContent value="propinas">
           {branchId && <PropinasPorPagar branchId={branchId} />}
+        </TabsContent>
+
+        {/* Excepciones de la caja (fase 4.6) */}
+        <TabsContent value="excepciones">
+          {branchId && <ExcepcionesCaja branchId={branchId} lista={excepciones} recargar={load} />}
         </TabsContent>
       </Tabs>
 

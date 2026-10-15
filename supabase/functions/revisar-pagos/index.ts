@@ -8,9 +8,14 @@ import * as transbank from "../_shared/pasarelas/transbank.ts";
  * se confirmó a tiempo), el intento queda rechazado y no hay cobro; si se pudo confirmar, se registra
  * igual que si el cliente hubiera vuelto. Lo llama el reloj de la base (cada 5 minutos) con su clave,
  * o el local desde la caja ("revisar ahora") para su sucursal.
+ *
+ * También reintenta los cobros que la app tenía que devolver y la pasarela no devolvió (fase 4.6): antes
+ * de devolver pregunta a Transbank cómo está el cobro, para no devolver dos veces.
  */
 
 interface Intento { id: string; token: string | null; conexion_id: string | null; propina: number; proveedor: string | null }
+interface Devolucion { id: string; token: string; conexion_id: string | null; monto: number }
+type Conexion = { ambiente: transbank.Ambiente; credenciales: transbank.CredTransbank | null } | null;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -33,7 +38,7 @@ Deno.serve(async (req) => {
 
     const { data } = await admin.rpc("_intentos_por_revisar", { _branch_id: sucursal });
     const intentos = (data ?? []) as Intento[];
-    const resumen = { revisados: 0, confirmados: 0, cerrados: 0, pendientes: 0 };
+    const resumen = { revisados: 0, confirmados: 0, cerrados: 0, pendientes: 0, devueltos: 0, sin_devolver: 0 };
 
     for (const it of intentos) {
       resumen.revisados++;
@@ -72,7 +77,8 @@ Deno.serve(async (req) => {
           });
           const confirmacion = conf as { estado: string; reembolsar?: number } | null;
           if (confirmacion?.estado === "reembolsado" && (confirmacion.reembolsar ?? 0) > 0) {
-            await transbank.devolver(conexion.ambiente, conexion.credenciales, it.token, cobrado);
+            const devuelto = await transbank.devolver(conexion.ambiente, conexion.credenciales, it.token, cobrado);
+            await admin.rpc("_anotar_devolucion_intento", { _intento_id: it.id, _ok: devuelto.ok, _referencia: devuelto.referencia });
           }
           resumen.confirmados++;
         } else {
@@ -83,6 +89,41 @@ Deno.serve(async (req) => {
         resumen.pendientes++;
       }
     }
+    // Devoluciones pendientes: se pregunta el estado del cobro y solo se devuelve lo que sigue cobrado
+    const { data: porDevolver } = await admin.rpc("_devoluciones_por_reintentar", { _branch_id: sucursal });
+    const conexiones = new Map<string, Conexion>();
+    for (const d of (porDevolver ?? []) as Devolucion[]) {
+      try {
+        if (!d.conexion_id) { resumen.sin_devolver++; continue; }
+        if (!conexiones.has(d.conexion_id)) {
+          const { data: c } = await admin.rpc("_credenciales_conexion", { _conexion_id: d.conexion_id });
+          conexiones.set(d.conexion_id, c as Conexion);
+        }
+        const conexion = conexiones.get(d.conexion_id);
+        if (!conexion?.credenciales) {
+          await admin.rpc("_anotar_devolucion_intento", { _intento_id: d.id, _ok: false, _referencia: null });
+          resumen.sin_devolver++;
+          continue;
+        }
+        const r = await transbank.estado(conexion.ambiente, conexion.credenciales, d.token) as transbank.ResultadoTransbank & { balance?: number };
+        const yaDevuelto = r.status === "REVERSED" || r.status === "NULLIFIED" || (r.status === "PARTIALLY_NULLIFIED" && (r.balance ?? 0) === 0);
+        if (yaDevuelto || r.status !== "AUTHORIZED" && r.status !== "PARTIALLY_NULLIFIED") {
+          // Ya estaba devuelto, o nunca quedó cobrado: no hay nada que devolver
+          await admin.rpc("_anotar_devolucion_intento", { _intento_id: d.id, _ok: true, _referencia: `TBK-${r.status ?? "SIN-COBRO"}` });
+          resumen.devueltos++;
+          continue;
+        }
+        const monto = r.status === "PARTIALLY_NULLIFIED" ? Math.min(d.monto, r.balance ?? d.monto) : d.monto;
+        const devuelto = await transbank.devolver(conexion.ambiente, conexion.credenciales, d.token, monto);
+        await admin.rpc("_anotar_devolucion_intento", { _intento_id: d.id, _ok: devuelto.ok, _referencia: devuelto.referencia });
+        if (devuelto.ok) resumen.devueltos++; else resumen.sin_devolver++;
+      } catch (e) {
+        console.error("revisar-pagos devolución", d.id, e instanceof Error ? e.message : e);
+        await admin.rpc("_anotar_devolucion_intento", { _intento_id: d.id, _ok: false, _referencia: null });
+        resumen.sin_devolver++;
+      }
+    }
+
     return json(resumen);
   } catch (e) {
     console.error("revisar-pagos", e instanceof Error ? e.message : e);
