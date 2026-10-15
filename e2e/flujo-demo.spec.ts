@@ -39,13 +39,12 @@ test("cocina recibe el pedido y lo avanza hasta entregado", async ({ page }) => 
   await page.locator('button[type="submit"]').click();
   // Cocina entra directo a su pantalla (fase 1.2)
   await expect(page).toHaveURL(new RegExp(`/kds\\?branch=${SUCURSAL_DEMO}`), { timeout: 15_000 });
-  const tarjeta = page.locator("div").filter({ hasText: `#${numeroPedido}` }).filter({ hasText: "Pisco Sour" }).last();
+  // Todo dentro de la tarjeta de ESTE pedido: con otras pruebas en paralelo, un botón suelto podría ser de otro
+  const tarjeta = page.locator("div.mb-3").filter({ hasText: `#${numeroPedido.padStart(3, "0")}` }).filter({ hasText: "Pisco Sour" });
   await expect(tarjeta).toBeVisible({ timeout: 15_000 });
   await tarjeta.getByRole("button", { name: "ACEPTAR" }).click();
-  const enCocina = page.locator("div").filter({ hasText: `#${numeroPedido}` }).filter({ has: page.getByRole("button", { name: "LISTO" }) }).last();
-  await enCocina.getByRole("button", { name: "LISTO" }).click();
-  const listo = page.locator("div").filter({ hasText: `#${numeroPedido}` }).filter({ has: page.getByRole("button", { name: /ENTREGADO/ }) }).last();
-  await listo.getByRole("button", { name: /ENTREGADO/ }).click();
+  await tarjeta.getByRole("button", { name: "LISTO" }).click();
+  await tarjeta.getByRole("button", { name: /ENTREGADO/ }).click();
   // La tarjeta de este pedido desaparece (otras pruebas en paralelo pueden tener sus propios pedidos listos)
-  await expect(page.locator("div.mb-3").filter({ hasText: `#${numeroPedido}` })).toHaveCount(0, { timeout: 10_000 });
+  await expect(tarjeta).toHaveCount(0, { timeout: 10_000 });
 });
