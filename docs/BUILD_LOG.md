@@ -4,6 +4,27 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 4.7: compuerta del dinero real ✅ (fase 4 terminada)
+La fase 4 se cierra igual que la 2 y la 3: con los casos difíciles que faltaban y las auditorías automáticas vacías.
+
+**Revisiones nuevas en la auditoría de la plata:**
+- un pago con Transbank sin su número de Webpay o sin su conexión;
+- un intento que salió a la pasarela sin conexión;
+- una pasarela activa sin su clave guardada, o una desconectada hace más de 120 días que todavía la tiene;
+- un cobro simulado en un local que no lo permite;
+- una diferencia con la pasarela anotada en otro local.
+
+**En la auditoría de la operación:** un consentimiento para promociones de alguien sin cuenta guardada.
+
+**`tests/seguridad/f4-7-compuerta.test.ts` revisa:**
+- "conectar Webpay" dos veces a la vez: queda una sola pasarela activa;
+- la vuelta de Webpay repetida a la vez: no se cobra dos veces;
+- la boleta marcada por dos personas a la vez, y la misma excepción resuelta dos veces a la vez: queda una sola constancia;
+- una transferencia devuelta en el local: se resta de la transferencia, no del efectivo;
+- un cliente que pagó y después borró su cuenta: la plata queda intacta y se puede reembolsar;
+- el aislamiento de todo lo nuevo de la fase 4 frente al comensal, alguien sin sesión, el mozo y el dueño de otro local (la mozo solo ve sus propias propinas pagadas);
+- las tres auditorías vacías y que detecten cada descuadre hecho a propósito.
+
 ## 2026-10-15 — Fase 4.6: excepciones de la caja ✅ (los correos esperan el dominio)
 El brief pide que la caja gestione las excepciones: pago sin pedido, monto que no calza y boleta fallida. Ahora hay una sola bandeja, en Caja → Excepciones, con un aviso en el Inicio y en el cierre de caja.
 

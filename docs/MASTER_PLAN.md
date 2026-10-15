@@ -99,7 +99,7 @@ Detalle de las ideas:
 
 Una sola capa de traducción de estados (inglés en la base, español en pantalla) · ningún error técnico ni en inglés frente al comensal (bloqueante, regla 10) · limpieza de código sin uso · tope de estilo bajando.
 
-## Fase 4 — Dinero real ⏳
+## Fase 4 — Dinero real ✅ (con lo pendiente del fundador en pausa)
 
 **Decisiones del fundador (14 de octubre de 2026):**
 - **Pasarelas:** todas las posibles. Cada local conecta con un botón la que quiera, y Tablio nunca toca la plata. Se parte con Mercado Pago (conexión con su cuenta) y Transbank (código de comercio y clave), con un diseño de "enchufes" para sumar más.
@@ -119,7 +119,7 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 | 4.4 | Pagos que no vuelven (revisión automática cada 5 minutos) y conciliación al cerrar la caja contra la pasarela (cada pago con Webpay contra Transbank); claves guardadas 120 días tras desconectar, solo para revisiones y devoluciones | ✅ |
 | 4.5 | Privacidad (Ley 21.719): consentimiento aparte para promociones, ver y descargar mis datos, borrar mi cuenta (la plata del local queda sin el nombre), invitados que no vuelven en 90 días se borran solos, política de privacidad. Falta la revisión de un abogado | ✅ |
 | 4.6 | Excepciones de la caja: una bandeja (Caja → Excepciones) con cobro sin pedido por devolver, reembolso rechazado, monto que no calza con Transbank, boleta de un día anterior sin marcar y pago sin confirmar; se resuelven con explicación y quedan en la auditoría. Las devoluciones automáticas quedan anotadas y se reintentan solas. **Falta:** los correos con Resend (esperan el dominio) | 🔨 caja ✅ · correos ⏳ |
-| 4.7 | Compuerta de la fase 4 | ⏳ |
+| 4.7 | Compuerta de la fase 4: casos difíciles que faltaban (conectar dos veces a la vez, vuelta de Webpay repetida, boleta y excepción resueltas dos veces a la vez, transferencia devuelta, cliente que borra su cuenta después de pagar), aislamiento de todo lo nuevo, y las tres auditorías vacías, con revisiones nuevas de pasarelas y privacidad | ✅ |
 
 
 Pasarela real y su receptor de avisos (webhooks) · **conciliación automática contra lo que la pasarela deposita** (al cerrar la caja, decisión del fundador del 13 de octubre) · boleta electrónica (una por venta) · privacidad Ley 21.719 (consentimiento, borrado, retención; bloqueante: estará vigente al lanzar) · excepciones del cajero (pago sin pedido, monto que no calza, boleta fallida) · correos con Resend.
