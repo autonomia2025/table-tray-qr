@@ -351,7 +351,7 @@ export default function BillPage() {
                 Propina sugerida: {formatCLP(finalTip)}
               </p>
             )}
-            <p className="mt-4 text-xs text-muted-foreground">Puedes pagar en efectivo o con tarjeta</p>
+            <p className="mt-4 text-xs text-muted-foreground">Puedes pagar en efectivo, con tarjeta o por transferencia</p>
 
             <AnimatePresence>
               {showBackBtn && (

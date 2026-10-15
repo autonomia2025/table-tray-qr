@@ -353,8 +353,8 @@ export default function CheckoutPage() {
               {sinPagar.forma === "cuenta"
                 ? "Ya está en preparación. Lo pagas al final, desde la app o con el mozo."
                 : sinPagar.aCocina
-                  ? "Ya va a la cocina. El mozo pasará a cobrarte en efectivo o con tarjeta."
-                  : "El mozo viene a cobrarte en efectivo o con tarjeta. Apenas pagues, tu pedido pasa a la cocina."}
+                  ? "Ya va a la cocina. El mozo pasará a cobrarte en efectivo, con tarjeta o por transferencia."
+                  : "El mozo viene a cobrarte en efectivo, con tarjeta o por transferencia. Apenas pagues, tu pedido pasa a la cocina."}
             </p>
           </div>
           <button
@@ -643,7 +643,7 @@ export default function CheckoutPage() {
                 onClick={() => pedirSinPagarEnApp("mozo")}
                 className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline disabled:opacity-50"
               >
-                💵 Prefiero pagarle al mozo (efectivo o tarjeta)
+                💵 Prefiero pagarle al mozo (efectivo, tarjeta o transferencia)
               </button>
               {modoPago === "open_tab" && (
                 <button

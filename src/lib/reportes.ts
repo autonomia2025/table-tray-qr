@@ -10,7 +10,7 @@ export interface Reporte {
   resumen: { ventas: number; pagos: number; propinas: number; reembolsado: number; ticket: number; pedidos: number; visitas: number };
   anterior: { ventas: number; pagos: number; pedidos: number; ticket: number };
   por_dia: { dia: string; ventas: number; pagos: number }[];
-  canales: { app: number; efectivo: number; pos: number };
+  canales: { app: number; efectivo: number; pos: number; transferencia?: number };
   horas: { dia_semana: number; hora: number; ventas: number; pagos: number }[];
   platos: { nombre: string; cantidad: number; ventas: number }[];
   sin_ventas: string[];

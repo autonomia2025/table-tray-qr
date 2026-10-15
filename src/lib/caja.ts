@@ -30,6 +30,8 @@ export interface ResumenCaja {
   app: CanalCaja;
   efectivo: CanalCaja;
   pos: CanalCaja;
+  /** Desde la fase 4.3. Los días cerrados antes no lo traen. */
+  transferencia?: CanalCaja;
   reembolsos: { cantidad: number; monto: number };
   automaticos: { cantidad: number; monto: number };
   propinas: PropinaMozo[];
@@ -38,6 +40,7 @@ export interface ResumenCaja {
     sin_confirmar: { cantidad: number; monto: number };
     con_alerta: number;
     mesas_abiertas: number;
+    sin_boleta?: { cantidad: number; monto: number };
   };
   cierre?: {
     efectivo_contado: number;

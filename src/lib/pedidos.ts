@@ -71,7 +71,7 @@ export async function crearPedidoMozo(
 }
 
 /**
- * Pedir sin pagar en la app (fase 2.B): "Pagar al mozo" (efectivo o POS) o, en locales con cuenta
+ * Pedir sin pagar en la app (fase 2.B): "Pagar al mozo" (efectivo, POS o transferencia) o, en locales con cuenta
  * abierta, "Agregar a mi cuenta". El servidor calcula el precio y numera el pedido.
  */
 export async function pedirSinPagar(
@@ -94,20 +94,30 @@ export async function pedirSinPagar(
   return { ok: true, pedidoId: r.order_id, numero: r.order_number, total: r.total, aCocina: r.a_cocina };
 }
 
-/** El mozo (o la caja) registra un cobro en efectivo o POS. En prepago, recién ahí pasa a cocina. */
+/** Medio con que el mozo o la caja cobran en el local. */
+export type MetodoCobroLocal = "cash" | "pos" | "transfer";
+
+/**
+ * El mozo (o la caja) registra un cobro en efectivo, POS o transferencia. En prepago, recién ahí pasa a
+ * cocina. En efectivo y transferencia se anota si entregó la boleta del local (fase 4.3); si no, queda
+ * pendiente y se le recuerda.
+ */
 export async function registrarCobroMozo(
   pedidoIds: string[],
-  metodo: "cash" | "pos",
+  metodo: MetodoCobroLocal,
   propina = 0,
   recibido?: number | null,
-): Promise<{ ok: true; total: number; vuelto: number | null } | { ok: false; error: string }> {
+  boleta?: { entregada: boolean; folio?: string | null },
+): Promise<{ ok: true; total: number; vuelto: number | null; boleta: "pendiente" | "entregada" | null } | { ok: false; error: string }> {
   const { data, error } = await supabase.rpc("registrar_cobro_mozo", {
     _order_ids: pedidoIds,
     _metodo: metodo,
     _propina: propina,
     _recibido: recibido ?? null,
+    _boleta_entregada: boleta?.entregada ?? false,
+    _boleta_folio: boleta?.folio ?? null,
   });
   if (error) return { ok: false, error: mensajeAmigable(error.message) };
-  const r = data as { total: number; vuelto: number | null };
-  return { ok: true, total: r.total, vuelto: r.vuelto };
+  const r = data as { total: number; vuelto: number | null; boleta: "pendiente" | "entregada" | null };
+  return { ok: true, total: r.total, vuelto: r.vuelto, boleta: r.boleta };
 }

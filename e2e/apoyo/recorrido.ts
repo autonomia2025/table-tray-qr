@@ -118,3 +118,17 @@ export async function conciliarHoyConTransbank(): Promise<{ pagos: number; difer
   });
   return await r.json();
 }
+
+/**
+ * Marca como entregadas las boletas que el mozo del demo tenga pendientes (fase 4.3), para que una prueba
+ * parta limpia aunque un intento anterior haya dejado alguna.
+ */
+export async function entregarBoletasDelMozo(): Promise<void> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = baseDeDatos();
+  const mozo = createClient(url, clave, { auth: { persistSession: false } });
+  const c = cuenta("waiter")!;
+  await mozo.auth.signInWithPassword({ email: c.correo, password: c.clave });
+  const { data } = await mozo.rpc("mis_boletas_pendientes");
+  for (const b of (data as { id: string }[] | null) ?? []) await mozo.rpc("marcar_boleta", { _pago_id: b.id });
+}

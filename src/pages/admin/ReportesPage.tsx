@@ -73,7 +73,7 @@ export default function ReportesPage() {
   const maxDia = Math.max(0, ...(r?.por_dia ?? []).map((d) => d.ventas));
   const maxPlato = Math.max(0, ...(r?.platos ?? []).map((p) => p.ventas));
   const maxCat = Math.max(0, ...(r?.categorias ?? []).map((c) => c.ventas));
-  const totalCanales = r ? r.canales.app + r.canales.efectivo + r.canales.pos : 0;
+  const totalCanales = r ? r.canales.app + r.canales.efectivo + r.canales.pos + (r.canales.transferencia ?? 0) : 0;
 
   return (
     <div className="space-y-4">
@@ -142,6 +142,9 @@ export default function ReportesPage() {
                 <Barra etiqueta="App (QR)" valor={r.canales.app} max={totalCanales} detalle={formatCLP(r.canales.app)} />
                 <Barra etiqueta="Efectivo" valor={r.canales.efectivo} max={totalCanales} detalle={formatCLP(r.canales.efectivo)} />
                 <Barra etiqueta="POS" valor={r.canales.pos} max={totalCanales} detalle={formatCLP(r.canales.pos)} />
+                {(r.canales.transferencia ?? 0) > 0 && (
+                  <Barra etiqueta="Transferencia" valor={r.canales.transferencia ?? 0} max={totalCanales} detalle={formatCLP(r.canales.transferencia ?? 0)} />
+                )}
               </div>
             </section>
           </TabsContent>

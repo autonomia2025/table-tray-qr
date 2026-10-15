@@ -4,6 +4,35 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 4.3 (etapa 1): transferencia y boleta del local ✅
+La boleta siempre es del local, con su RUT; Tablio nunca la emite a su nombre. Con la app o con POS no hace falta: el comprobante del pago vale como boleta (si el local lo declara en el SII). En efectivo y transferencia, el local la emite con su sistema de siempre, y Tablio se encarga de que no se olvide:
+- **Transferencia como medio de cobro.** El mozo y la caja cobran en efectivo, POS o transferencia.
+  - El dueño anota sus datos para transferir en Sucursal, y el mozo se los muestra al cliente.
+  - En el cierre de caja, la transferencia tiene su fila: suma al total del día, pero no se cuenta en el cajón (se revisa en la cartola).
+  - También aparece en los reportes, en "Cómo te pagaron".
+- **La boleta, por marcar.** Al cobrar en efectivo o transferencia, el mozo marca "Entregué la boleta" (con su número, opcional).
+  - Si no la marca, queda arriba en sus mesas en "Boletas por entregar", con el botón "Ya la entregué".
+  - La caja ve las de los últimos 7 días y el aviso antes de cerrar.
+  - Marcarla queda en la auditoría.
+  - El dueño puede apagar el recordatorio.
+- **En la base:**
+  - `payments.boleta_estado`, que lo fija el disparador `boleta_del_pago`;
+  - las funciones `marcar_boleta`, `boletas_pendientes` y `mis_boletas_pendientes`;
+  - la transferencia en `_conciliar_dia` y en `reporte_local`;
+  - dos revisiones nuevas en `auditoria_operacion`: `boleta_sin_motivo` y `boleta_incompleta`.
+- **El demo:** los cobros de ejemplo de días anteriores ya traen la boleta entregada.
+
+**Pruebas:**
+- `tests/seguridad/f4-3-boleta.test.ts` revisa:
+  - la caja con la transferencia;
+  - marcar la boleta y que marcarla dos veces no cambie nada;
+  - que el POS no la pida;
+  - quién puede marcarla y quién no (otro mozo, cocina, comensal, sin sesión, otro local);
+  - que nadie la escriba directo;
+  - el recordatorio apagado;
+  - que la auditoría detecte una boleta incoherente.
+- `e2e/boleta.spec.ts` recorre el cobro por transferencia de punta a punta.
+
 ## 2026-10-15 — Cierre de fase automático y decisiones de boleta y campañas
 El fundador pidió que cada fase termine siempre igual, sin tener que acordarse de pedirlo:
 - **Receta `/cerrar-fase`** (`.claude/skills/cerrar-fase/SKILL.md`): pruebas completas, publicación, documentos al día, recorrido con fotos, reporte publicado, aviso al celular y seguir con la siguiente etapa. Si esa etapa necesita algo de él (servicio externo, cuenta, regla de la sección 4, algo irreversible), se salta a la siguiente que no esté bloqueada.

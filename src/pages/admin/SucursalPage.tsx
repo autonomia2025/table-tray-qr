@@ -30,7 +30,7 @@ export default function SucursalPage() {
   const [tenantForm, setTenantForm] = useState({ name: "", primary_color: "#E8531D", logo_url: "", cover_image_url: "", welcome_message: "" });
   const [branchForm, setBranchForm] = useState({ name: "", is_open: true, payment_mode: "open_tab",
     objetivo_llamado_min: 2, objetivo_retiro_min: 5, objetivo_pedido_min: 20,
-    pedir_codigo: "sin_pagar", limite_cuenta_persona: 30000 });
+    pedir_codigo: "sin_pagar", limite_cuenta_persona: 30000, recordar_boleta: true, datos_transferencia: "" });
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,7 +44,7 @@ export default function SucursalPage() {
     async function load() {
       const [{ data: tenant }, { data: branch }, { data: tabs }] = await Promise.all([
         supabase.from("tenants").select("name, primary_color, logo_url, cover_image_url, welcome_message").eq("id", tenantId).single(),
-        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min, pedir_codigo, limite_cuenta_persona").eq("id", branchId).single(),
+        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min, pedir_codigo, limite_cuenta_persona, recordar_boleta, datos_transferencia").eq("id", branchId).single(),
         supabase.from("tables").select("id, number, name, capacity").eq("branch_id", branchId).order("number"),
       ]);
       if (tenant) setTenantForm({
@@ -54,7 +54,8 @@ export default function SucursalPage() {
       });
       if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true, payment_mode: branch.payment_mode ?? "open_tab",
         objetivo_llamado_min: branch.objetivo_llamado_min, objetivo_retiro_min: branch.objetivo_retiro_min, objetivo_pedido_min: branch.objetivo_pedido_min,
-        pedir_codigo: branch.pedir_codigo, limite_cuenta_persona: branch.limite_cuenta_persona });
+        pedir_codigo: branch.pedir_codigo, limite_cuenta_persona: branch.limite_cuenta_persona,
+        recordar_boleta: branch.recordar_boleta, datos_transferencia: branch.datos_transferencia ?? "" });
       setTables(tabs ?? []);
       setLoading(false);
     }
@@ -74,6 +75,7 @@ export default function SucursalPage() {
         objetivo_llamado_min: branchForm.objetivo_llamado_min, objetivo_retiro_min: branchForm.objetivo_retiro_min,
         objetivo_pedido_min: branchForm.objetivo_pedido_min,
         pedir_codigo: branchForm.pedir_codigo, limite_cuenta_persona: branchForm.limite_cuenta_persona,
+        recordar_boleta: branchForm.recordar_boleta, datos_transferencia: branchForm.datos_transferencia.trim() || null,
       }).eq("id", branchId),
 
     ]);
@@ -228,6 +230,30 @@ export default function SucursalPage() {
               </div>
             </div>
           )}
+
+          {/* Efectivo y transferencia: datos para transferir y la boleta del local (fase 4.3) */}
+          <div>
+            <Label htmlFor="datos-transferencia">Datos para transferir</Label>
+            <p className="mb-2 text-xs text-muted-foreground">El mozo se los muestra al cliente cuando paga por transferencia. Por ejemplo: banco, tipo y número de cuenta, RUT, nombre y correo.</p>
+            <Textarea
+              id="datos-transferencia"
+              rows={3}
+              maxLength={300}
+              value={branchForm.datos_transferencia}
+              onChange={(e) => setBranchForm((p) => ({ ...p, datos_transferencia: e.target.value }))}
+              placeholder={"Banco Estado · Cuenta Vista 12345678\nRUT 76.123.456-7 · El Bar SpA\npagos@elbar.cl"}
+            />
+          </div>
+          <div className="flex items-start justify-between gap-3 rounded-xl border p-3">
+            <div>
+              <Label htmlFor="recordar-boleta" className="text-sm font-semibold">Recordar la boleta en efectivo y transferencia</Label>
+              <p className="text-xs text-muted-foreground">
+                La boleta es del local y sale de tu sistema de siempre. Tablio le recuerda al mozo entregarla y te muestra las que faltan al cerrar la caja.
+                Con la app o con POS no hace falta: el comprobante del pago vale como boleta si lo declaraste en el SII.
+              </p>
+            </div>
+            <Switch id="recordar-boleta" checked={branchForm.recordar_boleta} onCheckedChange={(v) => setBranchForm((p) => ({ ...p, recordar_boleta: v }))} />
+          </div>
 
           {/* Tiempos objetivo (fase 3.3): el semáforo del mozo y el ranking del equipo usan estos minutos */}
           <div>

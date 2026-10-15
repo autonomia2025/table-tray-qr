@@ -227,6 +227,7 @@ export type Database = {
           city: string | null
           corte_dia: string
           created_at: string | null
+          datos_transferencia: string | null
           id: string
           is_open: boolean | null
           limite_cuenta_persona: number
@@ -239,6 +240,7 @@ export type Database = {
           payment_mode: string
           pedir_codigo: string
           phone: string | null
+          recordar_boleta: boolean
           restaurant_id: string
           tenant_id: string
         }
@@ -247,6 +249,7 @@ export type Database = {
           city?: string | null
           corte_dia?: string
           created_at?: string | null
+          datos_transferencia?: string | null
           id?: string
           is_open?: boolean | null
           limite_cuenta_persona?: number
@@ -259,6 +262,7 @@ export type Database = {
           payment_mode?: string
           pedir_codigo?: string
           phone?: string | null
+          recordar_boleta?: boolean
           restaurant_id: string
           tenant_id: string
         }
@@ -267,6 +271,7 @@ export type Database = {
           city?: string | null
           corte_dia?: string
           created_at?: string | null
+          datos_transferencia?: string | null
           id?: string
           is_open?: boolean | null
           limite_cuenta_persona?: number
@@ -279,6 +284,7 @@ export type Database = {
           payment_mode?: string
           pedir_codigo?: string
           phone?: string | null
+          recordar_boleta?: boolean
           restaurant_id?: string
           tenant_id?: string
         }
@@ -1923,6 +1929,10 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          boleta_estado: string | null
+          boleta_folio: string | null
+          boleta_marcada_at: string | null
+          boleta_marcada_por: string | null
           branch_id: string
           created_at: string
           customer_email: string | null
@@ -1951,6 +1961,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          boleta_estado?: string | null
+          boleta_folio?: string | null
+          boleta_marcada_at?: string | null
+          boleta_marcada_por?: string | null
           branch_id: string
           created_at?: string
           customer_email?: string | null
@@ -1979,6 +1993,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          boleta_estado?: string | null
+          boleta_folio?: string | null
+          boleta_marcada_at?: string | null
+          boleta_marcada_por?: string | null
           branch_id?: string
           created_at?: string
           customer_email?: string | null
@@ -3220,6 +3238,7 @@ export type Database = {
           tipo: string
         }[]
       }
+      boletas_pendientes: { Args: { _branch_id: string }; Returns: Json }
       calcular_precios: {
         Args: { _branch_id: string; _items: Json; _tenant_id: string }
         Returns: Json
@@ -3347,11 +3366,16 @@ export type Database = {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined
       }
+      marcar_boleta: {
+        Args: { _folio?: string; _pago_id: string }
+        Returns: Json
+      }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
+      mis_boletas_pendientes: { Args: never; Returns: Json }
       mis_datos: { Args: never; Returns: Json }
       mis_propinas_por_cobrar: { Args: { _branch_id: string }; Returns: Json }
       mis_sellos: {
@@ -3400,6 +3424,8 @@ export type Database = {
       }
       registrar_cobro_mozo: {
         Args: {
+          _boleta_entregada?: boolean
+          _boleta_folio?: string
           _metodo: string
           _order_ids: string[]
           _propina?: number

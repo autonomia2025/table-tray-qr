@@ -79,6 +79,12 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - es el ambiente de pruebas de Transbank: no se cobra plata real;
     - en Caja → Cierre de caja, "Verificar con Transbank" compara cada pago con Webpay del día con Transbank;
     - al terminar, "Desconectar" (el demo vuelve a pagos simulados). Reiniciar el demo también lo desconecta.
+22. **Transferencia y boleta del local:**
+    - con el dueño, en Sucursal → "Datos para transferir", anota banco, cuenta y RUT; "Recordar la boleta en efectivo y transferencia" viene encendido;
+    - un comensal elige "Prefiero pagarle al mozo"; Camila abre la mesa y toca "📲 Transferencia": ve los datos para mostrárselos al cliente;
+    - abajo, "Entregué la boleta" (con su número, opcional). Si no la marca, queda arriba en sus mesas en "Boletas por entregar", con "Ya la entregué";
+    - en Caja → Cierre de caja aparecen las boletas por entregar de los últimos 7 días y la fila "Transferencia" en el cuadre (se revisa en la cartola, no se cuenta en el cajón);
+    - con la app o con POS no se pide boleta: el comprobante del pago vale como boleta si el local lo declara en el SII.
 
 ## Experiencia del comensal (invitado o cliente)
 

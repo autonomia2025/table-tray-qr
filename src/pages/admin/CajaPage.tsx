@@ -20,6 +20,8 @@ import { cerrarCaja, resumenCaja, type ResumenCaja } from "@/lib/caja";
 import { textoPago } from "@/lib/estados";
 import PropinasPorPagar from "@/components/admin/PropinasPorPagar";
 import ConciliacionPasarela from "@/components/admin/ConciliacionPasarela";
+import BoletasPendientes from "@/components/admin/BoletasPendientes";
+import { marcarBoleta } from "@/lib/boletas";
 
 interface PaymentRow {
   id: string;
@@ -33,6 +35,8 @@ interface PaymentRow {
   customer_email: string | null;
   table_id: string | null;
   settlement_id: string | null;
+  boleta_estado: "pendiente" | "entregada" | null;
+  boleta_folio: string | null;
 }
 
 interface RefundRow {
@@ -62,6 +66,7 @@ const METHOD_LABELS: Record<string, string> = {
   card: "Tarjeta",
   cash: "Efectivo",
   pos: "POS",
+  transfer: "Transferencia",
 };
 
 
@@ -96,6 +101,9 @@ function AvisosCierre({ resumen }: { resumen: ResumenCaja }) {
   }
   if (avisos.con_alerta) {
     lista.push(`${avisos.con_alerta} ${avisos.con_alerta === 1 ? "pedido pagado tiene" : "pedidos pagados tienen"} un aviso (por ejemplo, un producto agotado).`);
+  }
+  if (avisos.sin_boleta?.cantidad) {
+    lista.push(`${avisos.sin_boleta.cantidad} ${avisos.sin_boleta.cantidad === 1 ? "cobro en efectivo o transferencia no tiene" : "cobros en efectivo o transferencia no tienen"} la boleta marcada (${formatCLP(avisos.sin_boleta.monto)}).`);
   }
   if (avisos.mesas_abiertas) {
     lista.push(`${avisos.mesas_abiertas} ${avisos.mesas_abiertas === 1 ? "mesa sigue abierta" : "mesas siguen abiertas"}.`);
@@ -152,7 +160,7 @@ export default function CajaPage() {
     const [{ data: pays }, { data: refs }, { data: setts }, { data: tabs }] = await Promise.all([
       supabase
         .from("payments")
-        .select("id, created_at, amount, tip_amount, refunded_amount, method, status, external_reference, customer_email, table_id, settlement_id")
+        .select("id, created_at, amount, tip_amount, refunded_amount, method, status, external_reference, customer_email, table_id, settlement_id, boleta_estado, boleta_folio")
         .eq("branch_id", branchId)
         .eq("dia_negocio", dia)
         .order("created_at", { ascending: false }),
@@ -260,6 +268,7 @@ export default function CajaPage() {
         Propina: p.tip_amount,
         Reembolsado: p.refunded_amount,
         Estado: textoPago(p.status),
+        Boleta: p.boleta_estado === "entregada" ? (p.boleta_folio ? `N° ${p.boleta_folio}` : "Entregada") : p.boleta_estado === "pendiente" ? "Pendiente" : "",
         Comprobante: p.external_reference ?? "",
         Email: p.customer_email ?? "",
       })),
@@ -357,7 +366,22 @@ export default function CajaPage() {
                 <TableRow key={p.id}>
                   <TableCell>{new Date(p.created_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}</TableCell>
                   <TableCell>{p.table_id ? tableMap[p.table_id] ?? "—" : "—"}</TableCell>
-                  <TableCell>{METHOD_LABELS[p.method] ?? p.method}</TableCell>
+                  <TableCell>
+                    {METHOD_LABELS[p.method] ?? p.method}
+                    {p.boleta_estado === "pendiente" && (
+                      <button type="button" className="ml-1.5 align-middle" title="Marcar la boleta como entregada"
+                        onClick={async () => {
+                          const r = await marcarBoleta(p.id);
+                          if (r.ok === false) { toast({ title: "No se pudo marcar la boleta", description: r.error, variant: "destructive" }); return; }
+                          load();
+                        }}>
+                        <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-400">Sin boleta · marcar</Badge>
+                      </button>
+                    )}
+                    {p.boleta_estado === "entregada" && p.boleta_folio && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">Boleta N° {p.boleta_folio}</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">{formatCLP(p.amount)}</TableCell>
                   <TableCell className="text-right">{formatCLP(p.tip_amount)}</TableCell>
                   <TableCell>
@@ -385,6 +409,8 @@ export default function CajaPage() {
         <TabsContent value="conciliacion">
           {/* Conciliación con la pasarela (fase 4.4) */}
           {branchId && date && <ConciliacionPasarela branchId={branchId} dia={date} />}
+          {/* Boletas de efectivo y transferencia (fase 4.3) */}
+          {branchId && <BoletasPendientes branchId={branchId} alCambiar={load} />}
           {resumen && (
             <>
               {diaCerrado && resumen.cierre && (
@@ -479,9 +505,19 @@ export default function CajaPage() {
                           </TableCell>
                           <TableCell className="text-right"><Diferencia valor={difPos} /></TableCell>
                         </TableRow>
+                        {resumen.transferencia && (resumen.transferencia.cobrado > 0 || resumen.transferencia.devuelto > 0) && (
+                          <TableRow>
+                            <TableCell className="font-medium">Transferencia</TableCell>
+                            <TableCell className="text-right tabular-nums">{formatCLP(resumen.transferencia.cobrado)}</TableCell>
+                            <TableCell className="text-right tabular-nums">{resumen.transferencia.devuelto ? `−${formatCLP(resumen.transferencia.devuelto)}` : "—"}</TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums">{formatCLP(resumen.transferencia.esperado)}</TableCell>
+                            <TableCell className="text-right text-xs text-muted-foreground">Revísalo en la cartola del banco</TableCell>
+                            <TableCell className="text-right"><Diferencia valor={0} /></TableCell>
+                          </TableRow>
+                        )}
                         <TableRow className="bg-muted/50">
                           <TableCell className="font-bold">Total del día</TableCell>
-                          <TableCell className="text-right font-bold tabular-nums">{formatCLP(resumen.app.cobrado + resumen.efectivo.cobrado + resumen.pos.cobrado)}</TableCell>
+                          <TableCell className="text-right font-bold tabular-nums">{formatCLP(resumen.app.cobrado + resumen.efectivo.cobrado + resumen.pos.cobrado + (resumen.transferencia?.cobrado ?? 0))}</TableCell>
                           <TableCell className="text-right font-bold tabular-nums">{resumen.reembolsos.monto ? `−${formatCLP(resumen.reembolsos.monto)}` : "—"}</TableCell>
                           <TableCell className="text-right text-base font-extrabold tabular-nums">{formatCLP(resumen.total_neto)}</TableCell>
                           <TableCell colSpan={2} className="text-right text-xs text-muted-foreground">

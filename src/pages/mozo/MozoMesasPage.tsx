@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWaiters } from '@/contexts/WaitersContext';
-import { cambiarEstadoPedido, registrarCobroMozo } from '@/lib/pedidos';
+import { cambiarEstadoPedido, registrarCobroMozo, type MetodoCobroLocal } from '@/lib/pedidos';
+import { marcarBoleta, misBoletasPendientes, MEDIO_COBRO, type BoletaPendiente } from '@/lib/boletas';
 import { supabase } from '@/integrations/supabase/client';
 import { atenderLlamado, cerrarMesa, separarMesa, tomarMesa, transferirMesa, unirMesas } from "@/lib/mesa";
 import { formatCLP } from '@/lib/format';
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Clock, Receipt } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 interface TableData {
   id: string;
@@ -181,18 +183,24 @@ export default function MozoMesasPage() {
   const [codigos, setCodigos] = useState<Record<string, string>>({});
   const [unirOpen, setUnirOpen] = useState(false);
   const [confirmBillTable, setConfirmBillTable] = useState<TableData | null>(null);
-  // Cobro en la mesa (fase 2.B): efectivo o POS
-  const [cobro, setCobro] = useState<{ metodo: 'cash' | 'pos'; propina: string; recibido: string } | null>(null);
+  // Cobro en la mesa (fase 2.B): efectivo, POS o transferencia; en efectivo y transferencia, la boleta (fase 4.3)
+  const [cobro, setCobro] = useState<{ metodo: MetodoCobroLocal; propina: string; recibido: string; boleta: boolean; folio: string } | null>(null);
+  const [cobroLocal, setCobroLocal] = useState<{ recordarBoleta: boolean; datosTransferencia: string | null }>({ recordarBoleta: true, datosTransferencia: null });
+  const [boletas, setBoletas] = useState<BoletaPendiente[]>([]);
+  const cargarBoletas = useCallback(() => { misBoletasPendientes().then(setBoletas); }, []);
   const prevUrgentRef = useRef(0);
   const [objetivos, setObjetivos] = useState<Objetivos>(OBJETIVOS_POR_DEFECTO);
   const prevOlvidadasRef = useRef(0);
   useEffect(() => {
     if (!branchId) return;
-    supabase.from('branches').select('objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min').eq('id', branchId).maybeSingle()
+    supabase.from('branches').select('objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min, recordar_boleta, datos_transferencia').eq('id', branchId).maybeSingle()
       .then(({ data }) => {
-        if (data) setObjetivos({ llamado: data.objetivo_llamado_min, retiro: data.objetivo_retiro_min, pedido: data.objetivo_pedido_min });
+        if (!data) return;
+        setObjetivos({ llamado: data.objetivo_llamado_min, retiro: data.objetivo_retiro_min, pedido: data.objetivo_pedido_min });
+        setCobroLocal({ recordarBoleta: data.recordar_boleta, datosTransferencia: data.datos_transferencia });
       });
-  }, [branchId]);
+    cargarBoletas();
+  }, [branchId, cargarBoletas]);
 
   const fetchTables = useCallback(async () => {
     const { data: tablesData } = await supabase
@@ -559,6 +567,35 @@ export default function MozoMesasPage() {
         </div>
       )}
 
+      {/* Boletas por entregar: lo cobrado en efectivo o transferencia sin boleta marcada (fase 4.3) */}
+      {boletas.length > 0 && (
+        <div className="mb-3 rounded-2xl border border-amber-400/60 bg-amber-50 p-3 dark:bg-amber-950/40" aria-labelledby="boletas-pendientes">
+          <p id="boletas-pendientes" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Receipt className="h-4 w-4" aria-hidden /> Boletas por entregar · {boletas.length}
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {boletas.slice(0, 4).map(b => (
+              <li key={b.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate text-foreground">
+                  {b.mesa !== null ? `Mesa ${b.mesa}` : 'Cobro'} · {formatCLP(b.monto)} · <span className="text-muted-foreground">{MEDIO_COBRO[b.metodo]}</span>
+                </span>
+                <Button size="sm" variant="outline" className="h-9 shrink-0" disabled={actionLoading === `boleta-${b.id}`}
+                  onClick={async () => {
+                    setActionLoading(`boleta-${b.id}`);
+                    const r = await marcarBoleta(b.id);
+                    setActionLoading(null);
+                    if (r.ok === false) { toast({ title: 'No se pudo marcar', description: r.error, variant: 'destructive' }); return; }
+                    cargarBoletas();
+                  }}>
+                  {actionLoading === `boleta-${b.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ya la entregué'}
+                </Button>
+              </li>
+            ))}
+          </ul>
+          {boletas.length > 4 && <p className="mt-1 text-xs text-muted-foreground">y {boletas.length - 4} más</p>}
+        </div>
+      )}
+
       {/* Resumen por color: también sirve de leyenda */}
       <div className="flex flex-wrap gap-1.5 mb-4" aria-label="Resumen de mesas">
         {(Object.keys(ESTADOS) as EstadoMesa[]).filter(e => cuenta(e) > 0).map(e => (
@@ -742,7 +779,7 @@ export default function MozoMesasPage() {
             </div>
           )}
 
-          {/* Por cobrar: pedidos que se pagan al mozo (efectivo o POS) */}
+          {/* Por cobrar: pedidos que se pagan al mozo (efectivo, POS o transferencia) */}
           {(() => {
             const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled');
             if (!selectedTable || pendientes.length === 0) return null;
@@ -753,13 +790,13 @@ export default function MozoMesasPage() {
                 <p className="mb-2 text-xs text-muted-foreground">
                   {pendientes.length} pedido{pendientes.length > 1 ? 's' : ''} · en prepago pasan a cocina al registrar el cobro
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button className="h-11 bg-amber-500 text-white hover:bg-amber-600" onClick={() => setCobro({ metodo: 'cash', propina: '', recibido: '' })}>
-                    💵 Efectivo
-                  </Button>
-                  <Button className="h-11 bg-amber-500 text-white hover:bg-amber-600" onClick={() => setCobro({ metodo: 'pos', propina: '', recibido: '' })}>
-                    💳 POS
-                  </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  {([['cash', '💵 Efectivo'], ['pos', '💳 POS'], ['transfer', '📲 Transferencia']] as const).map(([metodo, texto]) => (
+                    <Button key={metodo} className="h-11 bg-amber-500 px-1 text-xs text-white hover:bg-amber-600 sm:text-sm"
+                      onClick={() => setCobro({ metodo, propina: '', recibido: '', boleta: false, folio: '' })}>
+                      {texto}
+                    </Button>
+                  ))}
                 </div>
               </div>
             );
@@ -849,7 +886,7 @@ export default function MozoMesasPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Registrar un cobro en efectivo o POS */}
+      {/* Registrar un cobro en efectivo, POS o transferencia */}
       <Dialog open={!!cobro} onOpenChange={(o) => { if (!o) setCobro(null); }}>
         <DialogContent className="rounded-2xl">
           {(() => {
@@ -859,9 +896,11 @@ export default function MozoMesasPage() {
             const propina = Math.max(0, Math.round(Number(cobro.propina) || 0));
             const recibido = cobro.recibido ? Math.round(Number(cobro.recibido) || 0) : null;
             const vuelto = recibido !== null ? recibido - totalPendiente - propina : null;
+            const pideBoleta = cobroLocal.recordarBoleta && cobro.metodo !== 'pos';
             const registrar = async () => {
               setActionLoading('cobro');
-              const r = await registrarCobroMozo(pendientes.map(o => o.id), cobro.metodo, propina, cobro.metodo === 'cash' ? recibido : null);
+              const r = await registrarCobroMozo(pendientes.map(o => o.id), cobro.metodo, propina, cobro.metodo === 'cash' ? recibido : null,
+                pideBoleta ? { entregada: cobro.boleta, folio: cobro.folio } : undefined);
               setActionLoading(null);
               if (r.ok === false) {
                 toast({ title: 'No se pudo registrar el cobro', description: r.error, variant: 'destructive' });
@@ -869,16 +908,19 @@ export default function MozoMesasPage() {
               }
               toast({
                 title: `✅ Cobrado ${formatCLP(r.total + propina)}`,
-                description: r.vuelto !== null && r.vuelto > 0 ? `Vuelto: ${formatCLP(r.vuelto)}` : 'Los pedidos pasan a cocina.',
+                description: r.boleta === 'pendiente'
+                  ? 'Recuerda entregar la boleta: queda en "Boletas por entregar".'
+                  : r.vuelto !== null && r.vuelto > 0 ? `Vuelto: ${formatCLP(r.vuelto)}` : 'Los pedidos pasan a cocina.',
               });
               setCobro(null);
+              cargarBoletas();
               openSheet(selectedTable);
               fetchTables();
             };
             return (
               <>
                 <DialogHeader>
-                  <DialogTitle>{cobro.metodo === 'cash' ? '💵 Cobro en efectivo' : '💳 Cobro con POS'} · Mesa {selectedTable.number}</DialogTitle>
+                  <DialogTitle>{cobro.metodo === 'cash' ? '💵 Cobro en efectivo' : cobro.metodo === 'pos' ? '💳 Cobro con POS' : '📲 Cobro por transferencia'} · Mesa {selectedTable.number}</DialogTitle>
                   <DialogDescription>Total de los pedidos: {formatCLP(totalPendiente)}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3">
@@ -910,7 +952,32 @@ export default function MozoMesasPage() {
                       )}
                     </div>
                   )}
+                  {cobro.metodo === 'transfer' && (
+                    <div className="rounded-xl border bg-muted/40 p-3 text-sm">
+                      <p className="font-semibold text-foreground">Datos para transferir</p>
+                      {cobroLocal.datosTransferencia
+                        ? <p className="mt-1 whitespace-pre-line text-foreground">{cobroLocal.datosTransferencia}</p>
+                        : <p className="mt-1 text-muted-foreground">El local no ha anotado sus datos. Pídeselos al encargado.</p>}
+                      <p className="mt-2 text-xs text-muted-foreground">Registra el cobro cuando veas que la transferencia llegó.</p>
+                    </div>
+                  )}
                   <p className="text-base font-bold">Total a cobrar: {formatCLP(totalPendiente + propina)}</p>
+                  {pideBoleta && (
+                    <div className="rounded-xl border p-3">
+                      <label htmlFor="cobro-boleta" className="flex items-center justify-between gap-3">
+                        <span>
+                          <span className="block text-sm font-semibold text-foreground">Entregué la boleta</span>
+                          <span className="block text-xs text-muted-foreground">La del sistema del local, por {formatCLP(totalPendiente)} (la propina no va en la boleta)</span>
+                        </span>
+                        <Switch id="cobro-boleta" checked={cobro.boleta} onCheckedChange={(v) => setCobro({ ...cobro, boleta: v })} />
+                      </label>
+                      {cobro.boleta && (
+                        <Input className="mt-2" aria-label="Número de boleta (opcional)" placeholder="N° de boleta (opcional)" maxLength={40}
+                          value={cobro.folio} onChange={(e) => setCobro({ ...cobro, folio: e.target.value })} />
+                      )}
+                      {!cobro.boleta && <p className="mt-2 text-xs text-muted-foreground">Si aún no la entregas, te la recordamos arriba en tus mesas.</p>}
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button className="h-12 w-full" disabled={actionLoading === 'cobro' || (vuelto !== null && vuelto < 0)} onClick={registrar}>
