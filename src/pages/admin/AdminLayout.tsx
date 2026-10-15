@@ -1,4 +1,6 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import GuiaRapida from "@/components/GuiaRapida";
+import { guiaDeRol } from "@/lib/guias";
 import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
@@ -66,6 +68,9 @@ export default function AdminLayout() {
           })}
         </nav>
         <div className="p-2 border-t border-border">
+          <div className="flex items-center gap-2 px-1 pb-1 text-sm text-muted-foreground">
+            <GuiaRapida rol={guiaDeRol(role)} className="-ml-1" /> Cómo se usa
+          </div>
           <button
             onClick={logout}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
@@ -94,6 +99,11 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+
+      {/* En el celular no hay barra lateral: la guía queda arriba a la derecha (fase 5.5) */}
+      <div className="md:hidden fixed right-2 top-2 z-40 rounded-full border border-border bg-card shadow-sm" style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}>
+        <GuiaRapida rol={guiaDeRol(role)} />
+      </div>
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-card border-t border-border flex z-50">

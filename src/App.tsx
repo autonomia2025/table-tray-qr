@@ -24,6 +24,7 @@ import AdminGuard from "./pages/admin/AdminGuard";
 import UnifiedLoginPage from "./pages/UnifiedLoginPage";
 import MozoJoinPage from "./pages/mozo/MozoJoinPage";
 import ActivarLocalPage from "./pages/ActivarLocalPage";
+import AyudaPage from "./pages/AyudaPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
@@ -124,6 +125,8 @@ const App = () => (
           <Route path="/mozo/join/:token" element={<MozoJoinPage />} />
           {/* El dueño activa su local con el enlace que le manda Tablio (fase 5.1) */}
           <Route path="/activar/:token" element={<ActivarLocalPage />} />
+          {/* Guías imprimibles por rol (fase 5.5) */}
+          <Route path="/ayuda/:rol" element={<AyudaPage />} />
           {/* Un solo login para todos los roles (fase 1.2) */}
           <Route path="/mozo/login" element={<Navigate to="/login" replace />} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>

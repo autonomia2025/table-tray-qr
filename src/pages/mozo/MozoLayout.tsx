@@ -1,6 +1,7 @@
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { LayoutGrid, Bell, User, LogOut, Loader2 } from 'lucide-react';
+import GuiaRapida from '@/components/GuiaRapida';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -109,7 +110,8 @@ export default function MozoLayout() {
       {/* Header */}
       <header className="h-14 border-b border-border bg-card flex items-center px-4 shrink-0">
         <span className="text-sm font-extrabold text-foreground truncate flex-1">tablio<span className="text-primary">.</span></span>
-        <span className="text-sm text-muted-foreground mr-3 truncate">{staffName}</span>
+        <span className="text-sm text-muted-foreground mr-1 truncate">{staffName}</span>
+        <GuiaRapida rol="mozo" />
         <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-foreground">
           <LogOut className="w-5 h-5" />
         </button>

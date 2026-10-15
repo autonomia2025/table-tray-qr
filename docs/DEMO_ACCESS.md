@@ -94,6 +94,8 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - un local recién activado ve en su Inicio "Para abrir tu local": marca, carta, equipo, cobro, QR, pedido de prueba y abrir. Cada paso tiene su botón y se marca solo. El demo ya los tiene casi todos hechos;
     - en Menú → "Pegar carta" se pega la carta entera: un título por categoría terminado en dos puntos y un plato por línea con su precio al final (o columnas copiadas de una planilla). Antes de importar se ve cómo quedó y qué líneas no se entendieron.
 
+26. **Guías de capacitación:** el botón "?" (abajo a la izquierda en el panel; arriba en el celular, en la pantalla del mozo y en la cocina) abre la guía corta del rol. Las guías imprimibles están en `/ayuda/dueno`, `/ayuda/caja`, `/ayuda/mozo` y `/ayuda/cocina`, sin necesidad de entrar.
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.

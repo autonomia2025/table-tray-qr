@@ -4,6 +4,13 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 5.5: guías de capacitación ✅
+- **Una guía corta por rol:** dueño o administrador, caja, mozo, y cocina y barra. Cada una trae los pasos del día a día con los nombres exactos de los botones, y qué hacer si algo falla.
+- **Dónde se abren:** con el botón "?" en el panel, la pantalla del mozo y la cocina.
+- **Para imprimir:** en `/ayuda/:rol`, para entregársela al equipo el primer día.
+- **No se desactualizan:** `src/lib/guias.test.ts` revisa que cada botón nombrado en una guía exista en la app; si alguien cambia el texto de un botón, la prueba avisa.
+- **Pruebas:** `e2e/guias.spec.ts` (el mozo, el dueño y la cocina abren su guía, y la versión imprimible).
+
 ## 2026-10-15 — Fase 5.4: monitoreo interno ✅
 Antes, la revisión diaria solo comprobaba que la app y la base respondieran. Ahora la base se revisa por dentro cada hora:
 - los relojes automáticos y sus fallas;

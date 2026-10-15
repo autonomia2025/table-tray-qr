@@ -10,6 +10,7 @@ import { Volume2, VolumeX, Wifi, WifiOff, LogIn, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { textoPedidoPlural } from "@/lib/estados";
+import GuiaRapida from "@/components/GuiaRapida";
 
 /* ===================== TYPES ===================== */
 interface KDSOrderItem {
@@ -977,6 +978,9 @@ function KDSBoard({ branchId }: { branchId: string }) {
               </span>
             )}
           </div>
+
+          {/* Cómo se usa (fase 5.5) */}
+          <GuiaRapida rol="cocina" className="text-gray-400 hover:text-white" />
 
           {/* Sound toggle */}
           <button
