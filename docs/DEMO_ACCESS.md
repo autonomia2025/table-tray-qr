@@ -96,6 +96,12 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 
 26. **Guías de capacitación:** el botón "?" (abajo a la izquierda en el panel; arriba en el celular, en la pantalla del mozo y en la cocina) abre la guía corta del rol. Las guías imprimibles están en `/ayuda/dueno`, `/ayuda/caja`, `/ayuda/mozo` y `/ayuda/cocina`, sin necesidad de entrar.
 
+27. **Tablet compartida:**
+    - el mozo crea su PIN en Perfil → "Mi PIN para tablets";
+    - el dueño, en Equipo → "Tablets compartidas", toca "Activar este dispositivo como tablet" y después "Abrir la pantalla de la tablet" (o entra a `/tablet`);
+    - en la tablet, cada mozo toca su nombre y escribe su PIN; al terminar, "Cambiar de mozo". Tras 4 minutos sin uso, vuelve sola a pedir el PIN;
+    - desde Equipo se desactiva una tablet o se borra el PIN de alguien.
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.

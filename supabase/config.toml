@@ -29,6 +29,9 @@ verify_jwt = false
 [functions.activar-local]
 verify_jwt = false
 
+[functions.entrar-con-pin]
+verify_jwt = false
+
 [functions.process-payment]
 verify_jwt = false
 

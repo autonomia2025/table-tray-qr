@@ -12,6 +12,8 @@ import { abrirTurno, cerrarTurno, duracion, useMiTurno } from '@/lib/turnos';
 import { CLASE_SEMAFORO, NOMBRE_PERIODO, NOMBRE_TIPO, minutos, miDesempeno, semaforo, type Desempeno, type MetaAvance, type Objetivos } from '@/lib/equipo';
 import { HandCoins, Target } from 'lucide-react';
 import { fechaLarga, misPropinasPorCobrar, type MisPropinas } from '@/lib/propinasEquipo';
+import { definirMiPin, esModoTablet, estadoPines } from '@/lib/tablet';
+import { Input } from '@/components/ui/input';
 
 export default function MozoPerfilPage() {
   const { staffName, role, logout, branchId } = useWaiters();
@@ -22,16 +24,33 @@ export default function MozoPerfilPage() {
   const [trabajando, setTrabajando] = useState(false);
   const [desempeno, setDesempeno] = useState<{ objetivos: Objetivos; hoy: Desempeno; metas: MetaAvance[] } | null>(null);
   const [misPropinas, setMisPropinas] = useState<MisPropinas | null>(null);
+  // PIN para tablets compartidas (fase 6.1)
+  const [tienePin, setTienePin] = useState<boolean | null>(null);
+  const [pin, setPin] = useState('');
+  const [guardandoPin, setGuardandoPin] = useState(false);
 
   useEffect(() => {
     if (!branchId) return;
     miDesempeno(branchId).then((r) => { if (r.ok) setDesempeno(r.dato); });
     misPropinasPorCobrar(branchId).then(setMisPropinas);
   }, [branchId, turno?.propinas]);
+  useEffect(() => {
+    if (!branchId) return;
+    estadoPines(branchId).then((l) => setTienePin(l.length ? l[0].tiene_pin : false));
+  }, [branchId]);
+  const guardarPin = async () => {
+    setGuardandoPin(true);
+    const r = await definirMiPin(pin);
+    setGuardandoPin(false);
+    if (r.ok === false) { toast({ title: 'No se pudo guardar', description: r.error, variant: 'destructive' }); return; }
+    setTienePin(true);
+    setPin('');
+    toast({ title: 'PIN guardado', description: 'Ya puedes entrar con él en las tablets del local.' });
+  };
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login', { replace: true });
+    navigate(esModoTablet() ? '/tablet' : '/login', { replace: true });
   };
 
   const empezar = async () => {
@@ -180,9 +199,24 @@ export default function MozoPerfilPage() {
         </div>
       )}
 
+      {/* PIN para tablets compartidas (fase 6.1) */}
+      <div className="mt-6 w-full max-w-sm rounded-2xl border bg-card p-4" data-testid="mi-pin">
+        <p className="font-bold text-foreground">Mi PIN para tablets</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          {tienePin ? 'Ya tienes PIN. Puedes cambiarlo cuando quieras.' : 'Si el local usa una tablet compartida, entras con tu nombre y este PIN de 4 números.'}
+        </p>
+        <div className="flex gap-2">
+          <Input aria-label="Nuevo PIN de 4 números" inputMode="numeric" type="password" maxLength={4} placeholder="4 números" value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} className="h-11" />
+          <Button className="h-11" onClick={guardarPin} disabled={pin.length !== 4 || guardandoPin}>
+            {guardandoPin ? <Loader2 className="h-4 w-4 animate-spin" /> : tienePin ? 'Cambiar' : 'Guardar'}
+          </Button>
+        </div>
+      </div>
+
       <Button variant="destructive" className="mt-10 w-full max-w-sm h-12" onClick={handleLogout}>
         <LogOut className="w-5 h-5 mr-2" />
-        Cerrar sesión
+        {esModoTablet() ? 'Cambiar de mozo' : 'Cerrar sesión'}
       </Button>
 
       <Dialog open={confirmar} onOpenChange={setConfirmar}>

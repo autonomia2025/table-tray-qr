@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Plus, Pencil, Loader2, Users, Link2, Copy, Check, Mail } from "lucide-react";
 import TurnosEquipo from "@/components/admin/TurnosEquipo";
 import DesempenoEquipo from "@/components/admin/DesempenoEquipo";
+import TabletsEquipo from "@/components/admin/TabletsEquipo";
 
 interface StaffRow {
   id: string;
@@ -226,6 +227,8 @@ export default function EquipoPage() {
           </table>
         </div>
       )}
+
+      {branchId && <TabletsEquipo branchId={branchId} staff={staff} />}
 
       <DesempenoEquipo branchId={branchId} tenantId={tenantId} />
 

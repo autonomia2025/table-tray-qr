@@ -826,6 +826,57 @@ export type Database = {
           },
         ]
       }
+      equipos_compartidos: {
+        Row: {
+          branch_id: string
+          creado_por: string | null
+          created_at: string
+          id: string
+          nombre: string
+          revocado_at: string | null
+          tenant_id: string
+          token_hash: string
+          ultimo_uso_at: string | null
+        }
+        Insert: {
+          branch_id: string
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+          nombre: string
+          revocado_at?: string | null
+          tenant_id: string
+          token_hash: string
+          ultimo_uso_at?: string | null
+        }
+        Update: {
+          branch_id?: string
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+          nombre?: string
+          revocado_at?: string | null
+          tenant_id?: string
+          token_hash?: string
+          ultimo_uso_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipos_compartidos_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipos_compartidos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -2235,6 +2286,48 @@ export type Database = {
           },
         ]
       }
+      pines_personal: {
+        Row: {
+          actualizado_at: string
+          bloqueado_hasta: string | null
+          intentos: number
+          pin_hash: string
+          staff_id: string
+          tenant_id: string
+        }
+        Insert: {
+          actualizado_at?: string
+          bloqueado_hasta?: string | null
+          intentos?: number
+          pin_hash: string
+          staff_id: string
+          tenant_id: string
+        }
+        Update: {
+          actualizado_at?: string
+          bloqueado_hasta?: string | null
+          intentos?: number
+          pin_hash?: string
+          staff_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pines_personal_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: true
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pines_personal_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           created_at: string | null
@@ -3437,6 +3530,10 @@ export type Database = {
         }[]
       }
       _verificar_cron: { Args: { _clave: string }; Returns: boolean }
+      _verificar_pin: {
+        Args: { _pin: string; _staff_id: string; _token: string }
+        Returns: Json
+      }
       _version_politica: { Args: never; Returns: string }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       abrir_turno: { Args: { _branch_id: string }; Returns: Json }
@@ -3475,6 +3572,7 @@ export type Database = {
         }[]
       }
       boletas_pendientes: { Args: { _branch_id: string }; Returns: Json }
+      borrar_pin: { Args: { _staff_id: string }; Returns: undefined }
       calcular_precios: {
         Args: { _branch_id: string; _items: Json; _tenant_id: string }
         Returns: Json
@@ -3551,6 +3649,10 @@ export type Database = {
         }
         Returns: Json
       }
+      crear_equipo_compartido: {
+        Args: { _branch_id: string; _nombre: string }
+        Returns: Json
+      }
       crear_local: {
         Args: {
           _color?: string
@@ -3569,6 +3671,7 @@ export type Database = {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
       }
+      definir_mi_pin: { Args: { _pin: string }; Returns: undefined }
       desconectar_pago: { Args: { _conexion_id: string }; Returns: undefined }
       dia_abierto: {
         Args: { _branch_id: string; _dia: string }
@@ -3582,6 +3685,7 @@ export type Database = {
         Args: { _codigo: string; _premio_id: string }
         Returns: Json
       }
+      equipo_de_tablet: { Args: { _token: string }; Returns: Json }
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
       estado_activaciones: {
@@ -3592,6 +3696,14 @@ export type Database = {
           creado_at: string
           tenant_id: string
           vence_at: string
+        }[]
+      }
+      estado_pines: {
+        Args: { _branch_id: string }
+        Returns: {
+          bloqueado: boolean
+          staff_id: string
+          tiene_pin: boolean
         }[]
       }
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
@@ -3748,6 +3860,7 @@ export type Database = {
         Args: { _branch_id: string; _dia?: string }
         Returns: Json
       }
+      revocar_equipo_compartido: { Args: { _id: string }; Returns: undefined }
       riesgo_cuenta_abierta: { Args: { _branch_id: string }; Returns: Json }
       sa_activar_local: {
         Args: { _activo: boolean; _tenant_id: string }

@@ -4,6 +4,31 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 6.1: PIN del mozo en tablets compartidas ✅
+Por acuerdo con el fundador, mientras el piloto espera sus decisiones se adelanta la fase 6.
+
+**Qué hace:** muchos locales tienen una tablet para los mozos. Ahora:
+- el dueño o el encargado la activa desde Equipo;
+- cada mozo entra con su nombre y su PIN de 4 números, y todo lo que hace queda a su nombre (propinas, cobros, entregas), sin compartir contraseñas;
+- "Cambiar de mozo" la deja lista para el siguiente, y tras 4 minutos sin uso vuelve sola a pedir el PIN.
+
+**Cómo está protegido:**
+- El PIN se guarda cifrado en una tabla que nadie lee desde el navegador. No se aceptan PIN obvios, y 5 intentos fallidos lo bloquean 10 minutos.
+- La tablet tiene su propia credencial, que se desactiva desde Equipo.
+- Salir en la tablet no cierra la sesión del teléfono del mozo.
+- Un mozo desactivado no entra, aunque tenga PIN.
+
+**Pruebas:**
+- `tests/seguridad/f6-1-pin-tablets.test.ts` revisa:
+  - que nadie lea el PIN;
+  - que la sesión que se entrega sea la del mozo correcto;
+  - el bloqueo por intentos;
+  - la tablet desactivada;
+  - quién puede activar tablets;
+  - que el dueño de otro local no las toque;
+  - que un mozo desactivado no entre.
+- `e2e/tablet.spec.ts` recorre la tablet de punta a punta.
+
 ## 2026-10-15 — Fase 5.5: guías de capacitación ✅
 - **Una guía corta por rol:** dueño o administrador, caja, mozo, y cocina y barra. Cada una trae los pasos del día a día con los nombres exactos de los botones, y qué hacer si algo falla.
 - **Dónde se abren:** con el botón "?" en el panel, la pantalla del mozo y la cocina.

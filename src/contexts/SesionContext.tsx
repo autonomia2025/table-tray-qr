@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Perfil } from "@/lib/roles";
+import { esModoTablet } from "@/lib/tablet";
 
 /**
  * Sesión única de la app (fase 1.2): quién está conectado, con qué rol y en qué locales.
@@ -56,7 +57,8 @@ export function SesionProvider({ children }: { children: React.ReactNode }) {
   }, [recargar]);
 
   const salir = useCallback(async () => {
-    await supabase.auth.signOut();
+    // En una tablet compartida, salir cierra la sesión solo en la tablet (no en el teléfono del mozo)
+    await supabase.auth.signOut(esModoTablet() ? { scope: "local" } : undefined);
     usuarioActual.current = null;
     setPerfil(null);
   }, []);

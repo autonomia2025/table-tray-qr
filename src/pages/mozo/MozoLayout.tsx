@@ -2,6 +2,7 @@ import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useWaiters } from '@/contexts/WaitersContext';
 import { LayoutGrid, Bell, User, LogOut, Loader2 } from 'lucide-react';
 import GuiaRapida from '@/components/GuiaRapida';
+import { esModoTablet } from '@/lib/tablet';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,6 +26,7 @@ function playNotifSound() {
 export default function MozoLayout() {
   const { isLoggedIn, staffName, branchId, staffId, logout, cargando } = useWaiters();
   const navigate = useNavigate();
+  const modoTablet = esModoTablet();
   const location = useLocation();
   const [notifCount, setNotifCount] = useState(0);
   const prevNotifCountRef = useRef(0);
@@ -83,6 +85,20 @@ export default function MozoLayout() {
     prevNotifCountRef.current = notifCount;
   }, [notifCount]);
 
+  // Tablet compartida (fase 6.1): si nadie la toca en 4 minutos, vuelve a la pantalla del PIN
+  useEffect(() => {
+    if (!modoTablet || !isLoggedIn) return;
+    let espera = setTimeout(() => {}, 0);
+    const reiniciar = () => {
+      clearTimeout(espera);
+      espera = setTimeout(async () => { await logout(); navigate('/tablet', { replace: true }); }, 4 * 60_000);
+    };
+    reiniciar();
+    const eventos = ['pointerdown', 'keydown'] as const;
+    eventos.forEach((e) => window.addEventListener(e, reiniciar));
+    return () => { clearTimeout(espera); eventos.forEach((e) => window.removeEventListener(e, reiniciar)); };
+  }, [modoTablet, isLoggedIn, logout, navigate]);
+
   // Mientras se lee la sesión
   if (cargando) {
     return (
@@ -92,7 +108,7 @@ export default function MozoLayout() {
     );
   }
 
-  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!isLoggedIn) return <Navigate to={modoTablet ? "/tablet" : "/login"} replace />;
 
   const tabs = [
     { path: '/mozo/mesas', icon: LayoutGrid, label: 'Mesas' },
@@ -102,7 +118,7 @@ export default function MozoLayout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login', { replace: true });
+    navigate(modoTablet ? '/tablet' : '/login', { replace: true });
   };
 
   return (
@@ -112,9 +128,15 @@ export default function MozoLayout() {
         <span className="text-sm font-extrabold text-foreground truncate flex-1">tablio<span className="text-primary">.</span></span>
         <span className="text-sm text-muted-foreground mr-1 truncate">{staffName}</span>
         <GuiaRapida rol="mozo" />
-        <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-foreground">
-          <LogOut className="w-5 h-5" />
-        </button>
+        {modoTablet ? (
+          <button onClick={handleLogout} className="ml-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-accent">
+            Cambiar de mozo
+          </button>
+        ) : (
+          <button onClick={handleLogout} className="p-2 text-muted-foreground hover:text-foreground">
+            <LogOut className="w-5 h-5" />
+          </button>
+        )}
       </header>
 
       {/* Content */}

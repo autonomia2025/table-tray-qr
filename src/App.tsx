@@ -25,6 +25,7 @@ import UnifiedLoginPage from "./pages/UnifiedLoginPage";
 import MozoJoinPage from "./pages/mozo/MozoJoinPage";
 import ActivarLocalPage from "./pages/ActivarLocalPage";
 import AyudaPage from "./pages/AyudaPage";
+import TabletPage from "./pages/TabletPage";
 import MesasPage from "./pages/admin/MesasPage";
 import MenuAdminPage from "./pages/admin/MenuAdminPage";
 import QRPage from "./pages/admin/QRPage";
@@ -127,6 +128,8 @@ const App = () => (
           <Route path="/activar/:token" element={<ActivarLocalPage />} />
           {/* Guías imprimibles por rol (fase 5.5) */}
           <Route path="/ayuda/:rol" element={<AyudaPage />} />
+          {/* Tablet compartida: cada mozo entra con su PIN (fase 6.1) */}
+          <Route path="/tablet" element={<TabletPage />} />
           {/* Un solo login para todos los roles (fase 1.2) */}
           <Route path="/mozo/login" element={<Navigate to="/login" replace />} />
           <Route path="/mozo" element={<WaitersProvider><MozoLayout /></WaitersProvider>}>

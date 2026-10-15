@@ -142,9 +142,20 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 
 ## Después del lanzamiento
 
-**Fase 6 — Control del equipo:** turnos, permisos finos, varios cierres de caja al día, PIN para el mozo en tablets compartidas.
+**Orden acordado con el fundador (15 de octubre de 2026):** mientras el piloto espera sus decisiones (paso 5.6), se adelanta lo que no depende de él: fase 6, después Campañas, después el resto de la fase 7 (con los juegos), la fase 8 y la fase 9.
+
+**Fase 6 — Control del equipo** 🔨
+
+| Paso | Qué | Estado |
+|---|---|---|
+| 6.0 | Turnos y propina del mozo de la mesa | ✅ (fase 3.1) |
+| 6.1 | **PIN del mozo en tablets compartidas:** el local deja una tablet como "equipo compartido" y cada mozo entra con su PIN de 4 números. Todo lo que hace queda a su nombre (propinas, cobros, entregas), sin compartir contraseñas | ✅ |
+| 6.2 | **Varios cierres de caja al día:** cortes por turno (por ejemplo, mañana y noche), cada uno con su conteo y su diferencia; el cierre del día los suma. Sigue bloqueado y auditado | ⏳ |
+| 6.3 | **Permisos finos:** el dueño ajusta qué puede hacer cada rol (reembolsar, cerrar caja, cobrar, anular pedidos, ver reportes, editar la carta…). Se aplica en el servidor, no solo en la pantalla | ⏳ |
+| 6.4 | Compuerta de la fase 6 | ⏳ |
 
 **Fase 7 — Más ventas y experiencia** (ideas de experiencia, segunda ola):
+- **Primero, Campañas** (aprobadas el 15 de octubre): todo listo y con envío como aviso al celular a quienes instalaron la app; el envío por correo se activa cuando haya dominio y Resend.
 - **Campañas por correo (aprobadas el 15 de octubre de 2026; se adelantan apenas haya dominio y Resend):** sección "Campañas" del dueño, públicos listos (no vienen hace 30 días, frecuentes, por plato, todos los que aceptaron promociones), sugerencia en Inicio, beneficio que se activa al pagar con el QR para medir visitas y ventas, baja en cada correo y límite de envíos por local. Después, el mismo mensaje como aviso al celular.
 - **Invitar una ronda** (uno paga para la mesa, desde su propio pedido) y **dividir un plato** entre quienes elijas: respetan "cada uno paga lo suyo".
 - Niveles por local (Bronce, Plata, Oro) y rachas ("3 viernes seguidos"), con beneficios que define el dueño.
