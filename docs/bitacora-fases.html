@@ -1,0 +1,135 @@
+<title>Bitácora de Tablio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: una columna de lectura; arriba el estado y lo pendiente, abajo la línea de tiempo de reportes. */
+:root {
+  --bg: hsl(36 45% 97%);
+  --surface: hsl(36 40% 99%);
+  --fg: hsl(20 18% 14%);
+  --muted: hsl(20 10% 42%);
+  --line: hsl(28 22% 86%);
+  --accent: hsl(16 82% 51%);
+  --accent-soft: hsl(16 82% 51% / 0.1);
+  --ok: hsl(145 45% 34%);
+  --wait: hsl(38 85% 40%);
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: hsl(20 14% 9%); --surface: hsl(20 12% 12%); --fg: hsl(30 20% 92%); --muted: hsl(25 10% 64%);
+    --line: hsl(20 10% 22%); --accent: hsl(16 85% 58%); --accent-soft: hsl(16 85% 58% / 0.14);
+    --ok: hsl(145 45% 55%); --wait: hsl(38 85% 60%); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: hsl(20 14% 9%); --surface: hsl(20 12% 12%); --fg: hsl(30 20% 92%); --muted: hsl(25 10% 64%);
+  --line: hsl(20 10% 22%); --accent: hsl(16 85% 58%); --accent-soft: hsl(16 85% 58% / 0.14);
+  --ok: hsl(145 45% 55%); --wait: hsl(38 85% 60%); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.55;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 760px; margin: 0 auto; display: grid; gap: 36px; }
+header { display: grid; gap: 6px; }
+.logo { font-weight: 800; font-size: 22px; letter-spacing: -0.02em; }
+.logo span { color: var(--accent); }
+h1 { font-size: clamp(26px, 5vw, 34px); font-weight: 800; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 62ch; }
+h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
+a { color: var(--accent); font-weight: 600; text-decoration: none; }
+a:hover, a:focus-visible { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+.ahora { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 16px; padding: 20px 22px; display: grid; gap: 8px; }
+.ahora p { margin: 0; }
+.ahora .titulo { font-weight: 800; font-size: 18px; }
+
+.lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lista li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; }
+.chip { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; margin-top: 2px; }
+.chip.wait { color: var(--wait); background: color-mix(in srgb, var(--wait) 14%, transparent); }
+.chip.pausa { color: var(--muted); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.chip.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.lista strong { font-weight: 700; }
+.lista .det { color: var(--muted); }
+
+.tiempo { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--line); margin-left: 6px; }
+.tiempo li { position: relative; padding: 0 0 18px 22px; display: grid; gap: 2px; }
+.tiempo li::before { content: ""; position: absolute; left: -7px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); }
+.tiempo li.grande::before { background: var(--accent); }
+.tiempo .fila { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.tiempo .fase { font-weight: 800; }
+.tiempo .fecha { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tiempo p { margin: 0; color: var(--muted); max-width: 62ch; }
+
+.como { color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+.como p { margin: 0; max-width: 62ch; }
+</style>
+
+<main>
+  <header>
+    <div class="logo">tablio<span>.</span></div>
+    <h1>Bitácora de fases</h1>
+    <p class="sub">Todos los reportes en un solo lugar. Cada vez que termino una fase, la agrego arriba con su reporte y fotos, y te aviso.</p>
+  </header>
+
+  <section class="ahora" aria-labelledby="h-ahora">
+    <h2 id="h-ahora" style="margin:0">Ahora</h2>
+    <p class="titulo">Fase 4: dinero real</p>
+    <p>Listo: Webpay conectado por cada local, pagos que no vuelven, conciliación con Transbank y privacidad del comensal.</p>
+    <p><strong>Lo que sigue:</strong> la boleta en su etapa simple (4.3) y las excepciones de la caja (4.6). Campañas queda aprobada y espera el dominio.</p>
+  </section>
+
+  <section aria-labelledby="h-ti">
+    <h2 id="h-ti">Lo que necesito de ti</h2>
+    <ul class="lista">
+      <li><span class="chip wait">Cuando puedas</span><div><strong>Dominio definitivo.</strong> <span class="det">Lo necesitan los correos, las campañas y los QR impresos.</span></div></li>
+      <li><span class="chip wait">Cuando puedas</span><div><strong>Cuenta de Resend</strong> <span class="det">(después del dominio), para enviar correos.</span></div></li>
+      <li><span class="chip wait">Antes del piloto</span><div><strong>Contador y abogado.</strong> <span class="det">Tengo guardadas las preguntas: propina en el comprobante, boleta en el SII y el rol de Tablio en la ley de datos.</span></div></li>
+      <li><span class="chip wait">Antes del piloto</span><div><strong>Plan pagado de Supabase.</strong> <span class="det">El gratis pausa el proyecto tras 7 días sin uso.</span></div></li>
+      <li><span class="chip pausa">En pausa</span><div><strong>Apple Pay y Google Pay</strong> <span class="det">(pedir acceso de prueba a Klap) y <strong>Mercado Pago</strong>. No bloquean las demos.</span></div></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-dec">
+    <h2 id="h-dec">Decisiones recientes</h2>
+    <ul class="lista">
+      <li><span class="chip ok">15 oct</span><div><strong>Boleta en dos etapas.</strong> <span class="det">Siempre a nombre de cada local. Para el piloto, el local usa su sistema y Tablio solo recuerda marcarla; después, integrada.</span></div></li>
+      <li><span class="chip ok">15 oct</span><div><strong>Campañas por correo aprobadas.</strong> <span class="det">Solo a clientes que aceptaron promociones, con públicos listos y resultado medido en visitas y ventas.</span></div></li>
+      <li><span class="chip ok">15 oct</span><div><strong>Cierre de fase automático.</strong> <span class="det">Reporte, bitácora y aviso al terminar cada fase; después sigo solo con la siguiente.</span></div></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-rep">
+    <h2 id="h-rep">Reportes</h2>
+    <ol class="tiempo" reversed>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/Xci3Gpeefp9pQDfY437XEK">Fase 4.4 y 4.5</a><span class="fecha">14 oct 2026</span></div><p>Pagos que no vuelven, verificar con Transbank al cerrar la caja y privacidad del comensal.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/M2oFq8gdmh5DDHMM7AxzX8">Fase 4.1</a><span class="fecha">14 oct 2026</span></div><p>Cada local conecta su Webpay con un botón; la plata va directo a su cuenta.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/2Ek1igRUjdYy6S4dMNkLjG">Pista P</a><span class="fecha">14 oct 2026</span></div><p>Calidad: textos de estados en un solo lugar, errores siempre en español y propinas por pagar al equipo.</p></li>
+      <li class="grande"><div class="fila"><a class="fase" href="https://claude.ai/artifact/JGAPosyAT2rFutVqHWTXXs">Fase 3 completa</a><span class="fecha">14 oct 2026</span></div><p>Cierre de la operación de sala, con la compuerta de revisión automática.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/GDWaug57cr5r3ysN9TMDA1">Fase 3.7</a><span class="fecha">14 oct 2026</span></div><p>Sellos que se sienten: se suman solos al pagar y se ven con animación.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/3dWqfpiUUfMwFM9c5Z7py7">Fase 3.6</a><span class="fecha">14 oct 2026</span></div><p>Reportes calculados en el servidor e inicio del dueño.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/RMpuhUFkMT3RnPHhULhhph">Fase 3.5</a><span class="fecha">14 oct 2026</span></div><p>Código de presencia, cuenta abierta controlada y unir mesas.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/8CAS1EMKNA7pH9W9eqhRBn">Fase 3.4b</a><span class="fecha">14 oct 2026</span></div><p>App instalable y avisos al celular cuando el pedido está listo.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/E6KSKVspAv83M3XXP1FCbK">Fase 3.4</a><span class="fecha">14 oct 2026</span></div><p>La mesa en vivo: el comensal ve sus platos y el tiempo estimado.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/Q7h3ANLXe4hsK6DXfrs7PB">Fase 3.3</a><span class="fecha">14 oct 2026</span></div><p>Control del equipo: semáforo del mozo, ranking y metas.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/EGe7UPtfPaEud16HqNxtD1">Fase 3.2</a><span class="fecha">14 oct 2026</span></div><p>Estaciones de cocina y pantalla de cocina más robusta.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/TTgn4we2ZmFprD4ZwfbXPT">Fase 3.1</a><span class="fecha">14 oct 2026</span></div><p>Turnos y propina del mozo de la mesa.</p></li>
+      <li class="grande"><div class="fila"><a class="fase" href="https://claude.ai/artifact/RdubHTHDLAFtYuxuuLBU8W">Fase 2 terminada</a><span class="fecha">14 oct 2026</span></div><p>El núcleo de la plata, con su compuerta de revisión.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/5Htkv6R3Q6kCyo7UrioCrC">Fase 2.C y 2.D</a><span class="fecha">14 oct 2026</span></div><p>Reembolsos y cierre de caja.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/TMH5jobSouRd9Ekdfb5Jow">Fase 2.A y 2.B</a><span class="fecha">14 oct 2026</span></div><p>Pagar ahora, pagar al mozo y agregar a mi cuenta.</p></li>
+      <li class="grande"><div class="fila"><a class="fase" href="https://claude.ai/artifact/1p1WYMQKvS1urZ4ATe2xDS">Fase 1.10</a><span class="fecha">13 oct 2026</span></div><p>Compuerta de seguridad: cierre de la fase 1.</p></li>
+      <li><div class="fila"><a class="fase" href="https://claude.ai/artifact/64PenDGqV6HJgXB7aaPz4v">Fase 1.9</a><span class="fecha">13 oct 2026</span></div><p>Precios desde el servidor y pedido del mozo.</p></li>
+    </ol>
+  </section>
+
+  <section class="como" aria-labelledby="h-como">
+    <h2 id="h-como">Cómo se cierra cada fase</h2>
+    <p>Pruebas completas (base de prueba, base real y app publicada), publicación, recorrido con fotos, reporte en esta bitácora y un aviso para ti. Después sigo con la siguiente fase, salvo que necesite algo tuyo: en ese caso queda arriba, en "Lo que necesito de ti".</p>
+  </section>
+</main>

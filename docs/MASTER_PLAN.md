@@ -8,7 +8,9 @@ Salió del diagnóstico, del plan maestro y de su autocrítica (1 y 2 de octubre
 - **Cada etapa termina probada y publicada:** pruebas de seguridad y de navegador contra una base desechable, contra la base real y contra la app publicada, más la integración continua en verde. Cada etapa queda anotada en `docs/BUILD_LOG.md`.
 - Si algo obliga a romper una regla de la sección 4 del brief, se detiene y se pregunta.
 
-**Estado:** ✅ hecho · 🔨 en curso · ⏳ pendiente.
+**Estado:** ✅ hecho · 🔨 en curso · ⏳ pendiente · ⏸️ en pausa por decisión del fundador.
+
+**Cierre de cada etapa:** receta `/cerrar-fase` (`.claude/skills/cerrar-fase/SKILL.md`). Todos los reportes quedan en la [bitácora de fases](https://claude.ai/artifact/LKBZxWS4xLC4Z8DDuNUiRV).
 
 ---
 
@@ -21,7 +23,7 @@ Son trámites de calendario, no de programación. De ellos dependen decisiones d
 | F.1 | Elegir el local piloto y anotar cómo opera: mesas, cuenta abierta, efectivo, boleta, impresora | ⏳ |
 | F.2 | Pasarela de pago (que la plata vaya directo al local) | ⏳ |
 | F.3 | Boleta electrónica y asesoría tributaria y legal (Ley 21.719, promociones de alcohol) | ⏳ |
-| F.4 | Dominio definitivo (antes de imprimir QR reales) | ⏳ |
+| F.4 | Dominio definitivo (antes de imprimir QR reales). **Se adelanta:** lo necesitan los correos y las campañas. El fundador aún no lo tiene | ⏳ |
 | F.5 | Clave de la API de Claude para el chat de soporte | ⏳ |
 | F.6 | **Resend** para correos (transaccionales y marketing): **aprobado**, se configura más adelante | ⏳ |
 | F.7 | Credenciales de Google y cuenta de desarrollador de Apple (registro del comensal) | ⏳ más adelante |
@@ -112,8 +114,8 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 |---|---|---|
 | 4.1 | Pasarelas conectadas por cada local, con Transbank (Webpay) completo: conectar con claves probadas y cifradas, pago con redirección y vuelta, devolución por la pasarela; un local real sin pasarela no cobra con la app (lo simulado solo en el demo) | ✅ |
 | 4.2 | Mercado Pago con un botón (conexión con su cuenta). Necesita la aplicación de Tablio en Mercado Pago, que crea el fundador. **Pendiente por decisión del fundador (15 de octubre): se hace después, para no atrasar la app** | ⏸️ |
-| 4.2b | **Apple Pay y Google Pay en la misma pantalla de pago** (prioridad del fundador, por fricción). Webpay no los muestra en línea; Klap Checkout Flex sí, sin salir del sitio. Necesita que el fundador pida a Klap la evaluación comercial y el acceso de prueba; después, un conector "Klap" igual al de Transbank | ⏳ |
-| 4.3 | Boleta electrónica para efectivo y transferencia, a nombre de cada local y enviada por correo (proveedor de boletas) | ⏳ |
+| 4.2b | **Apple Pay y Google Pay en la misma pantalla de pago** (prioridad del fundador, por fricción). Webpay no los muestra en línea; Klap Checkout Flex sí, sin salir del sitio. Necesita que el fundador pida a Klap la evaluación comercial y el acceso de prueba; después, un conector "Klap" igual al de Transbank. **En pausa por decisión del fundador (15 de octubre): no bloquea las demos** | ⏸️ |
+| 4.3 | Boleta para efectivo y transferencia, siempre a nombre de cada local. **Etapa 1 (para el piloto):** el local usa su sistema de siempre y Tablio deja marcar "boleta entregada" al cobrar, con aviso si falta. **Etapa 2:** proveedor de boletas conectado por cada local (como las pasarelas), enviada por correo o al celular | ⏳ |
 | 4.4 | Pagos que no vuelven (revisión automática cada 5 minutos) y conciliación al cerrar la caja contra la pasarela (cada pago con Webpay contra Transbank); claves guardadas 120 días tras desconectar, solo para revisiones y devoluciones | ✅ |
 | 4.5 | Privacidad (Ley 21.719): consentimiento aparte para promociones, ver y descargar mis datos, borrar mi cuenta (la plata del local queda sin el nombre), invitados que no vuelven en 90 días se borran solos, política de privacidad. Falta la revisión de un abogado | ✅ |
 | 4.6 | Excepciones de la caja (pago sin pedido, monto que no calza, boleta fallida) y correos con Resend | ⏳ |
@@ -131,6 +133,7 @@ Proyecto de producción armado desde el repositorio · dominio y tarjetas impres
 **Fase 6 — Control del equipo:** turnos, permisos finos, varios cierres de caja al día, PIN para el mozo en tablets compartidas.
 
 **Fase 7 — Más ventas y experiencia** (ideas de experiencia, segunda ola):
+- **Campañas por correo (aprobadas el 15 de octubre de 2026; se adelantan apenas haya dominio y Resend):** sección "Campañas" del dueño, públicos listos (no vienen hace 30 días, frecuentes, por plato, todos los que aceptaron promociones), sugerencia en Inicio, beneficio que se activa al pagar con el QR para medir visitas y ventas, baja en cada correo y límite de envíos por local. Después, el mismo mensaje como aviso al celular.
 - **Invitar una ronda** (uno paga para la mesa, desde su propio pedido) y **dividir un plato** entre quienes elijas: respetan "cada uno paga lo suyo".
 - Niveles por local (Bronce, Plata, Oro) y rachas ("3 viernes seguidos"), con beneficios que define el dueño.
 - Pasaporte de la casa: coleccionar estilos y tragos probados, con insignias.

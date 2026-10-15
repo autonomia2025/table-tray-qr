@@ -4,6 +4,15 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Cierre de fase automático y decisiones de boleta y campañas
+El fundador pidió que cada fase termine siempre igual, sin tener que acordarse de pedirlo:
+- **Receta `/cerrar-fase`** (`.claude/skills/cerrar-fase/SKILL.md`): pruebas completas, publicación, documentos al día, recorrido con fotos, reporte publicado, aviso al celular y seguir con la siguiente etapa. Si esa etapa necesita algo de él (servicio externo, cuenta, regla de la sección 4, algo irreversible), se salta a la siguiente que no esté bloqueada.
+- **Bitácora de fases** (página publicada, fuente `docs/bitacora-fases.html`): todos los reportes en un solo lugar, más "Ahora" y "Lo que necesito de ti".
+- **Decisiones del fundador:**
+  - Boleta en dos etapas, siempre a nombre de cada local: primero el local usa su sistema y Tablio recuerda marcarla; después, un proveedor conectado por local.
+  - Campañas por correo aprobadas; esperan el dominio y Resend.
+  - Apple Pay, Google Pay y Mercado Pago quedan en pausa.
+
 ## 2026-10-15 — Fase 4.5: privacidad del comensal (Ley 21.719) ✅
 La ley de datos entra en vigencia el 1 de diciembre de 2026. Lo que hace el comensal desde "Mi cuenta" en la carta:
 - **Promociones:** solo con un consentimiento aparte, desmarcado por defecto ("Quiero recibir novedades…") al guardar su cuenta, y cambiable cuando quiera (`guardar_consentimiento`, tabla `consentimientos_comensal`, con la versión de la política que aceptó). Si entra a una cuenta que ya tenía, se respeta lo que había elegido.
