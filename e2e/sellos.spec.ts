@@ -19,7 +19,9 @@ test("al pagar, el sello cae en la tarjeta; con la tarjeta completa, la mozo ent
   await cliente.getByText("Ver pedido").click();
   await cliente.getByRole("button", { name: /Ir a pagar/ }).click();
   // Antes de pagar ya sabe qué suma este pago
-  await expect(cliente.getByText(/Este pago suma tu sello|completas tu tarjeta|Hoy ya sumaste tu sello/)).toBeVisible({ timeout: 15_000 });
+  const antes = cliente.getByText(/Este pago suma tu sello|completas tu tarjeta|Hoy ya sumaste tu sello/);
+  await expect(antes).toBeVisible({ timeout: 15_000 });
+  const yaSumoHoy = /Hoy ya sumaste/.test(await antes.first().innerText());
   await foto(cliente, "120-cliente-antes-de-pagar");
   await cliente.getByRole("button", { name: /Pagar con tarjeta/ }).click();
   await expect(cliente.getByText("¡Pago listo!")).toBeVisible({ timeout: 20_000 });
@@ -33,7 +35,11 @@ test("al pagar, el sello cae en la tarjeta; con la tarjeta completa, la mozo ent
   await foto(cliente, "122-cliente-tarjeta-completa");
 
   // El premio con su código (si hoy ya había completado la tarjeta en otra prueba, igual está por retirar)
-  const codigo = (await tarjeta.getByTestId("codigo-premio").first().innerText()).trim();
+  const premio = tarjeta.getByTestId("codigo-premio").first();
+  const hayPremio = await premio.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false);
+  // Un sello por día: si otra corrida de hoy ya sumó el sello y entregó el premio, no queda nada que entregar
+  test.skip(!hayPremio && yaSumoHoy, "El cliente ya sumó su sello de hoy y retiró el premio en otra corrida");
+  const codigo = (await premio.innerText()).trim();
   expect(codigo).toMatch(/^[A-Z2-9]{4}$/);
 
   // La mozo abre la mesa 1 y ve el premio por entregar

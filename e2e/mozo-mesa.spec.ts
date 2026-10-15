@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
+import { liberarMesa } from "./apoyo/recorrido";
 
 // Fases 1.5 y 1.6 — Una visita completa, sin cámara, con dos navegadores a la vez:
 // el comensal paga, llama al mozo; el mozo toma la mesa, atiende la llamada y la cierra;
@@ -15,6 +16,7 @@ test.skip(({ isMobile }) => isMobile, "Se prueba una vez, en escritorio");
 
 test("visita completa: pagar, llamar al mozo sin cámara, atender, cerrar la mesa y calificar", async ({ browser }) => {
   test.setTimeout(90_000); // dos navegadores a la vez
+  await liberarMesa(6);
   // Comensal: pide y paga en la mesa 6, y queda en el seguimiento
   const comensalCtx = await browser.newContext();
   const comensal = await comensalCtx.newPage();
