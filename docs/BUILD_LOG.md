@@ -24,6 +24,7 @@ Un local recién activado no tenía guía: el dueño entraba a un panel vacío. 
   - un local nuevo parte en cero y se va marcando;
   - la importación es todo o nada, con sus límites.
 - `e2e/primeros-pasos.spec.ts` recorre el flujo de punta a punta.
+- **Prueba antigua corregida:** `e2e/flujo-demo.spec.ts` buscaba el botón "Entregado" con un selector demasiado amplio. Con otras pruebas en paralelo, a veces entregaba el pedido de otra (por eso fallaba `equipo-desempeno` junto con ella). Ahora actúa solo dentro de la tarjeta de su propio pedido.
 
 ## 2026-10-15 — Fase 5.1: alta del local por Tablio ✅
 Antes, el superadmin creaba un local escribiendo directo desde el navegador y en pasos sueltos: si fallaba a mitad, quedaba un local a medias. Además no creaba mesas, códigos de mesa ni estaciones, y el superadmin elegía la contraseña del dueño.
