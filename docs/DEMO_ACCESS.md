@@ -88,6 +88,8 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 
 23. **Excepciones de la caja:** en Caja → Excepciones (con un número cuando hay algo pendiente) aparece lo que la app no pudo resolver sola. Por ejemplo: un cobro sin pedido que la pasarela no devolvió, una diferencia con Transbank, una boleta de ayer sin marcar o un reembolso rechazado. Cada una tiene su botón; lo que se resuelve a mano pide escribir qué pasó. El Inicio del dueño y el cierre de caja avisan cuántas hay. En el demo normalmente está vacía ("Todo en orden").
 
+24. **Dar de alta un local nuevo** (superadmin, en `/superadmin/tenants` → "Nuevo"): nombre, dirección en Tablio, dueño, correo, mesas y cómo cobra. Se crea completo (mesas con su QR y código, carta vacía) y aparece el enlace para el dueño, para copiar o mandar por WhatsApp. El dueño lo abre, elige su contraseña y queda en su panel. En el detalle del local se ve si ya lo activó, o se crea un enlace nuevo. **Ojo:** en la base real esto crea un local de verdad.
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.

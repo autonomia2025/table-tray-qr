@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      activaciones_local: {
+        Row: {
+          anulado_at: string | null
+          branch_id: string
+          correo: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          nombre_dueno: string | null
+          tenant_id: string
+          token: string
+          usado_por: string | null
+          used_at: string | null
+        }
+        Insert: {
+          anulado_at?: string | null
+          branch_id: string
+          correo: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          nombre_dueno?: string | null
+          tenant_id: string
+          token: string
+          usado_por?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          anulado_at?: string | null
+          branch_id?: string
+          correo?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          nombre_dueno?: string | null
+          tenant_id?: string
+          token?: string
+          usado_por?: string | null
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activaciones_local_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activaciones_local_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3151,6 +3211,10 @@ export type Database = {
         Args: { _qr_token: string }
         Returns: Record<string, unknown>
       }
+      _completar_activacion: {
+        Args: { _id: string; _user_id: string }
+        Returns: undefined
+      }
       _conciliar_dia: {
         Args: { _branch_id: string; _dia: string }
         Returns: Json
@@ -3199,6 +3263,7 @@ export type Database = {
           token: string
         }[]
       }
+      _liberar_activacion: { Args: { _id: string }; Returns: undefined }
       _llamar_revisar_pagos: { Args: never; Returns: undefined }
       _mas_dias_habiles: {
         Args: { _desde: string; _dias: number }
@@ -3229,6 +3294,15 @@ export type Database = {
         }
       }
       _minutos_plato: { Args: { _menu_item_id: string }; Returns: number }
+      _nuevo_enlace_activacion: {
+        Args: {
+          _branch_id: string
+          _correo: string
+          _nombre: string
+          _tenant_id: string
+        }
+        Returns: string
+      }
       _pagos_pasarela_dia: {
         Args: { _branch_id: string; _dia: string }
         Returns: {
@@ -3286,12 +3360,24 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      _puede_dar_alta: { Args: never; Returns: boolean }
       _puede_ver_plata: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
       _purgar_claves_pasarela: { Args: never; Returns: number }
       _purgar_invitados: { Args: never; Returns: number }
+      _reservar_activacion: {
+        Args: { _token: string }
+        Returns: {
+          branch_id: string
+          correo: string
+          id: string
+          nombre_dueno: string
+          slug: string
+          tenant_id: string
+        }[]
+      }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _sellos_pago: {
         Args: {
@@ -3435,6 +3521,20 @@ export type Database = {
         }
         Returns: Json
       }
+      crear_local: {
+        Args: {
+          _color?: string
+          _correo_dueno: string
+          _lead_id?: string
+          _mesas?: number
+          _modo?: string
+          _nombre: string
+          _nombre_dueno?: string
+          _slug: string
+          _telefono?: string
+        }
+        Returns: Json
+      }
       crear_pedido_mozo: {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
@@ -3454,6 +3554,16 @@ export type Database = {
       }
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
+      estado_activaciones: {
+        Args: never
+        Returns: {
+          activado_at: string
+          correo: string
+          creado_at: string
+          tenant_id: string
+          vence_at: string
+        }[]
+      }
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
       excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
@@ -3503,6 +3613,7 @@ export type Database = {
         Args: { _branch_id?: string; _tenant_id: string }
         Returns: Json
       }
+      nuevo_enlace_activacion: { Args: { _tenant_id: string }; Returns: Json }
       pagar_propinas: {
         Args: {
           _branch_id: string
@@ -3654,6 +3765,7 @@ export type Database = {
         Args: { _alias?: string; _qr_token: string }
         Returns: Json
       }
+      ver_activacion: { Args: { _token: string }; Returns: Json }
       ver_invitacion_mozo: {
         Args: { _token: string }
         Returns: {

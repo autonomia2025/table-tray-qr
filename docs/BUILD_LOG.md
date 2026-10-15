@@ -4,6 +4,28 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 5.1: alta del local por Tablio ✅
+Antes, el superadmin creaba un local escribiendo directo desde el navegador y en pasos sueltos: si fallaba a mitad, quedaba un local a medias. Además no creaba mesas, códigos de mesa ni estaciones, y el superadmin elegía la contraseña del dueño.
+
+**Ahora:**
+- `crear_local` lo crea todo en una sola operación del servidor: local, sucursal (cerrada y sin cobros simulados), carta vacía, mesas con su QR y su código, y estación principal. Lo pueden usar el superadmin y el equipo de ventas; si viene de un posible cliente, queda como convertido.
+- Al final aparece un enlace para el dueño, con un mensaje listo para copiar o mandar por WhatsApp. Sirve una vez y por 14 días.
+- El dueño abre `/activar/…`, escribe su nombre, elige su contraseña y queda dentro de su panel. Si ya tenía cuenta con ese correo (por ejemplo, de otro local), entra con ella y se le suma el local.
+- Si dos personas usan el mismo enlace a la vez, solo una lo activa.
+- En el detalle de cada local, el superadmin ve si el dueño lo activó o crea un enlace nuevo (el anterior deja de servir).
+
+**Pruebas:**
+- `tests/seguridad/f5-1-alta-local.test.ts` revisa:
+  - que nadie fuera de Tablio cree locales;
+  - que el local quede completo y las auditorías sigan vacías;
+  - que los datos malos no creen nada;
+  - la activación, incluso con dos personas a la vez;
+  - el dueño que ya tenía cuenta;
+  - el enlace anulado o vencido;
+  - el alta desde ventas.
+- Lo que crea locales corre solo en la base desechable, para no llenar los datos reales de locales falsos.
+- `e2e/alta-local.spec.ts` recorre el alta de punta a punta.
+
 ## 2026-10-15 — Fase 4.7: compuerta del dinero real ✅ (fase 4 terminada)
 La fase 4 se cierra igual que la 2 y la 3: con los casos difíciles que faltaban y las auditorías automáticas vacías.
 

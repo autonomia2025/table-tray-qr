@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Loader2, Plus, Eye, UserCheck, ChevronRight, ChevronLeft, Check, Trash2, Download, Search, Filter } from 'lucide-react';
+import { Loader2, Plus, Eye, UserCheck, Trash2, Download, Search, Filter } from 'lucide-react';
 import { exportToCSV } from '@/lib/export-utils';
+import AltaLocalDialog from '@/components/backoffice/AltaLocalDialog';
+import { enlaceActivacion, estadoActivaciones, nuevoEnlaceActivacion, type EstadoActivacion } from '@/lib/altaLocal';
 
 interface TenantRow {
   id: string;
@@ -98,21 +98,10 @@ export default function SATenantsPage() {
 
   // Wizard state
   const [createOpen, setCreateOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState(1);
-  const [creating, setCreating] = useState(false);
-  const [wizardError, setWizardError] = useState('');
-  const [newName, setNewName] = useState('');
-  const [newSlug, setNewSlug] = useState('');
-  const [newPhone, setNewPhone] = useState('');
-  const [newColor, setNewColor] = useState('#E8531D');
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [activacion, setActivacion] = useState<EstadoActivacion | null>(null);
+  const [enlaceNuevo, setEnlaceNuevo] = useState('');
 
-  const resetWizard = () => {
-    setWizardStep(1); setNewName(''); setNewSlug(''); setNewPhone(''); setNewColor('#E8531D');
-    setNewEmail(''); setNewPassword(''); setNewPasswordConfirm(''); setWizardError('');
-  };
+
 
   const fetchTenants = async () => {
     const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
@@ -198,8 +187,9 @@ export default function SATenantsPage() {
   };
 
   const openDetail = async (tenant: TenantRow) => {
-    setSelectedTenant(tenant); setSheetOpen(true); setDetailLoading(true);
+    setSelectedTenant(tenant); setSheetOpen(true); setDetailLoading(true); setEnlaceNuevo(''); setActivacion(null);
     fetchTenantUsers(tenant.id);
+    estadoActivaciones().then((l) => setActivacion(l.find((x) => x.tenant_id === tenant.id) ?? null));
     const [branchesRes, ordersRes, lastRes] = await Promise.all([
       supabase.from('branches').select('id, name, is_open').eq('tenant_id', tenant.id),
       supabase.from('orders').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
@@ -259,48 +249,11 @@ export default function SATenantsPage() {
     } finally { setDeleting(false); setDeleteTarget(null); }
   };
 
-  const validateStep1 = (): boolean => {
-    if (!newName.trim()) { setWizardError('Nombre obligatorio'); return false; }
-    if (!newSlug.trim() || newSlug.trim().length < 3) { setWizardError('Slug inválido (min 3 chars)'); return false; }
-    setWizardError(''); return true;
-  };
-  const validateStep2 = (): boolean => {
-    if (!newEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { setWizardError('Email inválido'); return false; }
-    if (newPassword.length < 6) { setWizardError('Contraseña min 6 chars'); return false; }
-    if (newPassword !== newPasswordConfirm) { setWizardError('Las contraseñas no coinciden'); return false; }
-    setWizardError(''); return true;
-  };
-  const goToStep2 = async () => {
-    if (!validateStep1()) return;
-    const { data: existing } = await supabase.from('tenants').select('id').eq('slug', newSlug.toLowerCase().trim()).maybeSingle();
-    if (existing) { setWizardError('Slug ya en uso'); return; }
-    setWizardStep(2);
-  };
-  const createTenant = async () => {
-    if (!validateStep2()) return;
-    setCreating(true); setWizardError('');
-    try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('create-tenant-user', {
-        body: { email: newEmail.trim(), password: newPassword },
-      });
-      if (fnError || fnData?.error) { setWizardError(fnData?.error || fnError?.message || 'Error'); setCreating(false); return; }
-      const userId = fnData.user_id;
-      const { data: tenant, error: tErr } = await supabase.from('tenants').insert({
-        name: newName.trim(), slug: newSlug.toLowerCase().trim(), email: newEmail.trim(),
-        phone: newPhone.trim() || null, primary_color: newColor, is_active: true,
-      }).select('id').single();
-      if (tErr || !tenant) throw tErr;
-      const { data: restaurant } = await supabase.from('restaurants').insert({ name: newName.trim(), tenant_id: tenant.id }).select('id').single();
-      if (!restaurant) throw new Error('Error creando restaurante');
-      const { data: branch } = await supabase.from('branches').insert({ name: 'Principal', restaurant_id: restaurant.id, tenant_id: tenant.id }).select('id').single();
-      if (!branch) throw new Error('Error creando sucursal');
-      await Promise.all([
-        supabase.from('menus').insert({ name: 'Menú Principal', branch_id: branch.id, tenant_id: tenant.id, is_active: true }),
-        supabase.from('tenant_members').insert({ user_id: userId, tenant_id: tenant.id, branch_id: branch.id, role: 'owner', is_active: true }),
-      ]);
-      toast({ title: 'Restaurante creado', description: `${newName.trim()} listo` });
-      setCreateOpen(false); resetWizard(); fetchTenants();
-    } catch (e: any) { setWizardError(e?.message ?? 'Error'); } finally { setCreating(false); }
+  const generarEnlace = async (tenantId: string) => {
+    const r = await nuevoEnlaceActivacion(tenantId);
+    if (r.ok === false) { toast({ title: 'No se pudo crear el enlace', description: r.error, variant: 'destructive' }); return; }
+    setEnlaceNuevo(enlaceActivacion(r.dato));
+    setActivacion((await estadoActivaciones()).find((x) => x.tenant_id === tenantId) ?? null);
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -313,7 +266,7 @@ export default function SATenantsPage() {
         <h1 className="text-xl font-bold text-foreground">Clientes</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="w-4 h-4 mr-1" />CSV</Button>
-          <Button onClick={() => { resetWizard(); setCreateOpen(true); }} size="sm"><Plus className="w-4 h-4 mr-1" />Nuevo</Button>
+          <Button onClick={() => setCreateOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" />Nuevo</Button>
         </div>
       </div>
 
@@ -417,6 +370,25 @@ export default function SATenantsPage() {
                 <p><span className="text-muted-foreground">Plan:</span> <Badge variant="outline" className="text-xs ml-1">{selectedTenant.plan_status || 'trial'}</Badge></p>
                 <p><span className="text-muted-foreground">Salud:</span> {HEALTH_CONFIG[selectedTenant.health].emoji} {HEALTH_CONFIG[selectedTenant.health].label}</p>
               </div>
+              {activacion && (
+                <div className="rounded-lg border border-border p-3 text-sm" data-testid="activacion-local">
+                  <h4 className="mb-1 font-semibold">Activación del dueño</h4>
+                  {activacion.activado_at ? (
+                    <p className="text-muted-foreground">Activado el {new Date(activacion.activado_at).toLocaleDateString('es-CL')} ({activacion.correo})</p>
+                  ) : (
+                    <>
+                      <p className="text-muted-foreground">
+                        Pendiente para {activacion.correo}. {new Date(activacion.vence_at) < new Date() ? 'El enlace venció.' : `El enlace vence el ${new Date(activacion.vence_at).toLocaleDateString('es-CL')}.`}
+                      </p>
+                      {enlaceNuevo ? (
+                        <p className="mt-2 break-all rounded-md bg-muted/50 p-2 font-medium text-foreground">{enlaceNuevo}</p>
+                      ) : (
+                        <Button size="sm" variant="outline" className="mt-2" onClick={() => generarEnlace(activacion.tenant_id)}>Crear un enlace nuevo</Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
               <div>
                 <h4 className="text-sm font-semibold mb-2">Sucursales</h4>
                 {detail.branches.map(b => (
@@ -481,43 +453,8 @@ export default function SATenantsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Create wizard */}
-      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetWizard(); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Nuevo restaurante — Paso {wizardStep} de 2</DialogTitle></DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${wizardStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-              {wizardStep > 1 ? <Check className="w-4 h-4" /> : '1'}
-            </div>
-            <div className="flex-1 h-0.5 bg-border"><div className={`h-full transition-all ${wizardStep >= 2 ? 'bg-primary w-full' : 'w-0'}`} /></div>
-            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${wizardStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>2</div>
-          </div>
-          {wizardStep === 1 && (
-            <div className="space-y-4 py-2">
-              <div><Label>Nombre *</Label><Input value={newName} onChange={e => { setNewName(e.target.value); if (!newSlug || newSlug === newName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')) setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')); }} placeholder="La Parrilla de Juan" /></div>
-              <div><Label>Slug *</Label><Input value={newSlug} onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} /><p className="text-xs text-muted-foreground mt-1">tablio.cl/{newSlug || '...'}</p></div>
-              <div><Label>Teléfono</Label><Input value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="+56 9 1234 5678" /></div>
-              <div><Label>Color</Label><div className="flex items-center gap-3"><input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} className="w-10 h-10 rounded cursor-pointer border border-border" /><Input value={newColor} onChange={e => setNewColor(e.target.value)} className="font-mono text-sm w-28" maxLength={7} /></div></div>
-            </div>
-          )}
-          {wizardStep === 2 && (
-            <div className="space-y-4 py-2">
-              <div className="bg-muted/50 rounded-lg p-3 text-sm"><p className="font-medium text-foreground">{newName}</p><p className="text-muted-foreground text-xs">/{newSlug}</p></div>
-              <div><Label>Email admin *</Label><Input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="admin@restaurante.cl" /></div>
-              <div><Label>Contraseña *</Label><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 6 chars" /></div>
-              <div><Label>Confirmar contraseña *</Label><Input type="password" value={newPasswordConfirm} onChange={e => setNewPasswordConfirm(e.target.value)} /></div>
-            </div>
-          )}
-          {wizardError && <p className="text-sm text-destructive">{wizardError}</p>}
-          <DialogFooter className="flex gap-2 sm:gap-0">
-            {wizardStep === 1 ? (
-              <><Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button><Button onClick={goToStep2}>Siguiente <ChevronRight className="w-4 h-4 ml-1" /></Button></>
-            ) : (
-              <><Button variant="outline" onClick={() => { setWizardStep(1); setWizardError(''); }}><ChevronLeft className="w-4 h-4 mr-1" />Atrás</Button><Button onClick={createTenant} disabled={creating}>{creating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}Crear</Button></>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Alta del local (fase 5.1): se crea completo en el servidor y el dueño activa su cuenta con un enlace */}
+      <AltaLocalDialog open={createOpen} onOpenChange={setCreateOpen} onCreado={fetchTenants} />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>

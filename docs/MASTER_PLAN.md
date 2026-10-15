@@ -124,9 +124,21 @@ Una sola capa de traducción de estados (inglés en la base, español en pantall
 
 Pasarela real y su receptor de avisos (webhooks) · **conciliación automática contra lo que la pasarela deposita** (al cerrar la caja, decisión del fundador del 13 de octubre) · boleta electrónica (una por venta) · privacidad Ley 21.719 (consentimiento, borrado, retención; bloqueante: estará vigente al lanzar) · excepciones del cajero (pago sin pedido, monto que no calza, boleta fallida) · correos con Resend.
 
-## Fase 5 — Producción y piloto ⏳
+## Fase 5 — Producción y piloto 🔨
 
 Proyecto de producción armado desde el repositorio · dominio y tarjetas impresas · monitoreo · prueba de carga (incluidos los límites de tiempo real) · alta asistida y capacitación · ensayo general · piloto supervisado.
+
+Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
+
+| Paso | Qué | Estado |
+|---|---|---|
+| 5.1 | **Alta del local por Tablio:** el superadmin (y el equipo de ventas) crea un local completo de una vez, en el servidor y sin dejar nada a medias: local, sucursal, carta vacía, mesas con su QR y código, y estación principal. El dueño recibe un enlace para activar su cuenta y elige su propia contraseña (nunca la elige Tablio) | ✅ |
+| 5.2 | **Primeros pasos del dueño:** lista de lo que falta para abrir (marca, carta, mesas, equipo, cobro, QR impresos, pedido de prueba) e importar la carta pegando una lista | ⏳ |
+| 5.3 | **Prueba de carga:** un bar lleno un viernes (muchos celulares pidiendo y pagando a la vez, pantallas en vivo), contra la base desechable, para conocer los límites | ⏳ |
+| 5.4 | **Monitoreo interno:** pantalla de salud para Tablio (relojes automáticos, pagos trabados, excepciones abiertas, auditorías, errores de funciones) y aviso diario si algo falla | ⏳ |
+| 5.5 | **Capacitación:** guías cortas dentro de la app para dueño, caja, mozo y cocina | ⏳ |
+| 5.6 | Proyecto de producción separado del demo, plan pagado de Supabase, dominio definitivo y tarjetas QR impresas | ⏸️ fundador |
+| 5.7 | Ensayo general y piloto supervisado en un local real | ⏸️ fundador |
 
 ## Después del lanzamiento
 
