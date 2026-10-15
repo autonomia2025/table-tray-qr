@@ -132,3 +132,14 @@ export async function entregarBoletasDelMozo(): Promise<void> {
   const { data } = await mozo.rpc("mis_boletas_pendientes");
   for (const b of (data as { id: string }[] | null) ?? []) await mozo.rpc("marcar_boleta", { _pago_id: b.id });
 }
+
+/** Deja una mesa del demo libre (como el dueño al cerrarla), para que la prueba no herede pedidos de otra corrida. */
+export async function liberarMesa(numero: number): Promise<void> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { url, clave } = baseDeDatos();
+  const dueno = createClient(url, clave, { auth: { persistSession: false } });
+  const c = cuenta("owner")!;
+  await dueno.auth.signInWithPassword({ email: c.correo, password: c.clave });
+  const { data: mesa } = await dueno.from("tables").select("id").eq("number", numero).eq("branch_id", SUCURSAL_DEMO).single();
+  await dueno.rpc("cerrar_mesa", { _table_id: mesa!.id, _motivo: "preparar prueba" });
+}

@@ -1,5 +1,5 @@
 import { test, expect, devices } from "@playwright/test";
-import { cuenta, entrar, entregarBoletasDelMozo, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
+import { cuenta, entrar, entregarBoletasDelMozo, liberarMesa, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
 
 // Fase 4.3 (etapa 1) — Transferencia y boleta del local. El dueño anota sus datos para transferir; el mozo
 // cobra por transferencia mostrándolos; la boleta (del sistema del local) queda pendiente y se le recuerda
@@ -12,6 +12,7 @@ const DATOS = "Banco Demo · Cuenta Corriente 0012345\nRUT 76.000.000-0 · Demo 
 test("cobro por transferencia: el mozo muestra los datos y la boleta queda por entregar hasta marcarla", async ({ page, browser }) => {
   test.setTimeout(150_000);
   await entregarBoletasDelMozo();
+  await liberarMesa(10);
 
   // El dueño anota los datos para transferir (Sucursal)
   await entrar(page, "owner");

@@ -1,5 +1,5 @@
 import { test, expect, devices } from "@playwright/test";
-import { cuenta, entrar, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
+import { cuenta, entrar, liberarMesa, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
 
 // Fase 2.B — "Pagar al mozo": el comensal pide sin pagar en la app, el mozo cobra en efectivo
 // (con vuelto) y recién entonces el pedido llega a la cocina. Tres pantallas a la vez.
@@ -8,6 +8,7 @@ test.skip(({ isMobile }) => !isMobile, "Se prueba una vez, en celular");
 
 test("pagar al mozo en efectivo: el pedido pasa a cocina recién al registrar el cobro", async ({ page, browser }) => {
   test.setTimeout(120_000);
+  await liberarMesa(9);
   // Comensal en la mesa 9
   await page.goto(linkMesa(9)!);
   await page.getByText("Agua mineral", { exact: true }).first().click();
