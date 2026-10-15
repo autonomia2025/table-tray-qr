@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, ArrowUp, ArrowDown, Pencil, Trash2, Upload, X, Image as ImageIcon } from "lucide-react";
+import { Plus, ArrowUp, ArrowDown, Pencil, Trash2, Upload, X, Image as ImageIcon, ClipboardPaste } from "lucide-react";
+import ImportarCartaDialog from "@/components/admin/ImportarCartaDialog";
 import { cn } from "@/lib/utils";
 import { mensajeError } from "@/lib/errores";
 
@@ -80,6 +81,9 @@ export default function MenuAdminPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: "cat" | "item"; id: string; name: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Pegar la carta de una vez (fase 5.2)
+  const [pegarCarta, setPegarCarta] = useState(false);
+  const [recargar, setRecargar] = useState(0);
 
   // Load menu & categories
   useEffect(() => {
@@ -108,14 +112,14 @@ export default function MenuAdminPage() {
         .eq("menu_id", menu.id)
         .order("sort_order");
       setCategories(cats ?? []);
-      if (cats?.length && !selectedCatId) setSelectedCatId(cats[0].id);
+      if (cats?.length) setSelectedCatId((actual) => actual && cats.some((c) => c.id === actual) ? actual : cats[0].id);
       const { data: est } = await supabase.from("stations").select("id, name, es_predeterminada")
         .eq("branch_id", branchId).eq("is_active", true).order("sort_order");
       setEstaciones(est ?? []);
       setLoadingCats(false);
     }
     load();
-  }, [branchId, tenantId]);
+  }, [branchId, tenantId, recargar]);
 
   // Load items when category selected
   useEffect(() => {
@@ -130,7 +134,7 @@ export default function MenuAdminPage() {
         setItems(data ?? []);
         setLoadingItems(false);
       });
-  }, [selectedCatId]);
+  }, [selectedCatId, recargar]);
 
   // Category CRUD
   const openCatModal = (cat?: Category) => {
@@ -345,6 +349,8 @@ export default function MenuAdminPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">Menú</h2>
+        <div className="flex items-center gap-3">
+        <Button size="sm" variant="outline" onClick={() => setPegarCarta(true)}><ClipboardPaste className="mr-1 h-4 w-4" />Pegar carta</Button>
         <a
           href={`/${slug}`}
           target="_blank"
@@ -353,7 +359,9 @@ export default function MenuAdminPage() {
         >
           Ver menú del cliente →
         </a>
+        </div>
       </div>
+      {branchId && <ImportarCartaDialog branchId={branchId} open={pegarCarta} onOpenChange={setPegarCarta} onImportada={() => setRecargar((n) => n + 1)} />}
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Categories column */}

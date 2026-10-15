@@ -7,6 +7,7 @@ import { formatCLP } from "@/lib/format";
 import { historiaDelLocal, nombreDia, variacion, type Historia } from "@/lib/reportes";
 import { fechaLarga, propinasPorPagar, type PropinasPorPagar } from "@/lib/propinasEquipo";
 import { excepcionesCaja } from "@/lib/excepciones";
+import PrimerosPasos from "@/components/admin/PrimerosPasos";
 
 // Inicio del dueño (fase 3.6, brief 5.5): cuenta en palabras simples cómo le fue al local, en vez de
 // mostrar veinte gráficos. Los datos los calcula la base (historia_del_local).
@@ -101,6 +102,9 @@ export default function InicioPage() {
           )}
         </div>
       </div>
+
+      {/* Lo que le falta a un local nuevo para abrir (fase 5.2) */}
+      {branchId && <PrimerosPasos branchId={branchId} slug={slug} />}
 
       {/* La historia */}
       <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border bg-card p-5" aria-labelledby="historia">

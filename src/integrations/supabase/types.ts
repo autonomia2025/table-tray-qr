@@ -300,6 +300,8 @@ export type Database = {
           payment_mode: string
           pedir_codigo: string
           phone: string | null
+          primeros_pasos_ocultos_at: string | null
+          qr_listos_at: string | null
           recordar_boleta: boolean
           restaurant_id: string
           tenant_id: string
@@ -322,6 +324,8 @@ export type Database = {
           payment_mode?: string
           pedir_codigo?: string
           phone?: string | null
+          primeros_pasos_ocultos_at?: string | null
+          qr_listos_at?: string | null
           recordar_boleta?: boolean
           restaurant_id: string
           tenant_id: string
@@ -344,6 +348,8 @@ export type Database = {
           payment_mode?: string
           pedir_codigo?: string
           phone?: string | null
+          primeros_pasos_ocultos_at?: string | null
+          qr_listos_at?: string | null
           recordar_boleta?: boolean
           restaurant_id?: string
           tenant_id?: string
@@ -3238,6 +3244,7 @@ export type Database = {
           token: string
         }[]
       }
+      _gestiona_sucursal: { Args: { _branch_id: string }; Returns: string }
       _guardar_conexion_pago: {
         Args: {
           _ambiente: string
@@ -3586,6 +3593,10 @@ export type Database = {
         Returns: boolean
       }
       historia_del_local: { Args: { _branch_id: string }; Returns: Json }
+      importar_carta: {
+        Args: { _branch_id: string; _lineas: Json }
+        Returns: Json
+      }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
       llamar_mozo: {
@@ -3600,6 +3611,10 @@ export type Database = {
       marcar_boleta: {
         Args: { _folio?: string; _pago_id: string }
         Returns: Json
+      }
+      marcar_paso: {
+        Args: { _branch_id: string; _paso: string }
+        Returns: undefined
       }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }
@@ -3639,6 +3654,7 @@ export type Database = {
       }
       premios_en_mesa: { Args: { _table_id: string }; Returns: Json }
       premios_por_entregar: { Args: { _tenant_id: string }; Returns: Json }
+      primeros_pasos: { Args: { _branch_id: string }; Returns: Json }
       propinas_por_pagar: { Args: { _branch_id: string }; Returns: Json }
       puede_asignar_rol: {
         Args: { _rol: string; _tenant_id: string }

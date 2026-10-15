@@ -4,6 +4,27 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 5.2: primeros pasos del dueño y pegar la carta ✅
+Un local recién activado no tenía guía: el dueño entraba a un panel vacío. Ahora:
+
+- **"Para abrir tu local"** en el Inicio:
+  - siete pasos en orden (marca, carta, equipo, cobro con la app, QR de las mesas, pedido de prueba y abrir), cada uno con su botón a dónde se hace;
+  - los calcula la base (`primeros_pasos`) y se marcan solos; los QR, al descargarlos o imprimirlos;
+  - se puede ocultar;
+  - los locales que ya venden tienen sus QR dados por listos.
+- **Pegar la carta** (Menú → "Pegar carta"):
+  - el dueño pega su carta como texto (títulos de categoría y un plato por línea con su precio) o como columnas copiadas de una planilla;
+  - ve una vista previa con las líneas que no se entendieron;
+  - la importa de una vez con `importar_carta`: todo o nada, hasta 300 platos, crea las categorías que faltan y no repite platos ya cargados.
+
+**Pruebas:**
+- `src/lib/primerosPasos.test.ts`: el lector de la carta pegada con precios chilenos en sus formas comunes, títulos, planillas y líneas sin precio.
+- `tests/seguridad/f5-2-primeros-pasos.test.ts`:
+  - solo el dueño, administrador o encargado usan esto en su local;
+  - un local nuevo parte en cero y se va marcando;
+  - la importación es todo o nada, con sus límites.
+- `e2e/primeros-pasos.spec.ts` recorre el flujo de punta a punta.
+
 ## 2026-10-15 — Fase 5.1: alta del local por Tablio ✅
 Antes, el superadmin creaba un local escribiendo directo desde el navegador y en pasos sueltos: si fallaba a mitad, quedaba un local a medias. Además no creaba mesas, códigos de mesa ni estaciones, y el superadmin elegía la contraseña del dueño.
 

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { QRCodeCanvas } from "qrcode.react";
 import { Download, Printer, QrCode, AlertTriangle, RefreshCw } from "lucide-react";
 import { cambiarCodigosMesa } from "@/lib/mesa";
+import { marcarPaso } from "@/lib/primerosPasos";
 
 interface TableRow2 {
   id: string;
@@ -89,6 +90,7 @@ export default function QRPage() {
       setTimeout(() => downloadCanvas(canvases[i] as HTMLCanvasElement, `qr-mesa-${t.number}.png`), i * 250);
     });
     toast({ title: "Descargando QRs", description: `${withToken.length} imágenes` });
+    if (branchId) marcarPaso(branchId, "qr"); // primeros pasos (fase 5.2)
   };
 
   if (loading) {
@@ -131,7 +133,7 @@ export default function QRPage() {
           <Button variant="outline" onClick={downloadAll} disabled={!withToken.length}>
             <Download className="mr-2 h-4 w-4" /> Descargar todos
           </Button>
-          <Button onClick={() => window.print()} disabled={!withToken.length}>
+          <Button onClick={() => { if (branchId) marcarPaso(branchId, "qr"); window.print(); }} disabled={!withToken.length}>
             <Printer className="mr-2 h-4 w-4" /> Imprimir tarjetas
           </Button>
         </div>

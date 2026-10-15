@@ -240,6 +240,8 @@ def main() -> None:
         "id": BRANCH, "tenant_id": TENANT, "restaurant_id": RESTAURANT, "name": "Barrio Italia",
         "address": "Av. Italia 1234, Providencia", "city": "Santiago", "phone": "+56 2 2345 6789",
         "is_open": True, "payment_mode": "prepaid", "pagos_simulados": True,
+        # Los QR del demo ya están impresos (primeros pasos, fase 5.2)
+        "qr_listos_at": "2026-10-01T12:00:00Z",
     }))
     sql.append(ins("public.menus", {"id": MENU, "tenant_id": TENANT, "branch_id": BRANCH, "name": "Carta Principal", "is_active": True}))
     # Estaciones: "Cocina" la crea sola la base (predeterminada); las bebidas van a "Barra" (fase 3.2)

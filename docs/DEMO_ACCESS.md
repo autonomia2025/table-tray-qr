@@ -90,6 +90,10 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 
 24. **Dar de alta un local nuevo** (superadmin, en `/superadmin/tenants` → "Nuevo"): nombre, dirección en Tablio, dueño, correo, mesas y cómo cobra. Se crea completo (mesas con su QR y código, carta vacía) y aparece el enlace para el dueño, para copiar o mandar por WhatsApp. El dueño lo abre, elige su contraseña y queda en su panel. En el detalle del local se ve si ya lo activó, o se crea un enlace nuevo. **Ojo:** en la base real esto crea un local de verdad.
 
+25. **Primeros pasos y pegar la carta:**
+    - un local recién activado ve en su Inicio "Para abrir tu local": marca, carta, equipo, cobro, QR, pedido de prueba y abrir. Cada paso tiene su botón y se marca solo. El demo ya los tiene casi todos hechos;
+    - en Menú → "Pegar carta" se pega la carta entera: un título por categoría terminado en dos puntos y un plato por línea con su precio al final (o columnas copiadas de una planilla). Antes de importar se ve cómo quedó y qué líneas no se entendieron.
+
 ## Experiencia del comensal (invitado o cliente)
 
 - Al abrir la carta de una mesa, el comensal entra como **invitado**: puede pedir y pagar sin registrarse.
