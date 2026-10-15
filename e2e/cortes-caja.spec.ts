@@ -46,6 +46,7 @@ test("la caja hace un corte de turno y el cierre cuenta solo desde el último co
   await expect(cortes.getByRole("button", { name: "Guardar corte" })).toBeDisabled();
   await cortes.getByLabel("Efectivo contado", { exact: true }).fill(String(esperado));
   await expect(cortes.getByText("Cuadra")).toBeVisible();
+  await cortes.evaluate((e) => e.scrollIntoView({ block: "start" }));
   await foto(page, "230-caja-hacer-corte");
   await cortes.getByRole("button", { name: "Guardar corte" }).click();
   await expect(page.getByText("Corte guardado").first()).toBeVisible({ timeout: 15_000 });
