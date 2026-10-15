@@ -4,6 +4,24 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 5.4: monitoreo interno ✅
+Antes, la revisión diaria solo comprobaba que la app y la base respondieran. Ahora la base se revisa por dentro cada hora:
+- los relojes automáticos y sus fallas;
+- las llamadas del reloj a las funciones;
+- los pagos con pasarela sin confirmar y los cobros que había que devolver;
+- las excepciones de caja de todos los locales;
+- las tres auditorías;
+- los locales creados cuyo dueño no activó la cuenta.
+
+**Cómo se ve y cómo avisa:**
+- El resultado queda registrado (30 días). El superadmin lo ve en vivo en **Salud** (`/superadmin/salud`), con la historia hora por hora.
+- La revisión diaria de GitHub ahora también falla, y avisa por correo, si la última revisión encontró un problema o si la base lleva más de 3 horas sin revisarse.
+- Lo único público es el estado ("ok", "atencion" o "problema"), sin ningún detalle.
+
+**Pruebas:**
+- `tests/seguridad/f5-4-salud.test.ts` revisa quién ve qué, que lo público no tenga datos, y que una revisión con un pago trabado a propósito dé "problema".
+- `e2e/salud.spec.ts` cubre la página.
+
 ## 2026-10-15 — Fase 5.3: prueba de carga ✅
 `bun run carga` simula un viernes lleno: un local de 40 mesas, comensales que piden y pagan en rondas, 10 pantallas en vivo y una cocina avanzando pedidos. Resultados y cómo leerlos en `docs/PRUEBA_CARGA.md`.
 

@@ -41,3 +41,21 @@ jobs:
             "$SUPABASE_URL/auth/v1/health" -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
           echo "Auth: $codigo"
           test "$codigo" = "200"
+
+      # Fase 5.4: la base se revisa sola cada hora (relojes, pagos trabados, auditorías…). Aquí solo se lee
+      # el estado de la última revisión: si encontró un problema, o si lleva más de 3 horas sin revisarse,
+      # este paso falla y GitHub avisa. El detalle está en Tablio → superadmin → Salud.
+      - name: La revisión interna de la base no encontró problemas
+        run: |
+          respuesta=$(curl -s --max-time 30 -X POST "$SUPABASE_URL/rest/v1/rpc/estado_salud" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H "Content-Type: application/json" -d '{}')
+          echo "Salud: $respuesta"
+          echo "$respuesta" | python3 -c '
+          import json, sys
+          r = json.load(sys.stdin)
+          if r.get("estado") == "problema":
+              sys.exit("La base encontró un problema: revisa Tablio, superadmin, Salud")
+          if not r.get("reciente"):
+              sys.exit("La base lleva más de 3 horas sin revisarse (¿el reloj automático está parado?)")
+          print("Estado:", r.get("estado"))
+          '

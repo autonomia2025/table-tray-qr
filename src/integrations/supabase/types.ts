@@ -2387,6 +2387,27 @@ export type Database = {
           },
         ]
       }
+      salud_registros: {
+        Row: {
+          created_at: string
+          detalle: Json
+          estado: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          detalle: Json
+          estado: string
+          id?: never
+        }
+        Update: {
+          created_at?: string
+          detalle?: Json
+          estado?: string
+          id?: never
+        }
+        Relationships: []
+      }
       seller_goals: {
         Row: {
           closes_goal: number | null
@@ -3211,6 +3232,7 @@ export type Database = {
       }
       _anular_sellos_pago: { Args: { _payment_id: string }; Returns: undefined }
       _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
+      _chequeo_salud: { Args: never; Returns: Json }
       _codigo_premio: { Args: { _tenant_id: string }; Returns: string }
       _codigo_presencia: { Args: never; Returns: string }
       _comensal_en_mesa: {
@@ -3386,6 +3408,7 @@ export type Database = {
         }[]
       }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
+      _revisar_salud: { Args: never; Returns: string }
       _sellos_pago: {
         Args: {
           _payment_id: string
@@ -3572,6 +3595,7 @@ export type Database = {
         }[]
       }
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
+      estado_salud: { Args: never; Returns: Json }
       excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
       guardar_consentimiento: { Args: { _promociones: boolean }; Returns: Json }
@@ -3729,6 +3753,7 @@ export type Database = {
         Args: { _activo: boolean; _tenant_id: string }
         Returns: undefined
       }
+      salud_plataforma: { Args: never; Returns: Json }
       separar_mesa: { Args: { _secundaria: string }; Returns: Json }
       siguiente_numero_pedido: { Args: { _branch_id: string }; Returns: number }
       tenants_privado: {

@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Building2, BarChart2, ToggleLeft, Settings, LogIn, Users, LogOut } from 'lucide-react';
+import { Building2, BarChart2, ToggleLeft, Settings, LogIn, Users, LogOut, HeartPulse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { path: '/superadmin/tenants', icon: Building2, label: 'Tenants' },
   { path: '/superadmin/equipo', icon: Users, label: 'Equipo' },
   { path: '/superadmin/metricas', icon: BarChart2, label: 'Métricas' },
+  { path: '/superadmin/salud', icon: HeartPulse, label: 'Salud' },
   { path: '/superadmin/flags', icon: ToggleLeft, label: 'Flags' },
   { path: '/superadmin/config', icon: Settings, label: 'Config' },
 ];

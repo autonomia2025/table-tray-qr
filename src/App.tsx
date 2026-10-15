@@ -46,6 +46,7 @@ import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
 import SATenantsPage from "./pages/superadmin/SATenantsPage";
 import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
 import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
+import SASaludPage from "./pages/superadmin/SASaludPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
 import SAEquipoPage from "./pages/superadmin/SAEquipoPage";
 import ForgotPasswordPage from "./pages/admin/ForgotPasswordPage";
@@ -139,6 +140,7 @@ const App = () => (
             <Route path="equipo" element={<SAEquipoPage />} />
             <Route path="metricas" element={<SAMetricsPage />} />
             <Route path="flags" element={<SAFlagsPage />} />
+            <Route path="salud" element={<SASaludPage />} />
             <Route path="config" element={<SAConfigPage />} />
           </Route>
           {/* Backoffice join (kept for invitation links) */}
