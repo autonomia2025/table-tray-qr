@@ -26,12 +26,14 @@ test("la caja reembolsa un pago con motivo y queda registrado", async ({ page, b
   await expect(fila).toBeVisible({ timeout: 20_000 });
   await foto(page, "50-caja-ingresos");
   await fila.getByRole("button", { name: /Reembolsar/ }).click();
-  await page.getByPlaceholder("Ej: producto no entregado").fill("El cliente pidió dos veces por error");
+  // Motivo único: el demo publicado acumula los reembolsos de otras corridas del mismo día
+  const motivo = `El cliente pidió dos veces por error (${Date.now().toString(36)})`;
+  await page.getByPlaceholder("Ej: producto no entregado").fill(motivo);
   await foto(page, "51-caja-reembolso-motivo");
   await page.getByRole("button", { name: "Confirmar reembolso" }).click();
   await expect(page.getByText("Reembolso registrado").first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Reembolsado").first()).toBeVisible({ timeout: 15_000 });
   await page.getByRole("tab", { name: "Reembolsos" }).click();
-  await expect(page.getByText("El cliente pidió dos veces por error")).toBeVisible();
+  await expect(page.getByText(motivo)).toBeVisible();
   await foto(page, "52-caja-reembolsos-registrados");
 });
