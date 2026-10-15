@@ -4,6 +4,33 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 6.2: varios cierres de caja al día ✅
+**Qué hace:** cuando la caja cambia de manos (turno mañana y turno noche), la cajera que se va hace un **corte de turno**:
+- cuenta el efectivo de su tramo y lo anota;
+- si no cuadra, explica la diferencia;
+- lo que se cobre después es del turno siguiente.
+
+Al final del día, el cierre cuenta solo lo que entró desde el último corte y suma todos los cortes. Así cada turno responde por lo suyo.
+
+**Cómo está hecho:**
+- Tabla `cortes_caja`: nadie la cambia, ni desde la base (`proteger_corte`).
+- Cada pago y reembolso guarda su `corte_numero` al ocurrir, bajo el mismo bloqueo que el día de negocio. Lo que llega después del corte no se mete en el tramo ya contado.
+- `hacer_corte_caja` deja hacer cortes a la caja, el encargado o el dueño, hasta 20 por día. Cada corte queda en la auditoría.
+- `cerrar_caja` con cortes guarda el corte final, y el cierre del día es la suma.
+- La auditoría de la plata suma dos revisiones: un corte que cambió y un cierre que no es la suma de sus cortes.
+
+**Pruebas:**
+- `tests/seguridad/f6-2-cortes-caja.test.ts` revisa:
+  - quién puede hacer cortes (nadie más ni otro local);
+  - que cada tramo se cuente por separado;
+  - la nota obligatoria;
+  - que un corte no se pueda cambiar;
+  - el cierre que suma los cortes;
+  - que la auditoría detecte un corte tocado a escondidas.
+- `e2e/cortes-caja.spec.ts` recorre el corte en pantalla.
+
+---
+
 ## 2026-10-15 — Fase 6.1: PIN del mozo en tablets compartidas ✅
 Por acuerdo con el fundador, mientras el piloto espera sus decisiones se adelanta la fase 6.
 

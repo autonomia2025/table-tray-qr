@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.18"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       activaciones_local: {
@@ -682,6 +707,90 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: true
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cortes_caja: {
+        Row: {
+          app_esperado: number
+          branch_id: string
+          created_at: string
+          dia: string
+          diferencia_efectivo: number
+          diferencia_pos: number | null
+          efectivo_contado: number
+          efectivo_esperado: number
+          final: boolean
+          hecho_por: string | null
+          hecho_por_nombre: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          numero: number
+          pagos: number
+          pos_contado: number | null
+          pos_esperado: number
+          tenant_id: string
+          transferencia_esperada: number
+        }
+        Insert: {
+          app_esperado?: number
+          branch_id: string
+          created_at?: string
+          dia: string
+          diferencia_efectivo: number
+          diferencia_pos?: number | null
+          efectivo_contado: number
+          efectivo_esperado: number
+          final?: boolean
+          hecho_por?: string | null
+          hecho_por_nombre?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          numero: number
+          pagos?: number
+          pos_contado?: number | null
+          pos_esperado: number
+          tenant_id: string
+          transferencia_esperada?: number
+        }
+        Update: {
+          app_esperado?: number
+          branch_id?: string
+          created_at?: string
+          dia?: string
+          diferencia_efectivo?: number
+          diferencia_pos?: number | null
+          efectivo_contado?: number
+          efectivo_esperado?: number
+          final?: boolean
+          hecho_por?: string | null
+          hecho_por_nombre?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          numero?: number
+          pagos?: number
+          pos_contado?: number | null
+          pos_esperado?: number
+          tenant_id?: string
+          transferencia_esperada?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cortes_caja_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cortes_caja_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -2143,6 +2252,7 @@ export type Database = {
           boleta_marcada_por: string | null
           boleta_nota: string | null
           branch_id: string
+          corte_numero: number | null
           created_at: string
           customer_email: string | null
           dia_negocio: string | null
@@ -2176,6 +2286,7 @@ export type Database = {
           boleta_marcada_por?: string | null
           boleta_nota?: string | null
           branch_id: string
+          corte_numero?: number | null
           created_at?: string
           customer_email?: string | null
           dia_negocio?: string | null
@@ -2209,6 +2320,7 @@ export type Database = {
           boleta_marcada_por?: string | null
           boleta_nota?: string | null
           branch_id?: string
+          corte_numero?: number | null
           created_at?: string
           customer_email?: string | null
           dia_negocio?: string | null
@@ -2382,6 +2494,7 @@ export type Database = {
           authorized_by: string | null
           authorized_by_name: string | null
           authorized_role: string | null
+          corte_numero: number | null
           created_at: string
           devolucion: string | null
           dia_negocio: string | null
@@ -2401,6 +2514,7 @@ export type Database = {
           authorized_by?: string | null
           authorized_by_name?: string | null
           authorized_role?: string | null
+          corte_numero?: number | null
           created_at?: string
           devolucion?: string | null
           dia_negocio?: string | null
@@ -2420,6 +2534,7 @@ export type Database = {
           authorized_by?: string | null
           authorized_by_name?: string | null
           authorized_role?: string | null
+          corte_numero?: number | null
           created_at?: string
           devolucion?: string | null
           dia_negocio?: string | null
@@ -3340,6 +3455,10 @@ export type Database = {
         Args: { _branch_id: string; _dia: string }
         Returns: Json
       }
+      _conciliar_tramo: {
+        Args: { _branch_id: string; _dia: string; _numero: number }
+        Returns: Json
+      }
       _credenciales_conexion: { Args: { _conexion_id: string }; Returns: Json }
       _desempeno_mozo: {
         Args: {
@@ -3489,6 +3608,19 @@ export type Database = {
       }
       _purgar_claves_pasarela: { Args: never; Returns: number }
       _purgar_invitados: { Args: never; Returns: number }
+      _registrar_corte: {
+        Args: {
+          _branch_id: string
+          _dia: string
+          _efectivo: number
+          _final: boolean
+          _local: string
+          _nombre: string
+          _notas: string
+          _pos: number
+        }
+        Returns: Json
+      }
       _reservar_activacion: {
         Args: { _token: string }
         Returns: {
@@ -3515,6 +3647,10 @@ export type Database = {
       _sembrar_propinas_pagadas_demo: { Args: never; Returns: number }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _tenant_reportes: { Args: { _branch_id: string }; Returns: string }
+      _tramo_abierto: {
+        Args: { _branch_id: string; _dia: string }
+        Returns: number
+      }
       _turno_abierto: { Args: { _staff_id: string }; Returns: string }
       _ventana_dias: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
@@ -3717,6 +3853,16 @@ export type Database = {
           _endpoint: string
           _p256dh: string
           _qr_token: string
+        }
+        Returns: Json
+      }
+      hacer_corte_caja: {
+        Args: {
+          _branch_id: string
+          _efectivo_contado: number
+          _nombre?: string
+          _notas?: string
+          _pos_contado?: number
         }
         Returns: Json
       }
@@ -4057,6 +4203,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

@@ -150,7 +150,7 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 |---|---|---|
 | 6.0 | Turnos y propina del mozo de la mesa | ✅ (fase 3.1) |
 | 6.1 | **PIN del mozo en tablets compartidas:** el local deja una tablet como "equipo compartido" y cada mozo entra con su PIN de 4 números. Todo lo que hace queda a su nombre (propinas, cobros, entregas), sin compartir contraseñas | ✅ |
-| 6.2 | **Varios cierres de caja al día:** cortes por turno (por ejemplo, mañana y noche), cada uno con su conteo y su diferencia; el cierre del día los suma. Sigue bloqueado y auditado | ⏳ |
+| 6.2 | **Varios cierres de caja al día:** cortes por turno (por ejemplo, mañana y noche), cada uno con su conteo y su diferencia; el cierre del día los suma. Sigue bloqueado y auditado | ✅ |
 | 6.3 | **Permisos finos:** el dueño ajusta qué puede hacer cada rol (reembolsar, cerrar caja, cobrar, anular pedidos, ver reportes, editar la carta…). Se aplica en el servidor, no solo en la pantalla | ⏳ |
 | 6.4 | Compuerta de la fase 6 | ⏳ |
 

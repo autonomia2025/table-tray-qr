@@ -101,6 +101,7 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - el dueño, en Equipo → "Tablets compartidas", toca "Activar este dispositivo como tablet" y después "Abrir la pantalla de la tablet" (o entra a `/tablet`);
     - en la tablet, cada mozo toca su nombre y escribe su PIN; al terminar, "Cambiar de mozo". Tras 4 minutos sin uso, vuelve sola a pedir el PIN;
     - desde Equipo se desactiva una tablet o se borra el PIN de alguien.
+28. **Cortes de turno (varios cierres al día):** como cajera, en Caja → "Cierre de caja", toca "Hacer corte de turno", ponle nombre (por ejemplo "Turno mañana"), escribe el efectivo contado y "Guardar corte". Lo que se cobre después es del turno siguiente; al cerrar el día se cuenta solo desde el último corte y el cierre suma todos.
 
 ## Experiencia del comensal (invitado o cliente)
 

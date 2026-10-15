@@ -21,6 +21,7 @@ import { textoPago } from "@/lib/estados";
 import PropinasPorPagar from "@/components/admin/PropinasPorPagar";
 import ConciliacionPasarela from "@/components/admin/ConciliacionPasarela";
 import BoletasPendientes from "@/components/admin/BoletasPendientes";
+import CortesCaja from "@/components/admin/CortesCaja";
 import { marcarBoleta } from "@/lib/boletas";
 import ExcepcionesCaja from "@/components/admin/ExcepcionesCaja";
 import { excepcionesCaja, type Excepcion } from "@/lib/excepciones";
@@ -221,8 +222,12 @@ export default function CajaPage() {
   const diaCerrado = !!resumen?.cerrado;
   const efectivo = diaCerrado ? resumen?.cierre?.efectivo_contado ?? null : leerMonto(efectivoContado);
   const pos = diaCerrado ? resumen?.cierre?.pos_contado ?? null : leerMonto(posContado);
-  const difEfectivo = resumen && efectivo !== null ? efectivo - resumen.efectivo.esperado : null;
-  const difPos = resumen && pos !== null ? pos - resumen.pos.esperado : null;
+  // Con cortes de turno, al cerrar se cuenta solo el último tramo (desde el último corte); el día suma todos
+  const conCortes = !diaCerrado && (resumen?.cortes?.length ?? 0) > 0 && !!resumen?.tramo_abierto;
+  const esperadoEfectivo = conCortes ? resumen!.tramo_abierto!.efectivo : resumen?.efectivo.esperado ?? 0;
+  const esperadoPos = conCortes ? resumen!.tramo_abierto!.pos : resumen?.pos.esperado ?? 0;
+  const difEfectivo = resumen && efectivo !== null ? efectivo - esperadoEfectivo : null;
+  const difPos = resumen && pos !== null ? pos - esperadoPos : null;
   const noCuadra = (difEfectivo ?? 0) !== 0 || (difPos ?? 0) !== 0;
   const faltaNota = noCuadra && notes.trim().length < 5;
 
@@ -424,6 +429,8 @@ export default function CajaPage() {
           {branchId && date && <ConciliacionPasarela branchId={branchId} dia={date} />}
           {/* Boletas de efectivo y transferencia (fase 4.3) */}
           {branchId && <BoletasPendientes branchId={branchId} alCambiar={load} />}
+          {/* Cortes de turno (fase 6.2) */}
+          {branchId && resumen && <CortesCaja branchId={branchId} resumen={resumen} recargar={load} />}
           {resumen && (
             <>
               {diaCerrado && resumen.cierre && (
@@ -454,6 +461,7 @@ export default function CajaPage() {
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Tablio suma lo cobrado y resta los reembolsos. Anota lo que contaste en el cajón y en el POS: la diferencia se calcula sola.
+                    {conCortes && " Como hubo cortes de turno, cuenta solo lo que entró desde el último corte."}
                   </p>
                   <div className="overflow-x-auto">
                     <Table>
@@ -480,14 +488,17 @@ export default function CajaPage() {
                           <TableCell className="font-medium">Efectivo</TableCell>
                           <TableCell className="text-right tabular-nums">{formatCLP(resumen.efectivo.cobrado)}</TableCell>
                           <TableCell className="text-right tabular-nums">{resumen.efectivo.devuelto ? `−${formatCLP(resumen.efectivo.devuelto)}` : "—"}</TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums">{formatCLP(resumen.efectivo.esperado)}</TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatCLP(resumen.efectivo.esperado)}
+                            {conCortes && <span className="block text-xs font-normal text-muted-foreground">{formatCLP(esperadoEfectivo)} desde el último corte</span>}
+                          </TableCell>
                           <TableCell className="text-right">
                             {diaCerrado ? (
                               <span className="tabular-nums">{efectivo !== null ? formatCLP(efectivo) : "—"}</span>
                             ) : (
                               <Input
                                 inputMode="numeric"
-                                aria-label="Efectivo contado"
+                                aria-label={conCortes ? "Efectivo contado desde el último corte" : "Efectivo contado"}
                                 placeholder="$0"
                                 value={efectivoContado}
                                 onChange={(e) => setEfectivoContado(e.target.value.replace(/\D/g, ""))}
@@ -501,7 +512,10 @@ export default function CajaPage() {
                           <TableCell className="font-medium">POS</TableCell>
                           <TableCell className="text-right tabular-nums">{formatCLP(resumen.pos.cobrado)}</TableCell>
                           <TableCell className="text-right tabular-nums">{resumen.pos.devuelto ? `−${formatCLP(resumen.pos.devuelto)}` : "—"}</TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums">{formatCLP(resumen.pos.esperado)}</TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {formatCLP(resumen.pos.esperado)}
+                            {conCortes && <span className="block text-xs font-normal text-muted-foreground">{formatCLP(esperadoPos)} desde el último corte</span>}
+                          </TableCell>
                           <TableCell className="text-right">
                             {diaCerrado ? (
                               <span className="tabular-nums">{pos !== null ? formatCLP(pos) : "—"}</span>

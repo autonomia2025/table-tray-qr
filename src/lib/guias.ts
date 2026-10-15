@@ -58,7 +58,8 @@ export const GUIAS: Record<RolGuia, Guia> = {
       { titulo: "Las excepciones", texto: "En la pestaña «Excepciones» está lo que necesita una persona: un cobro sin pedido por devolver, una diferencia con Transbank, una boleta sin marcar. Cada una tiene su botón." },
       { titulo: "Las boletas", texto: "En Cierre de caja ves las boletas de efectivo y transferencia que faltan. Márcalas «Entregada» con su número si lo tienes." },
       { titulo: "Verificar con Transbank", texto: "Antes de cerrar, toca «Verificar con Transbank»: compara cada pago con Webpay del día con lo que dice Transbank." },
-      { titulo: "Cerrar la caja", texto: "Cuenta el efectivo y escríbelo. Si no cuadra, explica la diferencia en las notas. Toca «Cerrar caja del día»: queda bloqueado y nadie lo puede cambiar." },
+      { titulo: "Cambio de turno", texto: "Si la caja cambia de manos durante el día, toca «Hacer corte de turno», cuenta el efectivo y toca «Guardar corte». Lo que se cobre después es del turno siguiente." },
+      { titulo: "Cerrar la caja", texto: "Cuenta el efectivo y escríbelo (si hubo cortes, solo lo que entró desde el último). Si no cuadra, explica la diferencia en las notas. Toca «Cerrar caja del día»: queda bloqueado y nadie lo puede cambiar." },
       { titulo: "Las propinas del equipo", texto: "En «Propinas del equipo» ves cuánto se le debe a cada mozo y hasta cuándo (7 días hábiles con tarjeta). Registra cada pago." },
     ],
     siFalla: [
