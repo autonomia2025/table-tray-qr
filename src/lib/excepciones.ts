@@ -7,8 +7,10 @@ import { mensajeError } from "@/lib/errores";
 //  - diferencia_pasarela: monto que no calza con Transbank al conciliar.
 //  - boleta_atrasada: cobro en efectivo o transferencia de un día anterior sin boleta marcada.
 //  - pago_sin_confirmar: salió a Webpay y la revisión automática todavía no lo resuelve.
+//  - parte_por_devolver: parte pagada de un plato dividido que se anuló (fase 7.4b).
 
-export type TipoExcepcion = "devolucion_fallida" | "reembolso_fallido" | "diferencia_pasarela" | "boleta_atrasada" | "pago_sin_confirmar";
+export type TipoExcepcion = "devolucion_fallida" | "reembolso_fallido" | "diferencia_pasarela" | "boleta_atrasada" | "pago_sin_confirmar"
+  | "parte_por_devolver";
 
 export interface Excepcion {
   tipo: TipoExcepcion;
@@ -31,6 +33,7 @@ export const TITULO_EXCEPCION: Record<TipoExcepcion, string> = {
   diferencia_pasarela: "Monto que no calza con Transbank",
   boleta_atrasada: "Boleta sin marcar",
   pago_sin_confirmar: "Pago sin confirmar",
+  parte_por_devolver: "Parte de un plato anulado por devolver",
 };
 
 type Resultado = { ok: true } | { ok: false; error: string };

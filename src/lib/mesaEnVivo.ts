@@ -33,9 +33,21 @@ export interface RondaEnVivo {
   items: { nombre: string; cantidad: number }[];
 }
 
+/** Un plato dividido donde estoy (fase 7.4b). */
+export interface DivididoEnVivo {
+  id: string;
+  estado: "esperando" | "pagado" | "anulado";
+  total: number;
+  plato: string;
+  soy_creador: boolean;
+  pedido_estado: ItemEnVivo["estado"];
+  partes: { id: string; monto: number; estado: "pendiente" | "pagada" | "rechazada"; yo: boolean; quien: string }[];
+}
+
 export interface MesaEnVivo {
   mesa: number;
-  personas: { alias: string | null; yo: boolean }[];
+  personas: { id?: string; alias: string | null; yo: boolean }[];
+  divididos?: DivididoEnVivo[];
   pedidos: PedidoEnVivo[];
   rondas?: RondaEnVivo[];
   /** Juegos (fase 7.8): el mejor puntaje de cada uno en la trivia y la última vuelta de la ruleta. */

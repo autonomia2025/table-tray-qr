@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,6 +6,9 @@ import { ArrowLeft, Trash2, Minus, Plus, ArrowRight } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { formatCLP } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
+import DividirPlato from "@/components/comensal/DividirPlato";
+import { miMesaEnVivo, type MesaEnVivo } from "@/lib/mesaEnVivo";
+import type { CartItem } from "@/store/cartStore";
 
 /* fetch primary color */
 async function fetchPrimaryColor(slug: string): Promise<string> {
@@ -35,6 +38,14 @@ export default function CartPage() {
   });
 
   const [orderNotes, setOrderNotes] = useState("");
+  // Dividir un plato (fase 7.4b): se ofrece si hay más gente en la mesa
+  const tableToken = useCartStore((s) => s.tableToken);
+  const [mesa, setMesa] = useState<MesaEnVivo | null>(null);
+  const [aDividir, setADividir] = useState<CartItem | null>(null);
+  useEffect(() => {
+    if (tableToken) miMesaEnVivo(tableToken).then(setMesa);
+  }, [tableToken]);
+  const hayMasGente = (mesa?.personas.length ?? 0) > 1;
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleConfirm = () => {
@@ -172,7 +183,14 @@ export default function CartPage() {
                         <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    <span className="text-sm font-bold text-card-foreground">{formatCLP(item.subtotal)}</span>
+                    <span className="flex items-center gap-3">
+                      {hayMasGente && (
+                        <button onClick={() => setADividir(item)} className="text-xs font-semibold underline" style={{ color: primaryColor }}>
+                          Dividir
+                        </button>
+                      )}
+                      <span className="text-sm font-bold text-card-foreground">{formatCLP(item.subtotal)}</span>
+                    </span>
                   </div>
                 </div>
               </motion.div>
@@ -217,6 +235,20 @@ export default function CartPage() {
             Ir a pagar <ArrowRight className="h-5 w-5" />
           </button>
         </div>
+      )}
+      {tableToken && (
+        <DividirPlato
+          token={tableToken}
+          item={aDividir}
+          mesa={mesa}
+          color={primaryColor}
+          onCerrar={() => setADividir(null)}
+          onDividido={(miParte) => {
+            if (aDividir) removeItem(aDividir.id);
+            setADividir(null);
+            navigate(`/${slug}/parte/${miParte}?t=${tableToken}`);
+          }}
+        />
       )}
     </motion.div>
   );

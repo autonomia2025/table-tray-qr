@@ -989,6 +989,7 @@ export type Database = {
           items: Json | null
           notas: string | null
           order_ids: string[] | null
+          parte_id: string | null
           ronda: boolean
           subtotal: number
           table_id: string
@@ -1007,6 +1008,7 @@ export type Database = {
           items?: Json | null
           notas?: string | null
           order_ids?: string[] | null
+          parte_id?: string | null
           ronda?: boolean
           subtotal: number
           table_id: string
@@ -1025,6 +1027,7 @@ export type Database = {
           items?: Json | null
           notas?: string | null
           order_ids?: string[] | null
+          parte_id?: string | null
           ronda?: boolean
           subtotal?: number
           table_id?: string
@@ -1045,6 +1048,13 @@ export type Database = {
             columns: ["envio_campana_id"]
             isOneToOne: false
             referencedRelation: "envios_campana"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_parte_id_fkey"
+            columns: ["parte_id"]
+            isOneToOne: false
+            referencedRelation: "partes_plato"
             referencedColumns: ["id"]
           },
           {
@@ -2415,6 +2425,74 @@ export type Database = {
           },
         ]
       }
+      partes_plato: {
+        Row: {
+          comensal_id: string | null
+          created_at: string
+          estado: string
+          id: string
+          monto: number
+          pagada_at: string | null
+          payment_id: string | null
+          plato_id: string
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          comensal_id?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          monto: number
+          pagada_at?: string | null
+          payment_id?: string | null
+          plato_id: string
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          comensal_id?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          monto?: number
+          pagada_at?: string | null
+          payment_id?: string | null
+          plato_id?: string
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partes_plato_comensal_id_fkey"
+            columns: ["comensal_id"]
+            isOneToOne: false
+            referencedRelation: "comensales_mesa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partes_plato_pago_fk"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partes_plato_plato_id_fkey"
+            columns: ["plato_id"]
+            isOneToOne: false
+            referencedRelation: "platos_divididos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partes_plato_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partidas_trivia: {
         Row: {
           created_at: string
@@ -2578,6 +2656,7 @@ export type Database = {
           intento_id: string | null
           method: string
           order_id: string | null
+          parte_id: string | null
           pedidos: string[] | null
           provider: string
           provider_payload: Json | null
@@ -2612,6 +2691,7 @@ export type Database = {
           intento_id?: string | null
           method?: string
           order_id?: string | null
+          parte_id?: string | null
           pedidos?: string[] | null
           provider?: string
           provider_payload?: Json | null
@@ -2646,6 +2726,7 @@ export type Database = {
           intento_id?: string | null
           method?: string
           order_id?: string | null
+          parte_id?: string | null
           pedidos?: string[] | null
           provider?: string
           provider_payload?: Json | null
@@ -2675,6 +2756,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_parte_id_fkey"
+            columns: ["parte_id"]
+            isOneToOne: false
+            referencedRelation: "partes_plato"
             referencedColumns: ["id"]
           },
           {
@@ -2838,6 +2926,64 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      platos_divididos: {
+        Row: {
+          creado_por: string | null
+          created_at: string
+          estado: string
+          id: string
+          order_id: string
+          resuelto_at: string | null
+          session_id: string
+          tenant_id: string
+          total: number
+        }
+        Insert: {
+          creado_por?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          order_id: string
+          resuelto_at?: string | null
+          session_id: string
+          tenant_id: string
+          total: number
+        }
+        Update: {
+          creado_por?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          order_id?: string
+          resuelto_at?: string | null
+          session_id?: string
+          tenant_id?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platos_divididos_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platos_divididos_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platos_divididos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       preguntas_trivia: {
         Row: {
@@ -4267,6 +4413,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cotizar_parte: {
+        Args: { _parte_id: string; _qr_token: string }
+        Returns: Json
+      }
       crear_cotizacion: {
         Args: {
           _items?: Json
@@ -4309,6 +4459,10 @@ export type Database = {
       dia_negocio: {
         Args: { _branch_id: string; _ts: string }
         Returns: string
+      }
+      dividir_plato: {
+        Args: { _comensales: string[]; _item: Json; _qr_token: string }
+        Returns: Json
       }
       empezar_trivia: { Args: { _qr_token: string }; Returns: Json }
       entregar_premio: {
@@ -4473,6 +4627,10 @@ export type Database = {
         Args: { _branch_id: string; _desde: string; _hasta: string }
         Returns: Json
       }
+      rechazar_parte: {
+        Args: { _parte_id: string; _qr_token: string }
+        Returns: undefined
+      }
       registrar_acceso_soporte: {
         Args: { _id: string; _tipo: string }
         Returns: undefined
@@ -4583,6 +4741,10 @@ export type Database = {
         Returns: boolean
       }
       tomar_mesa: { Args: { _table_id: string }; Returns: Json }
+      tomar_parte: {
+        Args: { _parte_id: string; _qr_token: string }
+        Returns: undefined
+      }
       transferir_mesa: {
         Args: { _staff_id: string; _table_id: string }
         Returns: Json

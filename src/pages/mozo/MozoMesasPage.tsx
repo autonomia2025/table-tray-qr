@@ -59,6 +59,8 @@ interface OrderWithItems {
   status: string;
   total_amount: number;
   payment_status: string | null;
+  /** 'dividido' (fase 7.4b): cada persona paga su parte con la app; el mozo no lo cobra. */
+  forma_pago?: string | null;
   items: { menu_item_name: string; quantity: number }[];
 }
 
@@ -245,7 +247,7 @@ export default function MozoMesasPage() {
           .eq('is_active', true),
         supabase
           .from('orders')
-          .select('id, table_id, status, payment_status, confirmed_at, ready_at, paid_at')
+          .select('id, table_id, status, payment_status, confirmed_at, ready_at, paid_at, forma_pago')
           .in('table_id', occupiedIds)
           .in('status', ['confirmed', 'in_kitchen', 'ready']),
         supabase
@@ -273,7 +275,7 @@ export default function MozoMesasPage() {
         // La hora de pago la escribe el servidor (orders.paid_at); el mozo no ve los pagos (datos del cliente).
         if (pagado) m.pagadoDesde = masAntiguo(m.pagadoDesde, o.paid_at ?? o.confirmed_at);
         if (o.status === 'ready') m.listoDesde = masAntiguo(m.listoDesde, o.ready_at);
-        if (prepago && o.status === 'confirmed' && !pagado) {
+        if (prepago && o.status === 'confirmed' && !pagado && o.forma_pago !== 'dividido') {
           m.porCobrar++;
           m.porCobrarDesde = masAntiguo(m.porCobrarDesde, o.confirmed_at);
         }
@@ -472,7 +474,7 @@ export default function MozoMesasPage() {
 
     const { data: ordersData } = await supabase
       .from('orders')
-      .select('id, order_number, status, total_amount, payment_status')
+      .select('id, order_number, status, total_amount, payment_status, forma_pago')
       .eq('session_id', session.id)
       .in('status', ['confirmed', 'in_kitchen', 'ready', 'delivered'])
       .order('confirmed_at', { ascending: true });
@@ -793,6 +795,9 @@ export default function MozoMesasPage() {
                     <p key={idx} className="text-sm text-foreground">{it.quantity}× {it.menu_item_name}</p>
                   ))}
                   <p className="text-xs font-semibold mt-1">{formatCLP(o.total_amount)}</p>
+                  {o.forma_pago === 'dividido' && o.payment_status !== 'paid' && (
+                    <p className="mt-1 text-xs text-muted-foreground">🍽️ Plato dividido: cada uno paga su parte con la app. Pasa a cocina cuando esté todo pagado.</p>
+                  )}
                 </div>
               ))}
             </div>
@@ -800,7 +805,7 @@ export default function MozoMesasPage() {
 
           {/* Por cobrar: pedidos que se pagan al mozo (efectivo, POS o transferencia) */}
           {(() => {
-            const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled');
+            const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled' && o.forma_pago !== 'dividido');
             if (!selectedTable || pendientes.length === 0) return null;
             const totalPendiente = pendientes.reduce((acc, o) => acc + o.total_amount, 0);
             return (
@@ -910,7 +915,7 @@ export default function MozoMesasPage() {
         <DialogContent className="rounded-2xl">
           {(() => {
             if (!cobro || !selectedTable) return null;
-            const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled');
+            const pendientes = orders.filter(o => o.payment_status !== 'paid' && o.payment_status !== 'refunded' && o.status !== 'cancelled' && o.forma_pago !== 'dividido');
             const totalPendiente = pendientes.reduce((acc, o) => acc + o.total_amount, 0);
             const propina = Math.max(0, Math.round(Number(cobro.propina) || 0));
             const recibido = cobro.recibido ? Math.round(Number(cobro.recibido) || 0) : null;

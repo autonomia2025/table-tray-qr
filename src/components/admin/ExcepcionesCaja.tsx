@@ -136,6 +136,13 @@ export default function ExcepcionesCaja({ branchId, lista, recargar }: { branchI
                   </Button>
                 </>
               )}
+              {e.tipo === "parte_por_devolver" && e.pago_id && (
+                <Button size="sm" variant="outline" disabled={!!ocupado}
+                  onClick={() => correr(`${e.id}-devolver`, () => reintentarReembolso(e.pago_id!, e.monto, "Plato dividido anulado: se devuelve la parte pagada"), "Parte devuelta")}>
+                  {ocupado === `${e.id}-devolver` ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}
+                  Devolver
+                </Button>
+              )}
               {e.tipo === "diferencia_pasarela" && (
                 <Button size="sm" variant="outline" disabled={!!ocupado} onClick={() => setNota({ excepcion: e, accion: "revisada", texto: "" })}>
                   Marcar revisada

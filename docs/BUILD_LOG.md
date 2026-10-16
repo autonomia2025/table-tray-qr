@@ -4,6 +4,38 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.4b: dividir un plato ✅
+**Qué hace:** en el carrito, si hay más gente en la mesa, cada producto tiene "Dividir". Se elige con quiénes y cada uno paga su parte en su celular. El plato va a la cocina recién cuando están todas pagadas.
+- **Quien no quiere** toca "No, gracias".
+- **Quien lo pidió** puede pagar la parte que falta ("La pago yo").
+- **Si el personal lo anula,** lo ya pagado aparece en Caja → Excepciones con un botón para devolverlo.
+
+**Cómo está protegido (toca la plata de varias personas):**
+- Cada parte es un pago normal, con su precio congelado, y las partes suman exacto el total.
+- Nadie paga la parte de otro sin que se la pasen.
+- La misma parte pagada dos veces al mismo tiempo: una se cobra y la otra se devuelve sola.
+- El mozo no puede cobrar en efectivo un plato dividido (se cobraría dos veces).
+- Devolver la parte de uno no deja el plato como "reembolsado" para los demás.
+- Las revisiones de la plata saben que un plato dividido tiene varios pagos, y vigilan que las partes calcen y que lo de un plato anulado se devuelva.
+
+**Además:** el seguimiento del pedido muestra solo los pedidos propios (antes mostraba el último de la mesa, aunque fuera de otro). Lo de los demás se ve en la mesa en vivo.
+
+**Pruebas:**
+- `tests/seguridad/f7-4b-dividir.test.ts` revisa:
+  - que las partes sumen el total;
+  - que el plato no vaya a cocina antes de tiempo;
+  - que nadie pague la parte de otro;
+  - que el mozo no lo cobre;
+  - la misma parte pagada dos veces a la vez;
+  - devolver una parte;
+  - "no, gracias" y "la pago yo";
+  - la anulación con devolución desde la caja;
+  - la auditoría con un descuadre hecho a propósito.
+- Las compuertas de la plata siguen en verde.
+- `e2e/dividir.spec.ts` recorre a dos personas dividiendo una tabla.
+
+---
+
 ## 2026-10-16 — Fase 7.8: juegos en la mesa ✅
 **Qué hace:** en el seguimiento, mientras llega lo pedido, aparece "Mientras esperan" con dos juegos:
 - **Trivia:** 5 preguntas de cultura chilena, comida, geografía y cultura general, sin nada de alcohol. Al terminar se ven las respuestas correctas y la mesa ve el mejor puntaje de cada uno.

@@ -25,6 +25,7 @@ import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { manifiestoDelLocal } from "@/lib/push";
 import { textoPedido } from "@/lib/estados";
 import JuegosMesa from "@/components/comensal/JuegosMesa";
+import PlatosDivididos from "@/components/comensal/PlatosDivididos";
 
 /* ---------- types ---------- */
 interface OrderItem {
@@ -186,11 +187,15 @@ export default function TrackingPage() {
   const { data: rawOrders, isLoading, isError } = useQuery({
     queryKey: ["orders-tracking", session?.id, unido],
     queryFn: async () => {
-      const { data } = await supabase
+      // Solo mis pedidos (cada uno paga lo suyo, regla 8): lo de los demás de la mesa se ve en la mesa en vivo
+      const { data: yo } = await supabase.auth.getUser();
+      let consulta = supabase
         .from("orders")
         .select("id, order_number, status, total_amount, confirmed_at, notes, payment_status, forma_pago")
-        .eq("session_id", session!.id)
-        .order("confirmed_at", { ascending: true });
+        .eq("session_id", session!.id);
+      // (los que tomó el mozo a mano no tienen dueño: los puede pagar cualquiera de la mesa, así que se ven)
+      if (yo.user) consulta = consulta.or(`user_id.eq.${yo.user.id},user_id.is.null`);
+      const { data } = await consulta.order("confirmed_at", { ascending: true });
 
       if (!data || data.length === 0) return [];
 
@@ -755,7 +760,7 @@ export default function TrackingPage() {
         {/* ── SESSION TOTAL (above actions) ── */}
         {orders.length > 1 && (
           <div className="flex items-center justify-between py-3 px-1 mb-2">
-            <span className="text-sm font-bold text-foreground">Total esta visita</span>
+            <span className="text-sm font-bold text-foreground">Lo tuyo en esta visita</span>
             <span className="text-lg font-bold" style={{ color: primaryColor }}>
               {formatCLP(sessionTotal)}
             </span>
@@ -825,6 +830,11 @@ export default function TrackingPage() {
           <div className="mb-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 p-4 text-center">
             <p className="text-sm font-bold text-green-700">¡Gracias por calificarnos! Nos vemos pronto 🧡</p>
           </div>
+        )}
+
+        {/* Platos divididos donde estoy (fase 7.4b) */}
+        {tableToken && slug && !!enVivo?.divididos?.length && (
+          <PlatosDivididos token={tableToken} slug={slug} platos={enVivo.divididos} color={primaryColor} recargar={recargarEnVivo} />
         )}
 
         {/* Juegos en la mesa (fase 7.8): mientras llega lo pedido */}
