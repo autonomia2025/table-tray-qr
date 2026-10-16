@@ -255,6 +255,78 @@ export type Database = {
           },
         ]
       }
+      beneficios_usados: {
+        Row: {
+          campana_id: string | null
+          created_at: string
+          descuento: number
+          envio_id: string | null
+          id: string
+          order_id: string
+          payment_id: string
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          campana_id?: string | null
+          created_at?: string
+          descuento: number
+          envio_id?: string | null
+          id?: string
+          order_id: string
+          payment_id: string
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          campana_id?: string | null
+          created_at?: string
+          descuento?: number
+          envio_id?: string | null
+          id?: string
+          order_id?: string
+          payment_id?: string
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beneficios_usados_campana_id_fkey"
+            columns: ["campana_id"]
+            isOneToOne: false
+            referencedRelation: "campanas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beneficios_usados_envio_id_fkey"
+            columns: ["envio_id"]
+            isOneToOne: true
+            referencedRelation: "envios_campana"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beneficios_usados_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beneficios_usados_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beneficios_usados_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bill_requests: {
         Row: {
           attended_at: string | null
@@ -424,6 +496,10 @@ export type Database = {
       }
       campanas: {
         Row: {
+          beneficio_dias: number
+          beneficio_minimo: number
+          beneficio_tipo: string | null
+          beneficio_valor: number | null
           con_aviso: number
           creada_por: string | null
           created_at: string
@@ -442,6 +518,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          beneficio_dias?: number
+          beneficio_minimo?: number
+          beneficio_tipo?: string | null
+          beneficio_valor?: number | null
           con_aviso?: number
           creada_por?: string | null
           created_at?: string
@@ -460,6 +540,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          beneficio_dias?: number
+          beneficio_minimo?: number
+          beneficio_tipo?: string | null
+          beneficio_valor?: number | null
           con_aviso?: number
           creada_por?: string | null
           created_at?: string
@@ -897,6 +981,8 @@ export type Database = {
         Row: {
           branch_id: string
           created_at: string
+          descuento: number
+          envio_campana_id: string | null
           estado: string
           expira_at: string
           id: string
@@ -912,6 +998,8 @@ export type Database = {
         Insert: {
           branch_id: string
           created_at?: string
+          descuento?: number
+          envio_campana_id?: string | null
           estado?: string
           expira_at?: string
           id?: string
@@ -927,6 +1015,8 @@ export type Database = {
         Update: {
           branch_id?: string
           created_at?: string
+          descuento?: number
+          envio_campana_id?: string | null
           estado?: string
           expira_at?: string
           id?: string
@@ -945,6 +1035,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_envio_campana_id_fkey"
+            columns: ["envio_campana_id"]
+            isOneToOne: false
+            referencedRelation: "envios_campana"
             referencedColumns: ["id"]
           },
           {
@@ -1696,6 +1793,7 @@ export type Database = {
           sort_order: number | null
           status: string | null
           tenant_id: string
+          tiene_alcohol: boolean
           total_orders: number | null
           updated_at: string | null
         }
@@ -1716,6 +1814,7 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           tenant_id: string
+          tiene_alcohol?: boolean
           total_orders?: number | null
           updated_at?: string | null
         }
@@ -1736,6 +1835,7 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           tenant_id?: string
+          tiene_alcohol?: boolean
           total_orders?: number | null
           updated_at?: string | null
         }
@@ -2200,6 +2300,8 @@ export type Database = {
           confirmed_at: string | null
           created_at: string | null
           delivered_at: string | null
+          descuento: number
+          envio_campana_id: string | null
           forma_pago: string | null
           id: string
           kitchen_accepted_at: string | null
@@ -2224,6 +2326,8 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          descuento?: number
+          envio_campana_id?: string | null
           forma_pago?: string | null
           id?: string
           kitchen_accepted_at?: string | null
@@ -2248,6 +2352,8 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          descuento?: number
+          envio_campana_id?: string | null
           forma_pago?: string | null
           id?: string
           kitchen_accepted_at?: string | null
@@ -2271,6 +2377,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_envio_campana_id_fkey"
+            columns: ["envio_campana_id"]
+            isOneToOne: false
+            referencedRelation: "envios_campana"
             referencedColumns: ["id"]
           },
           {
@@ -3638,6 +3751,14 @@ export type Database = {
           token: string
         }[]
       }
+      _beneficio_para: {
+        Args: { _lineas: Json; _tenant_id: string; _user_id: string }
+        Returns: {
+          descuento: number
+          envio_id: string
+          titulo: string
+        }[]
+      }
       _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
       _catalogo_permisos: {
         Args: never
@@ -4086,6 +4207,10 @@ export type Database = {
       get_tenant_id: { Args: never; Returns: string }
       guardar_campana: {
         Args: {
+          _beneficio_dias?: number
+          _beneficio_minimo?: number
+          _beneficio_tipo?: string
+          _beneficio_valor?: number
           _campana_id?: string
           _mensaje: string
           _plato?: string

@@ -4,6 +4,33 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.2: beneficio de la campaña al pagar con el QR ✅
+**Qué hace:** una campaña puede traer un descuento (un % o un monto en pesos, con compra mínima y días de validez). El cliente:
+- lo ve al abrir el aviso;
+- al pedir y pagar con el QR desde su cuenta, el descuento ya viene restado en el total.
+
+El dueño ve en la campaña cuántos usaron el beneficio y cuánto se descontó. Así se mide de verdad cuántos vinieron por la campaña.
+
+**Cómo está protegido (toca la plata):**
+- **El precio sigue saliendo de la base:** el descuento lo calcula y congela la cotización. El navegador solo lo muestra. El cobro, la propina, los sellos y los reportes usan ese total sin cambios.
+- **Nada que premie tomar más alcohol:** nunca se aplica a productos marcados "Tiene alcohol" (marca nueva en Menú).
+- **Una vez por persona y campaña,** solo con cuenta (no invitados), solo al pagar con el QR (no al pagarle al mozo), y vence a los días indicados.
+- **Dos pagos al mismo tiempo con el mismo beneficio:** uno lo usa y el otro se devuelve solo, como cualquier cobro que no corresponde.
+- **La auditoría de la plata** revisa que cada descuento calce con su uso anotado.
+
+**Pruebas:**
+- `tests/seguridad/f7-2-beneficio.test.ts` revisa:
+  - las reglas del beneficio;
+  - el descuento solo sobre lo sin alcohol;
+  - el invitado sin beneficio;
+  - el pago con el descuento y su uso anotado;
+  - el doble pago a la vez;
+  - el vencimiento y la compra mínima;
+  - que la auditoría detecte un descuento descuadrado a propósito.
+- `e2e/campanas.spec.ts` recorre la promoción con beneficio, el pago con el descuento y lo que ve el dueño.
+
+---
+
 ## 2026-10-16 — Fase 7.1: campañas por aviso al celular ✅
 **Qué hace:** en "Campañas", el dueño escribe una promoción corta (título y mensaje) y elige a quién le llega:
 - todos sus clientes;

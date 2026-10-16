@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BellOff, Megaphone, UtensilsCrossed } from "lucide-react";
+import { BellOff, Gift, Megaphone, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { bajaPromo, verPromo, type Promo } from "@/lib/campanas";
+import { bajaPromo, textoBeneficio, verPromo, type Promo } from "@/lib/campanas";
+import { formatCLP } from "@/lib/format";
 
 /**
  * La promoción que abre un aviso de campaña (fase 7.1). Muestra el mensaje del local, con su color, y deja
@@ -58,6 +59,21 @@ export default function PromoPage() {
           </p>
           <h1 className="text-2xl font-extrabold text-foreground">{promo.titulo}</h1>
           <p className="mt-2 text-base text-foreground">{promo.mensaje}</p>
+          {promo.beneficio && (
+            <div className="mt-4 rounded-xl border p-3" data-testid="beneficio-promo">
+              <p className="flex items-center gap-1.5 font-bold text-foreground"><Gift className="h-4 w-4" style={{ color }} /> {textoBeneficio(promo.beneficio)}</p>
+              {promo.beneficio.usado ? (
+                <p className="mt-1 text-sm text-muted-foreground">Ya usaste este beneficio. ¡Gracias por volver!</p>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Se aplica solo al pedir y pagar con el QR de tu mesa, con tu cuenta
+                  {promo.beneficio.minimo > 0 ? `, en compras desde ${formatCLP(promo.beneficio.minimo)}` : ""}.
+                  {promo.beneficio.vence_at ? ` Vale hasta el ${new Date(promo.beneficio.vence_at).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "numeric", month: "long" })}.` : ""}
+                  {" "}No aplica a productos con alcohol.
+                </p>
+              )}
+            </div>
+          )}
           <p className="mt-4 text-sm text-muted-foreground">Te esperamos en {promo.local}. Pide y paga con el QR de tu mesa.</p>
         </div>
 

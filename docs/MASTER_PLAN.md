@@ -159,7 +159,7 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 | Paso | Qué | Estado |
 |---|---|---|
 | 7.1 | **Campañas por aviso al celular** (aprobadas el 15 de octubre): sección "Campañas" del dueño, públicos listos (todos, no vienen hace 30 días, frecuentes, por plato), solo a quien aceptó promociones y junta sellos en el local, sin alcohol ni enlaces, límites (4 en 30 días, una por persona a la semana, de 10:00 a 22:00), baja desde cada aviso, medición de visitas y ventas en 7 días y sugerencia en Inicio | ✅ |
-| 7.2 | **Beneficio de la campaña al pagar con el QR:** un descuento o regalo que el cliente activa desde el aviso, congelado en la cotización (el precio sigue saliendo de la base), uno por persona, medido en visitas y ventas | ⏳ |
+| 7.2 | **Beneficio de la campaña al pagar con el QR:** un descuento o regalo que el cliente activa desde el aviso, congelado en la cotización (el precio sigue saliendo de la base), uno por persona, medido en visitas y ventas. Nunca sobre productos con alcohol | ✅ |
 | 7.3 | **Campañas por correo:** el mismo mensaje por correo a quienes no tienen la app, con baja en cada correo. Espera el dominio y Resend | ⏸ |
 | 7.4 | Invitar una ronda y dividir un plato | ⏳ |
 | 7.5 | Niveles y rachas | ⏳ |

@@ -13,6 +13,13 @@ export const NOMBRE_PUBLICO: Record<Publico, { titulo: string; detalle: string }
   por_plato: { titulo: "Pidieron un plato", detalle: "Los que lo pidieron en los últimos 90 días." },
 };
 
+export interface Beneficio { tipo: "porcentaje" | "monto"; valor: number; minimo: number; dias?: number; vence_at?: string; usado?: boolean }
+
+/** "15% de descuento" o "$2.000 de descuento", para mostrar el beneficio en una frase. */
+export function textoBeneficio(b: Pick<Beneficio, "tipo" | "valor">): string {
+  return b.tipo === "porcentaje" ? `${b.valor}% de descuento` : `$${b.valor.toLocaleString("es-CL")} de descuento`;
+}
+
 export interface Campana {
   id: string;
   titulo: string;
@@ -31,6 +38,9 @@ export interface Campana {
   volvieron: number;
   ventas: number;
   medicion_abierta: boolean;
+  beneficio: Beneficio | null;
+  canjes: number;
+  descuentos: number;
 }
 
 export interface Alcance { total: number; con_aviso: number; descansando: number }
@@ -49,11 +59,14 @@ export async function campanasDelLocal(local: string): Promise<Campana[]> {
 }
 
 export async function guardarCampana(
-  local: string, c: { id?: string | null; titulo: string; mensaje: string; publico: Publico; plato: string | null },
+  local: string,
+  c: { id?: string | null; titulo: string; mensaje: string; publico: Publico; plato: string | null; beneficio: Beneficio | null },
 ): Promise<Resultado<string>> {
   const { data, error } = await supabase.rpc("guardar_campana", {
     _tenant_id: local, _titulo: c.titulo, _mensaje: c.mensaje, _publico: c.publico,
     _plato: c.plato ?? undefined, _campana_id: c.id ?? undefined,
+    _beneficio_tipo: c.beneficio?.tipo ?? undefined, _beneficio_valor: c.beneficio?.valor ?? undefined,
+    _beneficio_minimo: c.beneficio?.minimo ?? 0, _beneficio_dias: c.beneficio?.dias ?? 7,
   });
   if (error) return { ok: false, error: mensajeError(error, "No se pudo guardar la campaña. Intenta de nuevo.") };
   return { ok: true, dato: data as string };
@@ -77,7 +90,10 @@ export async function enviarCampana(id: string): Promise<Resultado<{ destinatari
   return { ok: true, dato: data as { destinatarios: number; con_aviso: number; entregados?: number } };
 }
 
-export interface Promo { local: string; slug: string; color: string | null; logo: string | null; titulo: string; mensaje: string; enviada_at: string; de_baja: boolean }
+export interface Promo {
+  local: string; slug: string; color: string | null; logo: string | null; titulo: string; mensaje: string; enviada_at: string; de_baja: boolean;
+  beneficio: Beneficio | null;
+}
 
 export async function verPromo(token: string): Promise<Promo | null> {
   const { data } = await supabase.rpc("ver_promo", { _token: token });

@@ -104,7 +104,7 @@ export default function CheckoutPage() {
       })),
     [items],
   );
-  const [cotizacion, setCotizacion] = useState<{ id: string; subtotal: number; expira_at: string } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ id: string; subtotal: number; expira_at: string; descuento?: number; beneficio?: string | null } | null>(null);
   const [errorCotizacion, setErrorCotizacion] = useState("");
   // Código de presencia (fase 3.5): si la base lo pide, se ingresa y se repite lo que se estaba haciendo
   const [pideCodigo, setPideCodigo] = useState<null | { reintentar: () => void }>(null);
@@ -125,7 +125,7 @@ export default function CheckoutPage() {
       setErrorCotizacion(mensajeAmigable(error?.message ?? ""));
       return null;
     }
-    const c = data as { id: string; subtotal: number; expira_at: string };
+    const c = data as { id: string; subtotal: number; expira_at: string; descuento?: number; beneficio?: string | null };
     setCotizacion(c);
     setErrorCotizacion("");
     return c;
@@ -475,6 +475,13 @@ export default function CheckoutPage() {
                 </div>
               ))}
               <hr className="my-2 border-border" />
+              {/* Beneficio de una campaña (fase 7.2): ya viene descontado por la base */}
+              {!!cotizacion?.descuento && (
+                <div className="flex justify-between py-0.5" data-testid="beneficio-pago">
+                  <span className="text-sm font-medium text-card-foreground">🎁 {cotizacion.beneficio ? `Beneficio «${cotizacion.beneficio}»` : "Beneficio de tu local"}</span>
+                  <span className="text-sm font-medium text-card-foreground">−{formatCLP(cotizacion.descuento)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-sm font-bold text-card-foreground">Subtotal</span>
                 <span className="text-sm font-bold text-card-foreground">{formatCLP(subtotal)}</span>

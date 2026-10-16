@@ -40,6 +40,7 @@ interface MenuItem {
   labels: string[] | null;
   allergens: string[] | null;
   prep_time_minutes: number | null;
+  tiene_alcohol?: boolean | null;
   category_id: string;
   sort_order: number | null;
 }
@@ -75,7 +76,7 @@ export default function MenuAdminPage() {
   const [itemForm, setItemForm] = useState({
     name: "", description_short: "", description_long: "", price: 0,
     image_url: "", status: "available", labels: [] as string[],
-    allergens: [] as string[], prep_time_minutes: 0,
+    allergens: [] as string[], prep_time_minutes: 0, tiene_alcohol: false,
   });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: "cat" | "item"; id: string; name: string } | null>(null);
@@ -127,7 +128,7 @@ export default function MenuAdminPage() {
     setLoadingItems(true);
     supabase
       .from("menu_items")
-      .select("id, name, description_short, description_long, price, image_url, status, labels, allergens, prep_time_minutes, category_id, sort_order")
+      .select("id, name, description_short, description_long, price, image_url, status, labels, allergens, prep_time_minutes, tiene_alcohol, category_id, sort_order")
       .eq("category_id", selectedCatId)
       .order("sort_order")
       .then(({ data }) => {
@@ -194,14 +195,14 @@ export default function MenuAdminPage() {
         description_long: item.description_long ?? "", price: item.price,
         image_url: item.image_url ?? "", status: item.status ?? "available",
         labels: item.labels ?? [], allergens: item.allergens ?? [],
-        prep_time_minutes: item.prep_time_minutes ?? 0,
+        prep_time_minutes: item.prep_time_minutes ?? 0, tiene_alcohol: !!item.tiene_alcohol,
       });
       setImagePreview(item.image_url ?? null);
     } else {
       setEditItem(null);
       setItemForm({
         name: "", description_short: "", description_long: "", price: 0,
-        image_url: "", status: "available", labels: [], allergens: [], prep_time_minutes: 0,
+        image_url: "", status: "available", labels: [], allergens: [], prep_time_minutes: 0, tiene_alcohol: false,
       });
       setImagePreview(null);
     }
@@ -270,6 +271,7 @@ export default function MenuAdminPage() {
       labels: itemForm.labels,
       allergens: itemForm.allergens,
       prep_time_minutes: itemForm.prep_time_minutes || null,
+      tiene_alcohol: itemForm.tiene_alcohol,
       category_id: selectedCatId,
       tenant_id: tenantId,
     };
@@ -290,7 +292,7 @@ export default function MenuAdminPage() {
     if (!selectedCatId) return;
     const { data } = await supabase
       .from("menu_items")
-      .select("id, name, description_short, description_long, price, image_url, status, labels, allergens, prep_time_minutes, category_id, sort_order")
+      .select("id, name, description_short, description_long, price, image_url, status, labels, allergens, prep_time_minutes, tiene_alcohol, category_id, sort_order")
       .eq("category_id", selectedCatId)
       .order("sort_order");
     setItems(data ?? []);
@@ -554,6 +556,13 @@ export default function MenuAdminPage() {
                   <SelectItem value="hidden">Oculto</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border p-3">
+              <Switch id="tiene-alcohol" checked={itemForm.tiene_alcohol} onCheckedChange={(v) => setItemForm((p) => ({ ...p, tiene_alcohol: v }))} />
+              <div>
+                <Label htmlFor="tiene-alcohol">Tiene alcohol</Label>
+                <p className="text-xs text-muted-foreground">Los beneficios de las campañas nunca se aplican a estos productos.</p>
+              </div>
             </div>
             <div><Label>Tiempo prep. (min)</Label><Input type="number" value={itemForm.prep_time_minutes} onChange={(e) => setItemForm((p) => ({ ...p, prep_time_minutes: parseInt(e.target.value) || 0 }))} /></div>
             <div>

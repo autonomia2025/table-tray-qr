@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { BellRing, Loader2, Megaphone, Pencil, Send, Trash2 } from "lucide-react";
+import { BellRing, Gift, Loader2, Megaphone, Pencil, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useToast } from "@/hooks/use-toast";
@@ -14,8 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatCLP } from "@/lib/format";
 import {
-  alcanceCampana, borrarCampana, campanasDelLocal, enviarCampana, guardarCampana, NOMBRE_PUBLICO,
-  type Alcance, type Campana, type Publico,
+  alcanceCampana, borrarCampana, campanasDelLocal, enviarCampana, guardarCampana, NOMBRE_PUBLICO, textoBeneficio,
+  type Alcance, type Beneficio, type Campana, type Publico,
 } from "@/lib/campanas";
 
 /**
@@ -24,8 +24,13 @@ import {
  * volvieron y cuánto gastaron en los 7 días siguientes.
  */
 
-interface Borrador { id: string | null; titulo: string; mensaje: string; publico: Publico; plato: string | null }
-const VACIO: Borrador = { id: null, titulo: "", mensaje: "", publico: "todos", plato: null };
+interface Borrador { id: string | null; titulo: string; mensaje: string; publico: Publico; plato: string | null; beneficio: Beneficio | null }
+const VACIO: Borrador = { id: null, titulo: "", mensaje: "", publico: "todos", plato: null, beneficio: null };
+const BENEFICIO_INICIAL: Record<Beneficio["tipo"], Beneficio> = {
+  porcentaje: { tipo: "porcentaje", valor: 15, minimo: 0, dias: 7 },
+  monto: { tipo: "monto", valor: 2000, minimo: 8000, dias: 7 },
+};
+const numero = (v: string) => parseInt(v.replace(/\D/g, ""), 10) || 0;
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleString("es-CL", { timeZone: "America/Santiago", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -120,7 +125,8 @@ export default function CampanasPage() {
     return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
 
-  const listo = b.titulo.trim().length >= 3 && b.mensaje.trim().length >= 10 && (b.publico !== "por_plato" || !!b.plato);
+  const listo = b.titulo.trim().length >= 3 && b.mensaje.trim().length >= 10 && (b.publico !== "por_plato" || !!b.plato)
+    && (!b.beneficio || b.beneficio.valor > 0);
   return (
     <div className="max-w-4xl space-y-6">
       <div>
@@ -167,6 +173,43 @@ export default function CampanasPage() {
                   </div>
                 )}
               </div>
+
+              {/* Beneficio (fase 7.2): se aplica solo al pedir y pagar con el QR, una vez por persona */}
+              <div>
+                <Label>Beneficio (opcional)</Label>
+                <Select value={b.beneficio?.tipo ?? "ninguno"}
+                  onValueChange={(v) => setB({ ...b, beneficio: v === "ninguno" ? null : { ...BENEFICIO_INICIAL[v as Beneficio["tipo"]] } })}>
+                  <SelectTrigger aria-label="Beneficio"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ninguno">Sin beneficio, solo el mensaje</SelectItem>
+                    <SelectItem value="porcentaje">Un % de descuento</SelectItem>
+                    <SelectItem value="monto">Un descuento en pesos</SelectItem>
+                  </SelectContent>
+                </Select>
+                {b.beneficio && (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <Label htmlFor="beneficio-valor" className="text-xs">{b.beneficio.tipo === "porcentaje" ? "Descuento (%)" : "Descuento ($)"}</Label>
+                      <Input id="beneficio-valor" inputMode="numeric" value={b.beneficio.valor || ""}
+                        onChange={(e) => setB({ ...b, beneficio: { ...b.beneficio!, valor: numero(e.target.value) } })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="beneficio-minimo" className="text-xs">Compra mínima ($)</Label>
+                      <Input id="beneficio-minimo" inputMode="numeric" value={b.beneficio.minimo || ""} placeholder="0"
+                        onChange={(e) => setB({ ...b, beneficio: { ...b.beneficio!, minimo: numero(e.target.value) } })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="beneficio-dias" className="text-xs">Vale por (días)</Label>
+                      <Input id="beneficio-dias" inputMode="numeric" value={b.beneficio.dias || ""}
+                        onChange={(e) => setB({ ...b, beneficio: { ...b.beneficio!, dias: numero(e.target.value) } })} />
+                    </div>
+                    <p className="text-xs text-muted-foreground sm:col-span-3">
+                      Se aplica solo si pide y paga con el QR desde su cuenta, una vez por persona, y nunca a productos con alcohol
+                      (márcalos en Menú). {b.beneficio.tipo === "porcentaje" ? "De 5% a 50%." : "Con descuento en pesos, la compra mínima es al menos el doble."}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Así se ve el aviso en el celular */}
@@ -180,6 +223,11 @@ export default function CampanasPage() {
                     <p className="text-xs text-muted-foreground">{b.mensaje || "Tu mensaje"}</p>
                   </div>
                 </div>
+                {b.beneficio && b.beneficio.valor > 0 && (
+                  <p className="mt-2 flex items-center gap-1.5 px-1 text-xs font-medium text-foreground">
+                    <Gift className="h-3.5 w-3.5 text-primary" /> Al abrirlo: {textoBeneficio(b.beneficio)} por {b.beneficio.dias} {b.beneficio.dias === 1 ? "día" : "días"}
+                  </p>
+                )}
               </div>
               <div className="rounded-xl border p-3 text-sm" data-testid="alcance-campana">
                 {alcance === null ? (
@@ -230,21 +278,30 @@ export default function CampanasPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {NOMBRE_PUBLICO[c.publico].titulo}{c.plato_nombre ? `: ${c.plato_nombre}` : ""} · {c.enviada_at ? `enviada el ${fecha(c.enviada_at)}` : `creada el ${fecha(c.creada_at)}`}
                   </p>
+                  {c.beneficio && (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-foreground">
+                      <Gift className="h-3.5 w-3.5 text-primary" /> {textoBeneficio(c.beneficio)}
+                      {c.beneficio.minimo > 0 ? ` sobre ${formatCLP(c.beneficio.minimo)}` : ""} · {c.beneficio.vence_at ? `vence el ${fecha(c.beneficio.vence_at)}` : `vale ${c.beneficio.dias} días`}
+                    </p>
+                  )}
                 </div>
                 {c.estado === "borrador" && (
                   <div className="flex gap-1">
                     <Button size="sm" onClick={() => setAEnviar(c)}><Send className="mr-1 h-3.5 w-3.5" /> Enviar</Button>
-                    <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setB({ id: c.id, titulo: c.titulo, mensaje: c.mensaje, publico: c.publico, plato: c.plato })}><Pencil className="h-4 w-4" /></Button>
+                    <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setB({ id: c.id, titulo: c.titulo, mensaje: c.mensaje, publico: c.publico, plato: c.plato, beneficio: c.beneficio })}><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" aria-label="Borrar" onClick={() => borrar(c)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 )}
               </div>
               {c.estado === "enviada" && (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className={`grid grid-cols-2 gap-2 ${c.beneficio ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
                   <Metrica titulo="Le llegó a" valor={String(c.entregados)} detalle={`de ${c.destinatarios} ${c.destinatarios === 1 ? "cliente" : "clientes"}`} />
                   <Metrica titulo="La abrieron" valor={String(c.abiertos)} />
                   <Metrica titulo="Volvieron" valor={String(c.volvieron)} detalle={c.medicion_abierta ? "midiendo, 7 días" : "en 7 días"} />
                   <Metrica titulo="Gastaron" valor={formatCLP(c.ventas)} detalle="sin propinas" />
+                  {c.beneficio && (
+                    <Metrica titulo="Usaron el beneficio" valor={String(c.canjes)} detalle={`${formatCLP(c.descuentos)} en descuentos`} />
+                  )}
                 </div>
               )}
             </CardContent>

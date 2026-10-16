@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { execFileSync } from "node:child_process";
-import { anonimo, conSesion, esBaseLocal, hayCredenciales, invitado } from "./entorno";
+import { anonimo, conSesion, confirmarPresencia, esBaseLocal, hayCredenciales, invitado, llamarFuncion, qrMesa, DEMO } from "./entorno";
 
 // Fase 5.4 — Salud de la plataforma: la base se revisa sola cada hora y el superadmin la ve en vivo. Lo único
 // público es el estado de la última revisión ("ok", "atencion" o "problema"), sin ningún detalle.
@@ -38,6 +38,15 @@ describe.skipIf(!hayCredenciales)("salud de la plataforma", () => {
   });
 
   it.skipIf(!esBaseLocal)("la revisión detecta un problema hecho a propósito y lo deja registrado (y se deshace)", async () => {
+    // Un pago propio con la app (la prueba no depende de lo que hayan dejado otras)
+    const c = await invitado();
+    await c.rpc("unirse_a_mesa", { _qr_token: qrMesa(4)! });
+    await confirmarPresencia(c, 4);
+    const agua = (await anonimo().from("menu_items").select("id").eq("tenant_id", DEMO.tenant).eq("name", "Agua mineral").single()).data!.id;
+    const token = (await c.auth.getSession()).data.session!.access_token;
+    const pago = await llamarFuncion("process-payment", { table_token: qrMesa(4), method: "card", tip_amount: 0,
+      cart_items: [{ menu_item_id: agua, quantity: 1 }], idempotency_key: `salud-${Date.now()}` }, token);
+    expect(pago.status, pago.cuerpo).toBe(200);
     const salida = sql(`
       BEGIN;
       -- Un pago que salió a la pasarela hace dos horas y nadie confirmó

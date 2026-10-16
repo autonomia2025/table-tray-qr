@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { DEMO } from "../tests/seguridad/entorno";
-import { entrar, foto } from "./apoyo/recorrido";
+import { conSesion, llamarFuncion, DEMO } from "../tests/seguridad/entorno";
+import { entrar, entrarComoCliente, foto, ingresarCodigo, liberarMesa, linkMesa } from "./apoyo/recorrido";
 
 // Fase 7.1 — Campañas: el dueño escribe una promoción, ve a cuántos les llega y la manda; el cliente abre el
 // aviso, ve la promoción con el color del local y puede darse de baja. Solo en la base desechable (allí el
@@ -75,4 +75,60 @@ test("el dueño manda una campaña y el cliente la abre desde el aviso", async (
   await expect(tarjeta.locator("p", { hasText: /^1$/ }).first()).toBeVisible();
   await tarjeta.scrollIntoViewIfNeeded();
   await foto(page, "251-dueno-resultados-campana");
+});
+
+// Fase 7.2 — El beneficio: la campaña trae 15% de descuento; el cliente lo ve en la promoción y, al pagar con
+// el QR desde su cuenta, el descuento ya viene en el total (lo calcula la base).
+test("el cliente usa el beneficio de la campaña al pagar con el QR", async ({ browser }) => {
+  test.setTimeout(120_000);
+  limpiar();
+  sql(`INSERT INTO configuracion_tablio (clave, valor) VALUES ('campanas', '{"desde_hora": 0, "hasta_hora": 24}');
+       INSERT INTO consentimientos_comensal (user_id, promociones, politica_version)
+         SELECT id, true, 'prueba' FROM auth.users WHERE email = 'cliente@demo.tablio.test'
+       ON CONFLICT (user_id) DO UPDATE SET promociones = true;
+       UPDATE envios_campana SET created_at = now() - interval '8 days' WHERE tenant_id = '${DEMO.tenant}';`);
+  const { cliente: dueno, token } = await conSesion("owner");
+  const id = (await dueno.rpc("guardar_campana", {
+    _tenant_id: DEMO.tenant, _titulo: "Te extrañamos", _mensaje: "Esta semana tu próxima visita tiene premio. ¡Te esperamos!",
+    _publico: "todos", _beneficio_tipo: "porcentaje", _beneficio_valor: 15, _beneficio_dias: 7,
+  })).data as string;
+  expect((await llamarFuncion("enviar-campana", { campana_id: id }, token)).status).toBe(200);
+  const aviso = sql(`SELECT token FROM envios_campana WHERE campana_id = '${id}'`);
+  await liberarMesa(3);
+
+  const cel = await browser.newContext({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true });
+  const cliente = await cel.newPage();
+  await entrarComoCliente(cliente);
+  // Abre el aviso: ve el beneficio
+  await cliente.goto(`/demo-tablio/promo/${aviso}`);
+  await expect(cliente.getByTestId("beneficio-promo")).toContainText("15% de descuento", { timeout: 15_000 });
+  await foto(cliente, "254-cliente-promocion-con-beneficio");
+
+  // Va al local, pide y paga con el QR: el descuento ya viene en el total
+  await cliente.goto(linkMesa(3)!);
+  await cliente.getByText("Barros Luco", { exact: true }).last().click();
+  await cliente.getByRole("button", { name: /Agregar al carrito/ }).click();
+  await cliente.getByText("Ver pedido").click();
+  await cliente.getByRole("button", { name: /Ir a pagar/ }).click();
+  await expect(cliente.getByTestId("beneficio-pago")).toContainText("Te extrañamos", { timeout: 15_000 });
+  await foto(cliente, "255-cliente-paga-con-beneficio");
+  await cliente.getByRole("button", { name: /Pagar con tarjeta/ }).click();
+  const codigo = cliente.getByText(/código de tu mesa/i);
+  if (await codigo.isVisible().catch(() => false)) await ingresarCodigo(cliente, 3);
+  await expect(cliente.getByText("¡Pago listo!")).toBeVisible({ timeout: 20_000 });
+  await cel.close();
+  expect(sql(`SELECT count(*) FROM beneficios_usados WHERE campana_id = '${id}'`)).toBe("1");
+
+  // El dueño ve cuántos usaron el beneficio y cuánto descontó (se simula que el aviso llegó al celular)
+  sql(`SELECT public._anotar_aviso_campana(e.id, true) FROM envios_campana e WHERE e.campana_id = '${id}'`);
+  const ctx = await browser.newContext();
+  const panel = await ctx.newPage();
+  await entrar(panel, "owner");
+  await expect(panel).toHaveURL(/\/admin\/demo-tablio\//, { timeout: 15_000 });
+  await panel.goto("/admin/demo-tablio/campanas");
+  const tarjeta = panel.getByTestId("campana").filter({ hasText: "Te extrañamos" });
+  await expect(tarjeta.getByText("Usaron el beneficio")).toBeVisible({ timeout: 15_000 });
+  await tarjeta.scrollIntoViewIfNeeded();
+  await foto(panel, "256-dueno-beneficio-usado");
+  await ctx.close();
 });
