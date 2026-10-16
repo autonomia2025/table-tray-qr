@@ -53,6 +53,8 @@ export interface MesaEnVivo {
   /** Juegos (fase 7.8): el mejor puntaje de cada uno en la trivia y la última vuelta de la ruleta. */
   trivia?: { quien: string; puntaje: number; yo: boolean }[];
   ruleta?: { elegido: string; cuando: string; soy_yo: boolean } | null;
+  /** Módulos del local (fase 7.9): lo que no tiene, no se muestra. */
+  modulos?: import("./modulos").Modulos;
 }
 
 export interface LoDeSiempre {

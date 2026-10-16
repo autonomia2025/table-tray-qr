@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { borrarMiCuenta, descargarMisDatos, guardarConsentimiento, miConsentimiento } from "@/lib/privacidad";
 import { supabase } from "@/integrations/supabase/client";
 import { useSesion } from "@/contexts/SesionContext";
+import { tiene, useModulos } from "@/lib/modulos";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -25,13 +26,16 @@ interface Props {
   onCambiar: (abierto: boolean) => void;
   nombreLocal: string;
   color: string;
+  /** Para esconder lo que el local no tiene en su plan (fase 7.9) */
+  tenantId?: string;
 }
 
-export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color }: Props) {
+export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color, tenantId }: Props) {
   const { perfil, recargar } = useSesion();
   const registrado = !!perfil && !perfil.es_anonimo && !!perfil.email;
   const { slug } = useParams<{ slug: string }>();
   const [params] = useSearchParams();
+  const modulos = useModulos(tenantId);
 
   const [paso, setPaso] = useState<Paso>("inicio");
   const [modo, setModo] = useState<Modo>("guardar");
@@ -233,7 +237,7 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color 
                 </div>
               </div>
               {/* Pasaporte de la casa (fase 7.6) */}
-              {slug && (
+              {slug && tiene(modulos, "pasaporte") && (
                 <Link to={`/${slug}/pasaporte${params.get("t") ? `?t=${params.get("t")}` : ""}`} onClick={() => onCambiar(false)}
                   className="mt-3 flex items-center justify-between rounded-2xl border border-border p-4 text-sm font-semibold text-foreground" data-testid="cuenta-pasaporte">
                   <span>🛂 Mi pasaporte de {nombreLocal}</span>

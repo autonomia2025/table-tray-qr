@@ -4,6 +4,22 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.9: módulos por plan ✅
+**Qué hace:** las funciones nuevas (campañas, niveles y rachas, pasaporte, raspe y gana, juegos, invitar una ronda, dividir un plato y tablets compartidas) son módulos que pueden ir en un plan u otro. El superadmin, en "Planes y módulos", ve qué trae cada plan y puede prender o apagar un módulo para un local en particular, con motivo. Lo básico siempre está.
+
+**Cómo está hecho:**
+- Catálogo cerrado en la base y cuatro planes por tamaño (los del brief). Por ahora todos traen todo, para que nada cambie hasta decidir los precios (fase 8).
+- Se cumple en la base: cada función del módulo revisa `tiene_funcion`; si alguien llama directo sin tenerlo, la base la rechaza ("Esta función no está incluida en el plan del local"). En la ronda, el pedido simplemente no queda marcado (la plata no cambia).
+- Las pantallas esconden lo que el local no tiene: el menú y las páginas del dueño, Inicio, Lealtad, Equipo (tablets) y, para el comensal, juegos, ronda, dividir, pasaporte y raspe.
+- Reemplaza la pantalla vieja de "Flags" de Lovable, que no controlaba nada.
+- Billeteras digitales (Apple Wallet y Google Wallet) quedan como 7.9b: necesitan cuentas de desarrollador de Apple y Google.
+
+**Pruebas:**
+- `tests/seguridad/f7-9-modulos.test.ts`: sin sesión no se ven; solo el superadmin cambia (nadie escribe directo); con un módulo apagado sus funciones no corren aunque se llamen directo; el plan decide y el ajuste del local va por encima; motivo obligatorio y auditoría; las tres auditorías vacías y que detecten un plan con un módulo que no existe.
+- `e2e/modulos.spec.ts`: el superadmin apaga Campañas para el demo y el dueño deja de verlas.
+
+---
+
 ## 2026-10-16 — Fase 7.7: premio sorpresa al pagar (raspe y gana) ✅
 **Qué hace:** el dueño activa en Lealtad un premio sorpresa: elige el premio, cada cuánto se gana ("1 de cada 10") y el máximo de premios al mes (su presupuesto). Cada cliente con cuenta raspa una tarjeta al día al pagar (con la app o con el mozo), desde la compra mínima que elija el dueño. Si gana, el premio le aparece con su código y el mozo lo entrega como los demás.
 

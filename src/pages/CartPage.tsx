@@ -45,7 +45,7 @@ export default function CartPage() {
   useEffect(() => {
     if (tableToken) miMesaEnVivo(tableToken).then(setMesa);
   }, [tableToken]);
-  const hayMasGente = (mesa?.personas.length ?? 0) > 1;
+  const hayMasGente = (mesa?.personas.length ?? 0) > 1 && mesa?.modulos?.dividir !== false;
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const handleConfirm = () => {

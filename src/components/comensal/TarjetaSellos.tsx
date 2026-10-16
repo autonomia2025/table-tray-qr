@@ -7,6 +7,7 @@ import { formatCLP } from "@/lib/format";
 import { NOMBRE_NIVEL, selloNuevo, textoRacha } from "@/lib/sellos";
 import CuentaComensal from "@/components/comensal/CuentaComensal";
 import RaspeYGana from "@/components/comensal/RaspeYGana";
+import { tiene, useModulos } from "@/lib/modulos";
 
 /**
  * Tarjeta de sellos del comensal (fase 3.7): el sello "cae" sobre la tarjeta cuando acaba de ganarlo
@@ -32,6 +33,7 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
   const { slug } = useParams<{ slug: string }>();
   const [params] = useSearchParams();
   const [cuentaAbierta, setCuentaAbierta] = useState(false);
+  const modulos = useModulos(tenantId);
   const [animar, setAnimar] = useState(false);
   const visto = useRef<string | null>(null);
 
@@ -215,7 +217,7 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
       )}
 
       {/* Pasaporte de la casa (fase 7.6) */}
-      {t.registrado && slug && (
+      {t.registrado && slug && tiene(modulos, "pasaporte") && (
         <Link to={`/${slug}/pasaporte${params.get("t") ? `?t=${params.get("t")}` : ""}`}
           className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold text-card-foreground" data-testid="ir-pasaporte">
           <span>🛂 Mi pasaporte de {nombreLocal}</span>
@@ -232,7 +234,7 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
           {t.pendiente ? "Guardar mi cuenta y mi sello" : "Guardar mi cuenta"}
         </button>
       )}
-      <CuentaComensal abierto={cuentaAbierta} onCambiar={setCuentaAbierta} nombreLocal={nombreLocal} color={color} />
+      <CuentaComensal abierto={cuentaAbierta} onCambiar={setCuentaAbierta} nombreLocal={nombreLocal} color={color} tenantId={tenantId} />
     </div>
   );
 }

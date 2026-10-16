@@ -14,6 +14,7 @@ import { formatCLP } from "@/lib/format";
 import { premiosPorEntregar, type PremiosLocal } from "@/lib/sellos";
 import { exportToCSV } from "@/lib/export-utils";
 import { mensajeError } from "@/lib/errores";
+import { tiene, useModulos } from "@/lib/modulos";
 
 interface ProgramForm {
   id: string | null;
@@ -81,6 +82,7 @@ const DEFAULT_FORM: ProgramForm = {
 
 export default function LealtadPage() {
   const { tenantId, branchId } = useAdmin();
+  const modulos = useModulos(tenantId);
   const { toast } = useToast();
 
   const [form, setForm] = useState<ProgramForm>(DEFAULT_FORM);
@@ -266,6 +268,7 @@ export default function LealtadPage() {
             </div>
           )}
 
+          {tiene(modulos, "niveles") && (<>
           {/* Niveles y rachas (fase 7.5): premian visitas, nunca cantidades */}
           <div className="space-y-4 rounded-xl border p-4" data-testid="niveles-rachas">
             <div className="flex items-center gap-3">
@@ -335,6 +338,9 @@ export default function LealtadPage() {
             <p className="text-xs text-muted-foreground">Cuentan solo las visitas que suman sello (con cuenta y desde la compra mínima). Los premios se entregan igual que el de la tarjeta, con su código.</p>
           </div>
 
+          </>)}
+
+          {tiene(modulos, "raspe") && (<>
           {/* Premio sorpresa (fase 7.7): raspe y gana, con tope de premios al mes */}
           <div className="space-y-4 rounded-xl border p-4" data-testid="sorpresa-config">
             <div className="flex items-center gap-3">
@@ -374,6 +380,9 @@ export default function LealtadPage() {
             )}
           </div>
 
+          </>)}
+
+          {tiene(modulos, "pasaporte") && (<>
           {/* Pasaporte de la casa (fase 7.6): solo insignias, sin premios */}
           <div className="flex items-center gap-3 rounded-xl border p-4" data-testid="pasaporte-config">
             <Switch id="pasaporte" checked={form.pasaporte_activo} onCheckedChange={(v) => setForm((p) => ({ ...p, pasaporte_activo: v }))} />
@@ -382,6 +391,8 @@ export default function LealtadPage() {
               <p className="text-xs text-muted-foreground">Cada cliente ve lo que ha probado de tu carta, por sección, y gana insignias (por ejemplo «Experto en Cervezas»). Son solo insignias, sin premios.</p>
             </div>
           </div>
+
+          </>)}
 
           <Button onClick={save} disabled={saving}>{saving ? "Guardando..." : "Guardar programa"}</Button>
         </CardContent>

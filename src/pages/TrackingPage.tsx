@@ -838,7 +838,7 @@ export default function TrackingPage() {
         )}
 
         {/* Juegos en la mesa (fase 7.8): mientras llega lo pedido */}
-        {!isCancelled && tableToken && enVivo && !visitaTerminada && (
+        {!isCancelled && tableToken && enVivo && !visitaTerminada && enVivo.modulos?.juegos !== false && (
           <JuegosMesa token={tableToken} enVivo={enVivo} color={primaryColor} recargar={recargarEnVivo} />
         )}
 
@@ -867,7 +867,7 @@ export default function TrackingPage() {
             </button>
 
             {/* Invitar una ronda (fase 7.4): la paga quien invita, desde su propio pedido */}
-            {otros.length > 0 && (
+            {otros.length > 0 && enVivo?.modulos?.ronda !== false && (
               <button
                 onClick={() => { setEsRonda(true); navigate(`/${slug}/menu${qs}`); }}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground transition-colors active:bg-accent"

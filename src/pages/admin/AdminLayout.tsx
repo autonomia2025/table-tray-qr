@@ -5,10 +5,12 @@ import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTrian
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { NOMBRE_ROL, puedeVer, type SeccionLocal } from "@/lib/roles";
+import { tiene, useModulos } from "@/lib/modulos";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLayout() {
-  const { tenantName, branchName, branchId, primaryColor, isLoading, isImpersonating, logout, slug, role, permisos } = useAdmin();
+  const { tenantId, tenantName, branchName, branchId, primaryColor, isLoading, isImpersonating, logout, slug, role, permisos } = useAdmin();
+  const modulos = useModulos(tenantId);
   const location = useLocation();
   const navigate = useNavigate();
   const { slug: urlSlug } = useParams<{ slug: string }>();
@@ -29,7 +31,9 @@ export default function AdminLayout() {
     { seccion: "kds", path: `/kds?branch=${branchId}`, label: "KDS Cocina", icon: ChefHat, external: true },
     { seccion: "sucursal", path: `/admin/${effectiveSlug}/sucursal`, label: "Sucursal", icon: Settings, external: false },
     { seccion: "soporte", path: `/admin/${effectiveSlug}/soporte`, label: "Soporte", icon: Headset, external: false },
-  ].filter((item) => role && puedeVer(role, item.seccion as SeccionLocal, permisos));
+  ].filter((item) => role && puedeVer(role, item.seccion as SeccionLocal, permisos))
+    // Módulos por plan (fase 7.9)
+    .filter((item) => item.seccion !== "campanas" || tiene(modulos, "campanas"));
 
   if (isLoading) {
     return (

@@ -4,7 +4,7 @@ import { useSesion } from "@/contexts/SesionContext";
 import CuentaComensal from "@/components/comensal/CuentaComensal";
 
 /** Botón de cuenta en la carta: "Sellos" para el invitado, inicial del correo para el cliente. */
-export default function BotonCuenta({ nombreLocal, color }: { nombreLocal: string; color: string }) {
+export default function BotonCuenta({ nombreLocal, color, tenantId }: { nombreLocal: string; color: string; tenantId?: string }) {
   const { perfil } = useSesion();
   const [abierto, setAbierto] = useState(false);
   const registrado = !!perfil && !perfil.es_anonimo && !!perfil.email;
@@ -30,7 +30,7 @@ export default function BotonCuenta({ nombreLocal, color }: { nombreLocal: strin
           Sellos
         </button>
       )}
-      <CuentaComensal abierto={abierto} onCambiar={setAbierto} nombreLocal={nombreLocal} color={color} />
+      <CuentaComensal abierto={abierto} onCambiar={setAbierto} nombreLocal={nombreLocal} color={color} tenantId={tenantId} />
     </>
   );
 }

@@ -4187,6 +4187,15 @@ export type Database = {
         }[]
       }
       _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
+      _catalogo_modulos: {
+        Args: never
+        Returns: {
+          descripcion: string
+          modulo: string
+          nombre: string
+          orden: number
+        }[]
+      }
       _catalogo_permisos: {
         Args: never
         Returns: {
@@ -4246,6 +4255,10 @@ export type Database = {
           monto: number
           token: string
         }[]
+      }
+      _exigir_funcion: {
+        Args: { _modulo: string; _tenant_id: string }
+        Returns: undefined
       }
       _exigir_permiso: {
         Args: { _permiso: string; _tenant_id: string }
@@ -4488,6 +4501,19 @@ export type Database = {
         Args: { _nombre: string; _rol: string; _staff_id: string }
         Returns: undefined
       }
+      ajustar_modulo_local: {
+        Args: {
+          _estado: boolean
+          _modulo: string
+          _motivo: string
+          _tenant_id: string
+        }
+        Returns: undefined
+      }
+      asignar_plan: {
+        Args: { _plan_id: string; _tenant_id: string }
+        Returns: undefined
+      }
       atender_cuenta: { Args: { _id: string }; Returns: undefined }
       atender_llamado: { Args: { _id: string }; Returns: undefined }
       auditoria_operacion: {
@@ -4684,6 +4710,10 @@ export type Database = {
         Returns: string
       }
       guardar_consentimiento: { Args: { _promociones: boolean }; Returns: Json }
+      guardar_modulos_plan: {
+        Args: { _modulos: Json; _plan_id: string }
+        Returns: undefined
+      }
       guardar_permiso_rol: {
         Args: {
           _permiso: string
@@ -4758,6 +4788,7 @@ export type Database = {
         Args: { _branch_id?: string; _tenant_id: string }
         Returns: Json
       }
+      modulos_del_local: { Args: { _tenant_id: string }; Returns: Json }
       nuevo_enlace_activacion: { Args: { _tenant_id: string }; Returns: Json }
       pagar_propinas: {
         Args: {
@@ -4906,6 +4937,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      tiene_funcion: {
+        Args: { _modulo: string; _tenant_id: string }
+        Returns: boolean
       }
       tiene_permiso: {
         Args: { _permiso: string; _tenant_id: string }

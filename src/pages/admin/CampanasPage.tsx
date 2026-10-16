@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { BellRing, Gift, Loader2, Megaphone, Pencil, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
+import { tiene, useModulos } from "@/lib/modulos";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ function Metrica({ titulo, valor, detalle }: { titulo: string; valor: string; de
 
 export default function CampanasPage() {
   const { tenantId, tenantName } = useAdmin();
+  const modulos = useModulos(tenantId);
   const { toast } = useToast();
   const [params] = useSearchParams();
   const [campanas, setCampanas] = useState<Campana[]>([]);
@@ -127,6 +129,15 @@ export default function CampanasPage() {
 
   const listo = b.titulo.trim().length >= 3 && b.mensaje.trim().length >= 10 && (b.publico !== "por_plato" || !!b.plato)
     && (!b.beneficio || b.beneficio.valor > 0);
+  if (!tiene(modulos, "campanas")) {
+    return (
+      <div className="max-w-4xl space-y-2">
+        <h2 className="mb-1 text-2xl font-bold text-foreground">Campañas</h2>
+        <p className="text-sm text-muted-foreground" data-testid="modulo-no-incluido">Campañas no está incluido en el plan de tu local. Si te interesa, escríbenos desde Soporte.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl space-y-6">
       <div>

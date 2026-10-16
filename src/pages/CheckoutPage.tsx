@@ -147,7 +147,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!perfil || !token) return;
-    miMesaEnVivo(token).then((m) => setEnLaMesa(m?.personas.length ?? 0));
+    miMesaEnVivo(token).then((m) => setEnLaMesa(m?.modulos?.ronda === false ? 0 : m?.personas.length ?? 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perfil?.user_id, token]);
 

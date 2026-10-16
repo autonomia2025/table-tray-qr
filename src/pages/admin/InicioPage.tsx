@@ -9,6 +9,7 @@ import { fechaLarga, propinasPorPagar, type PropinasPorPagar } from "@/lib/propi
 import { excepcionesCaja } from "@/lib/excepciones";
 import PrimerosPasos from "@/components/admin/PrimerosPasos";
 import { alcanceCampana, campanasDelLocal } from "@/lib/campanas";
+import { tiene, useModulos } from "@/lib/modulos";
 import { usePermiso } from "@/hooks/usePermiso";
 
 // Inicio del dueño (fase 3.6, brief 5.5): cuenta en palabras simples cómo le fue al local, en vez de
@@ -28,7 +29,8 @@ function Comparacion({ actual, antes, contra }: { actual: number; antes: number;
 export default function InicioPage() {
   const { branchId, slug, tenantName, tenantId } = useAdmin();
   const puede = usePermiso(tenantId);
-  const puedeCampanas = puede("enviar_campanas");
+  const modulos = useModulos(tenantId);
+  const puedeCampanas = puede("enviar_campanas") && tiene(modulos, "campanas");
   // Sugerencia de campaña (fase 7.1): clientes que no vienen hace 30 días y ninguna campaña en 14 días
   const [dormidos, setDormidos] = useState(0);
   const [h, setH] = useState<Historia | null>(null);

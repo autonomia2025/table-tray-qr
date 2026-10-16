@@ -51,7 +51,7 @@ import { SuperAdminProvider } from "./contexts/SuperAdminContext";
 import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
 import SATenantsPage from "./pages/superadmin/SATenantsPage";
 import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
-import SAFlagsPage from "./pages/superadmin/SAFlagsPage";
+import SAModulosPage from "./pages/superadmin/SAModulosPage";
 import SASaludPage from "./pages/superadmin/SASaludPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
 import SAEquipoPage from "./pages/superadmin/SAEquipoPage";
@@ -153,7 +153,8 @@ const App = () => (
             <Route path="tenants" element={<SATenantsPage />} />
             <Route path="equipo" element={<SAEquipoPage />} />
             <Route path="metricas" element={<SAMetricsPage />} />
-            <Route path="flags" element={<SAFlagsPage />} />
+            <Route path="modulos" element={<SAModulosPage />} />
+            <Route path="flags" element={<Navigate to="../modulos" replace />} />
             <Route path="salud" element={<SASaludPage />} />
             <Route path="config" element={<SAConfigPage />} />
           </Route>

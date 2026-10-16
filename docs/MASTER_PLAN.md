@@ -167,7 +167,8 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 | 7.6 | **Pasaporte de la casa:** lo que cada cliente probó por sección de la carta (platos y tragos), con insignias. Solo insignias, sin premios | ✅ |
 | 7.7 | **Premio sorpresa al pagar (raspe y gana):** un raspe al día por cliente con cuenta; el local elige el premio (nunca alcohol), cada cuánto se gana y el tope de premios al mes. Lo decide la base al pagar | ✅ |
 | 7.8 | **Juegos en la mesa:** trivia de 5 preguntas que corrige el servidor, con ranking de la mesa, y la ruleta "¿quién invita la próxima?" (solo diversión). Premios por definir | ✅ |
-| 7.9 | Billeteras digitales y módulos por plan | ⏳ |
+| 7.9 | **Módulos por plan:** catálogo cerrado de módulos (campañas, niveles, pasaporte, raspe, juegos, ronda, dividir, tablets), qué trae cada plan y ajuste por local del superadmin, con motivo. Se cumple en la base (`tiene_funcion`). Por ahora todos los planes traen todo: el reparto se decide con los precios (fase 8) | ✅ |
+| 7.9b | **Billeteras digitales:** la tarjeta de sellos en Apple Wallet y Google Wallet. Espera las cuentas de desarrollador de Apple y Google | ⏸ |
 | 7.10 | Compuerta de la fase 7 | ⏳ |
 
 Detalle de cada idea:

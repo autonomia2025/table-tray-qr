@@ -4,6 +4,8 @@ import { KeyRound, Loader2, Tablet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAdmin } from "@/contexts/AdminContext";
+import { tiene, useModulos } from "@/lib/modulos";
 import {
   activarEsteDispositivo, borrarPin, desactivarTablet, estadoPines, esModoTablet, tabletsDeLaSucursal,
 } from "@/lib/tablet";
@@ -14,6 +16,8 @@ import {
  */
 export default function TabletsEquipo({ branchId, staff }: { branchId: string; staff: { id: string; name: string; role: string; is_active: boolean | null }[] }) {
   const { toast } = useToast();
+  const { tenantId } = useAdmin();
+  const modulos = useModulos(tenantId);
   const [tablets, setTablets] = useState<Awaited<ReturnType<typeof tabletsDeLaSucursal>>>([]);
   const [pines, setPines] = useState<Record<string, { tiene_pin: boolean; bloqueado: boolean }>>({});
   const [nombre, setNombre] = useState("Tablet de sala");
@@ -38,6 +42,15 @@ export default function TabletsEquipo({ branchId, staff }: { branchId: string; s
   };
 
   const conPin = staff.filter((s) => s.is_active && ["waiter", "manager", "cashier"].includes(s.role));
+
+  if (!tiene(modulos, "tablets")) {
+    return (
+      <section className="mt-8 space-y-1" aria-labelledby="tablets" data-testid="tablets-equipo">
+        <h3 id="tablets" className="flex items-center gap-2 text-lg font-bold text-foreground"><Tablet className="h-5 w-5 text-primary" /> Tablets compartidas</h3>
+        <p className="text-sm text-muted-foreground" data-testid="modulo-no-incluido">Tablets compartidas no está incluido en el plan de tu local. Si te interesa, escríbenos desde Soporte.</p>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8 space-y-3" aria-labelledby="tablets" data-testid="tablets-equipo">

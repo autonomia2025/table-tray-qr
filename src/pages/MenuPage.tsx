@@ -291,7 +291,7 @@ export default function MenuPage() {
               )}
             </div>
             <div className="flex items-center gap-1">
-              <BotonCuenta nombreLocal={tenant.name} color={primaryColor} />
+              <BotonCuenta nombreLocal={tenant.name} color={primaryColor} tenantId={tenantId} />
               <button onClick={() => setSearchOpen(true)} className="relative flex h-9 w-9 items-center justify-center rounded-full text-foreground">
                 <Search className="h-5 w-5" />
                 {totalItems > 0 && (
