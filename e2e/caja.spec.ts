@@ -1,5 +1,6 @@
 import { test, expect, devices } from "@playwright/test";
 import { cuenta, entrar, foto, ingresarCodigo, linkMesa } from "./apoyo/recorrido";
+import { conSesion, DEMO } from "../tests/seguridad/entorno";
 
 // Fase 2.D — Cierre de caja con conciliación automática: la base cuadra lo cobrado (app, efectivo,
 // POS) menos los reembolsos; la caja anota lo contado, la diferencia sale sola y el cierre queda
@@ -78,7 +79,10 @@ test("la caja cuadra sola, exige explicar las diferencias y el cierre queda bloq
   await expect(page.getByText("Caja cerrada · no se puede cambiar")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByLabel("Efectivo contado")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Cerrar caja del día" })).toHaveCount(0);
-  await expect(page.getByRole("cell", { name: dia })).toBeVisible();
+  // El cierre quedó guardado (se busca directo: el historial muestra solo los 30 cierres más nuevos)
+  const { cliente: caja } = await conSesion("cashier");
+  const { data: cierre } = await caja.from("payment_settlements").select("status").eq("branch_id", DEMO.sucursal).eq("settlement_date", dia).maybeSingle();
+  expect(cierre?.status).toBe("closed");
   await page.getByRole("heading", { name: "Caja", exact: true }).scrollIntoViewIfNeeded();
   await foto(page, "65-cierre-bloqueado");
 });

@@ -24,6 +24,7 @@ import AvisosCelular from "@/components/comensal/AvisosCelular";
 import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { manifiestoDelLocal } from "@/lib/push";
 import { textoPedido } from "@/lib/estados";
+import JuegosMesa from "@/components/comensal/JuegosMesa";
 
 /* ---------- types ---------- */
 interface OrderItem {
@@ -824,6 +825,11 @@ export default function TrackingPage() {
           <div className="mb-4 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 p-4 text-center">
             <p className="text-sm font-bold text-green-700">¡Gracias por calificarnos! Nos vemos pronto 🧡</p>
           </div>
+        )}
+
+        {/* Juegos en la mesa (fase 7.8): mientras llega lo pedido */}
+        {!isCancelled && tableToken && enVivo && !visitaTerminada && (
+          <JuegosMesa token={tableToken} enVivo={enVivo} color={primaryColor} recargar={recargarEnVivo} />
         )}
 
         {/* ── ACTION BUTTONS ── */}

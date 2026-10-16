@@ -2415,6 +2415,54 @@ export type Database = {
           },
         ]
       }
+      partidas_trivia: {
+        Row: {
+          created_at: string
+          id: string
+          preguntas: string[]
+          puntaje: number | null
+          session_id: string
+          tenant_id: string
+          terminada_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preguntas: string[]
+          puntaje?: number | null
+          session_id: string
+          tenant_id: string
+          terminada_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preguntas?: string[]
+          puntaje?: number | null
+          session_id?: string
+          tenant_id?: string
+          terminada_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partidas_trivia_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partidas_trivia_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_settlements: {
         Row: {
           branch_id: string
@@ -2791,6 +2839,33 @@ export type Database = {
         }
         Relationships: []
       }
+      preguntas_trivia: {
+        Row: {
+          activa: boolean
+          correcta: number
+          id: string
+          opciones: string[]
+          pregunta: string
+          tema: string
+        }
+        Insert: {
+          activa?: boolean
+          correcta: number
+          id?: string
+          opciones: string[]
+          pregunta: string
+          tema: string
+        }
+        Update: {
+          activa?: boolean
+          correcta?: number
+          id?: string
+          opciones?: string[]
+          pregunta?: string
+          tema?: string
+        }
+        Relationships: []
+      }
       refunds: {
         Row: {
           amount: number
@@ -2891,6 +2966,58 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "restaurants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ruletas_mesa: {
+        Row: {
+          created_at: string
+          elegido_alias: string | null
+          elegido_id: string | null
+          giro_user_id: string | null
+          id: string
+          session_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          elegido_alias?: string | null
+          elegido_id?: string | null
+          giro_user_id?: string | null
+          id?: string
+          session_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          elegido_alias?: string | null
+          elegido_id?: string | null
+          giro_user_id?: string | null
+          id?: string
+          session_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ruletas_mesa_elegido_id_fkey"
+            columns: ["elegido_id"]
+            isOneToOne: false
+            referencedRelation: "comensales_mesa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ruletas_mesa_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ruletas_mesa_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4183,6 +4310,7 @@ export type Database = {
         Args: { _branch_id: string; _ts: string }
         Returns: string
       }
+      empezar_trivia: { Args: { _qr_token: string }; Returns: Json }
       entregar_premio: {
         Args: { _codigo: string; _premio_id: string }
         Returns: Json
@@ -4213,6 +4341,7 @@ export type Database = {
       estado_salud: { Args: never; Returns: Json }
       excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
+      girar_ruleta: { Args: { _qr_token: string }; Returns: Json }
       guardar_campana: {
         Args: {
           _beneficio_dias?: number
@@ -4395,6 +4524,10 @@ export type Database = {
           _nota?: string
           _tipo: string
         }
+        Returns: Json
+      }
+      responder_trivia: {
+        Args: { _partida: string; _qr_token: string; _respuestas: number[] }
         Returns: Json
       }
       resultado_intento: { Args: { _intento_id: string }; Returns: Json }

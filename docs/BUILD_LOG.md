@@ -4,6 +4,30 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.8: juegos en la mesa ✅
+**Qué hace:** en el seguimiento, mientras llega lo pedido, aparece "Mientras esperan" con dos juegos:
+- **Trivia:** 5 preguntas de cultura chilena, comida, geografía y cultura general, sin nada de alcohol. Al terminar se ven las respuestas correctas y la mesa ve el mejor puntaje de cada uno.
+- **"¿Quién invita la próxima?":** una ruleta que elige a alguien de la mesa, y toda la mesa ve a quién le tocó. Es solo un juego: cada uno paga lo suyo.
+
+**Cómo está hecho:**
+- El servidor corrige la trivia: las respuestas correctas no llegan al celular antes de responder y una partida no se responde dos veces. Hay un máximo de 3 partidas por persona y visita.
+- La ruleta la sortea el servidor, solo con 2 o más en la mesa y no más de una vuelta cada 20 segundos.
+- Solo juegan y ven los resultados los de esa mesa.
+- Las partidas están en "Mis datos" y se borran con la cuenta.
+- Sin premios por ahora: un "sello extra" choca con la regla de un sello por día y se decidirá aparte.
+
+**Pruebas:**
+- `tests/seguridad/f7-8-juegos.test.ts` revisa:
+  - quién juega;
+  - que las respuestas no se filtren;
+  - la corrección única;
+  - el límite de partidas;
+  - el ranking (y que otra mesa no lo vea);
+  - el mínimo de la ruleta y su espera.
+- `e2e/juegos.spec.ts` recorre la trivia y la ruleta con dos celulares.
+
+---
+
 ## 2026-10-16 — Fase 7.4: invitar una ronda ✅
 **Qué hace:** cuando hay más de una persona en la mesa, al pagar aparece "🍻 Es una ronda para la mesa". Quien la invita la paga él, desde su propio pedido. El resto de la mesa ve en su seguimiento "Camila invitó una ronda: 1× Empanaditas de queso (6)", con su estado. En el seguimiento también está el botón "Invitar una ronda a la mesa".
 

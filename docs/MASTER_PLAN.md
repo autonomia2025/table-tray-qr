@@ -166,7 +166,7 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 | 7.5 | Niveles y rachas | ⏳ |
 | 7.6 | Pasaporte de la casa | ⏳ |
 | 7.7 | Premio sorpresa al pagar (raspe y gana) | ⏳ |
-| 7.8 | Juegos en la mesa (trivia y ruleta) | ⏳ |
+| 7.8 | **Juegos en la mesa:** trivia de 5 preguntas que corrige el servidor, con ranking de la mesa, y la ruleta "¿quién invita la próxima?" (solo diversión). Premios por definir | ✅ |
 | 7.9 | Billeteras digitales y módulos por plan | ⏳ |
 | 7.10 | Compuerta de la fase 7 | ⏳ |
 

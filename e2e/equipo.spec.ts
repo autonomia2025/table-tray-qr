@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import fs from "node:fs";
+import { conSesion, DEMO } from "../tests/seguridad/entorno";
 
 // Fase 1.7 — La pantalla Equipo usa las funciones del servidor: desactivar quita el acceso,
 // y crear una cuenta crea también su ficha en el equipo.
@@ -19,7 +20,25 @@ async function entrarComoDueno(page: Page) {
   await page.goto("/admin/demo-tablio/equipo");
 }
 
+// Si la prueba se corta a la mitad (red, lentitud), Diego queda reactivado igual: es la cuenta "mozo" que usan
+// las demás pruebas, también en la base real.
+async function reactivarDiego() {
+  const { cliente } = await conSesion("owner");
+  const { data } = await cliente.from("staff_users").select("id, is_active").eq("tenant_id", DEMO.tenant).eq("name", "Diego (mozo)").maybeSingle();
+  if (data && !data.is_active) await cliente.rpc("activar_personal", { _staff_id: data.id, _activo: true });
+}
+
 test("el dueño desactiva y vuelve a activar a un mozo", async ({ page }) => {
+  await reactivarDiego();
+  test.info().annotations.push({ type: "limpieza", description: "reactiva a Diego al terminar" });
+  try {
+    await desactivarYActivar(page);
+  } finally {
+    await reactivarDiego();
+  }
+});
+
+async function desactivarYActivar(page: Page) {
   await entrarComoDueno(page);
   const fila = page.locator("tr").filter({ hasText: "Diego (mozo)" });
   const interruptor = fila.getByRole("switch");
@@ -30,7 +49,7 @@ test("el dueño desactiva y vuelve a activar a un mozo", async ({ page }) => {
   await interruptor.click();
   await expect(page.getByText("Diego (mozo) activado").first()).toBeVisible();
   await expect(interruptor).toBeChecked();
-});
+}
 
 test("el dueño crea la cuenta de un mozo y aparece en el equipo, vinculada", async ({ page }) => {
   test.skip(process.env.E2E_BASE_DATOS !== "local", "Solo en la base desechable (crea cuentas)");
