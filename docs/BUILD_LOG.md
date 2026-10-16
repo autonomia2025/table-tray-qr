@@ -4,6 +4,19 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.10: compuerta de la fase 7 ✅
+**Qué revisa** (`tests/seguridad/f7-compuerta.test.ts`; no depende del orden de las pruebas):
+- **Aislamiento:** las tablas nuevas (campañas, avisos, bajas, beneficios usados, platos divididos y sus partes, partidas de trivia, ruletas y raspes) no las ve el dueño de otro local, un invitado ni un anónimo; el mozo y la cocina tampoco ven campañas, avisos, raspes ni beneficios. Nadie de afuera arma campañas, raspa o ajusta módulos.
+- **Casos difíciles que cruzan etapas:**
+  - Se apaga Dividir con un plato a medio pagar: ya no se puede dividir otro, pero lo que falta se paga igual y el plato pasa a cocina. Nadie queda con plata trabada.
+  - Una cuenta con raspe, trivia y ronda se borra entera: ninguna tabla de la fase 7 guarda su identificador, y su pago queda en el local, sin su nombre.
+  - Se devuelve un pago con un raspe sin raspar: el raspe se anula y ya no se puede raspar.
+- **Auditorías:** las tres salen vacías después de todo, y detectan descuadres hechos a propósito: campañas sobre el límite, parte de un plato que no suma, raspe ganador sin premio y sobre el tope, y plan con un módulo que no existe.
+
+Sin cambios en la base ni en las pantallas.
+
+---
+
 ## 2026-10-16 — Fase 7.9: módulos por plan ✅
 **Qué hace:** las funciones nuevas (campañas, niveles y rachas, pasaporte, raspe y gana, juegos, invitar una ronda, dividir un plato y tablets compartidas) son módulos que pueden ir en un plan u otro. El superadmin, en "Planes y módulos", ve qué trae cada plan y puede prender o apagar un módulo para un local en particular, con motivo. Lo básico siempre está.
 

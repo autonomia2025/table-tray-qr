@@ -169,7 +169,7 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 | 7.8 | **Juegos en la mesa:** trivia de 5 preguntas que corrige el servidor, con ranking de la mesa, y la ruleta "¿quién invita la próxima?" (solo diversión). Premios por definir | ✅ |
 | 7.9 | **Módulos por plan:** catálogo cerrado de módulos (campañas, niveles, pasaporte, raspe, juegos, ronda, dividir, tablets), qué trae cada plan y ajuste por local del superadmin, con motivo. Se cumple en la base (`tiene_funcion`). Por ahora todos los planes traen todo: el reparto se decide con los precios (fase 8) | ✅ |
 | 7.9b | **Billeteras digitales:** la tarjeta de sellos en Apple Wallet y Google Wallet. Espera las cuentas de desarrollador de Apple y Google | ⏸ |
-| 7.10 | Compuerta de la fase 7 | ⏳ |
+| 7.10 | **Compuerta de la fase 7:** aislamiento de todo lo nuevo, casos difíciles que cruzan etapas (apagar un módulo a medio pagar, devolver un pago con un raspe sin raspar, borrar una cuenta con datos de la fase 7) y las tres auditorías vacías y atentas a descuadres de campañas, beneficio, platos divididos, raspes y planes | ✅ |
 
 Detalle de cada idea:
 - **Invitar una ronda** (uno paga para la mesa, desde su propio pedido) y **dividir un plato** entre quienes elijas: respetan "cada uno paga lo suyo".
