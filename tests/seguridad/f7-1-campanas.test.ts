@@ -116,9 +116,10 @@ describe.skipIf(!hayCredenciales)("campañas", () => {
     const r = await enviar(id);
     expect(r.status).toBe(200);
     expect(r.cuerpo).toMatchObject({ destinatarios: 1, con_aviso: 1 });
-    // Ese "celular" no existe: el aviso queda como fallido (y se ve en los resultados)
+    // Ese "celular" no existe: el aviso queda como fallido (y se ve en los resultados). Sin claves de avisos
+    // (la integración continua no las tiene), la función no intenta enviar y el aviso sigue pendiente.
     const fila = ((await dueno.rpc("resultados_campanas", { _tenant_id: DEMO.tenant })).data as { id: string; fallidos: number; entregados: number }[]).find((c) => c.id === id)!;
-    expect(fila).toMatchObject({ entregados: 0, fallidos: 1 });
+    expect(fila).toMatchObject(r.cuerpo.configurado === false ? { entregados: 0, fallidos: 0 } : { entregados: 0, fallidos: 1 });
     // El resultado nunca trae direcciones de celulares
     expect(JSON.stringify(fila)).not.toContain("push.prueba.invalid");
   });
