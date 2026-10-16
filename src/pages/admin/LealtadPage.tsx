@@ -13,6 +13,7 @@ import { Download, Gift, Loader2 } from "lucide-react";
 import { formatCLP } from "@/lib/format";
 import { premiosPorEntregar, type PremiosLocal } from "@/lib/sellos";
 import { exportToCSV } from "@/lib/export-utils";
+import { mensajeError } from "@/lib/errores";
 
 interface ProgramForm {
   id: string | null;
@@ -34,6 +35,12 @@ interface ProgramForm {
   racha_premio: string;
   // Pasaporte de la casa (fase 7.6)
   pasaporte_activo: boolean;
+  // Premio sorpresa (fase 7.7)
+  sorpresa_activa: boolean;
+  sorpresa_premio: string;
+  sorpresa_uno_de: number;
+  sorpresa_tope_mes: number;
+  sorpresa_monto_minimo: number;
 }
 
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -65,6 +72,11 @@ const DEFAULT_FORM: ProgramForm = {
   racha_dia: null,
   racha_premio: "",
   pasaporte_activo: true,
+  sorpresa_activa: false,
+  sorpresa_premio: "",
+  sorpresa_uno_de: 10,
+  sorpresa_tope_mes: 20,
+  sorpresa_monto_minimo: 0,
 };
 
 export default function LealtadPage() {
@@ -76,6 +88,7 @@ export default function LealtadPage() {
   const [premios, setPremios] = useState<PremiosLocal | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sorpresasMes, setSorpresasMes] = useState(0);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -90,6 +103,11 @@ export default function LealtadPage() {
         .limit(500),
       premiosPorEntregar(tenantId),
     ]);
+    // Premios sorpresa ganados este mes (contra el tope)
+    const inicioMes = new Date().toLocaleDateString("sv-SE", { timeZone: "America/Santiago" }).slice(0, 8) + "01";
+    const { count } = await supabase.from("raspes").select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId).eq("mes", inicioMes).eq("gano", true).is("anulado_at", null);
+    setSorpresasMes(count ?? 0);
 
     const program =
       (programs ?? []).find((p) => p.branch_id === branchId) ??
@@ -115,6 +133,11 @@ export default function LealtadPage() {
           racha_dia: program.racha_dia ?? null,
           racha_premio: program.racha_premio ?? "",
           pasaporte_activo: program.pasaporte_activo ?? true,
+          sorpresa_activa: program.sorpresa_activa ?? false,
+          sorpresa_premio: program.sorpresa_premio ?? "",
+          sorpresa_uno_de: program.sorpresa_uno_de ?? 10,
+          sorpresa_tope_mes: program.sorpresa_tope_mes ?? 20,
+          sorpresa_monto_minimo: program.sorpresa_monto_minimo ?? 0,
         }
       : DEFAULT_FORM);
     setCustomers((custs ?? []) as CustomerRow[]);
@@ -145,6 +168,11 @@ export default function LealtadPage() {
       racha_dia: form.racha_semanas ? form.racha_dia : null,
       racha_premio: form.racha_semanas ? (form.racha_premio.trim().slice(0, 80) || "Premio de la racha") : null,
       pasaporte_activo: form.pasaporte_activo,
+      sorpresa_activa: form.sorpresa_activa && !!form.sorpresa_premio.trim(),
+      sorpresa_premio: form.sorpresa_premio.trim().slice(0, 80) || null,
+      sorpresa_uno_de: Math.min(100, Math.max(2, form.sorpresa_uno_de)),
+      sorpresa_tope_mes: Math.min(1000, Math.max(1, form.sorpresa_tope_mes)),
+      sorpresa_monto_minimo: Math.min(1_000_000, Math.max(0, Math.round(form.sorpresa_monto_minimo))),
     };
 
     const { error } = form.id
@@ -153,7 +181,7 @@ export default function LealtadPage() {
 
     setSaving(false);
     if (error) {
-      toast({ title: "No se pudo guardar", description: "Revisa los valores: entre 2 y 30 visitas y una recompensa de 2 a 80 letras.", variant: "destructive" });
+      toast({ title: "No se pudo guardar", description: mensajeError(error, "Revisa los valores: entre 2 y 30 visitas y una recompensa de 2 a 80 letras."), variant: "destructive" });
       return;
     }
     toast({ title: "Programa de lealtad guardado" });
@@ -305,6 +333,45 @@ export default function LealtadPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">Cuentan solo las visitas que suman sello (con cuenta y desde la compra mínima). Los premios se entregan igual que el de la tarjeta, con su código.</p>
+          </div>
+
+          {/* Premio sorpresa (fase 7.7): raspe y gana, con tope de premios al mes */}
+          <div className="space-y-4 rounded-xl border p-4" data-testid="sorpresa-config">
+            <div className="flex items-center gap-3">
+              <Switch id="sorpresa" checked={form.sorpresa_activa} onCheckedChange={(v) => setForm((p) => ({ ...p, sorpresa_activa: v }))} />
+              <div>
+                <Label htmlFor="sorpresa" className="font-semibold">Premio sorpresa al pagar (raspe y gana)</Label>
+                <p className="text-xs text-muted-foreground">Cada cliente con cuenta raspa una tarjeta al día al pagar. Tú eliges el premio, cada cuánto se gana y cuántos premios das como máximo al mes.</p>
+              </div>
+            </div>
+            {form.sorpresa_activa && (
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <Label htmlFor="sorpresa-premio">Premio</Label>
+                  <Input id="sorpresa-premio" maxLength={80} placeholder="Ej: Postre de la casa" value={form.sorpresa_premio}
+                    onChange={(e) => setForm((p) => ({ ...p, sorpresa_premio: e.target.value }))} />
+                  <p className="mt-1 text-xs text-muted-foreground">No puede ser alcohol.</p>
+                </div>
+                <div>
+                  <Label htmlFor="sorpresa-uno-de">Gana 1 de cada</Label>
+                  <Input id="sorpresa-uno-de" type="number" min={2} max={100} value={form.sorpresa_uno_de}
+                    onChange={(e) => setForm((p) => ({ ...p, sorpresa_uno_de: parseInt(e.target.value) || 2 }))} />
+                </div>
+                <div>
+                  <Label htmlFor="sorpresa-tope">Máximo de premios al mes</Label>
+                  <Input id="sorpresa-tope" type="number" min={1} max={1000} value={form.sorpresa_tope_mes}
+                    onChange={(e) => setForm((p) => ({ ...p, sorpresa_tope_mes: parseInt(e.target.value) || 1 }))} />
+                </div>
+                <div>
+                  <Label htmlFor="sorpresa-minimo">Compra mínima para raspar</Label>
+                  <Input id="sorpresa-minimo" type="number" min={0} step={500} value={form.sorpresa_monto_minimo}
+                    onChange={(e) => setForm((p) => ({ ...p, sorpresa_monto_minimo: parseInt(e.target.value) || 0 }))} />
+                </div>
+                <p className="self-end text-xs text-muted-foreground" data-testid="sorpresa-mes">
+                  Este mes: {sorpresasMes} de {form.sorpresa_tope_mes} premios. Al llegar al máximo, los raspes siguen pero no ganan.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Pasaporte de la casa (fase 7.6): solo insignias, sin premios */}

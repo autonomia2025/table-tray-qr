@@ -23,7 +23,7 @@ export interface Tarjeta {
   puntos?: number;
   hoy_sumado?: boolean;
   ultimo?: null | { payment_id: string; at: string; sello: boolean; puntos: number; premio: boolean; retroactivo: boolean };
-  premios?: { id: string; descripcion: string; codigo: string; ganado_at: string; motivo?: "tarjeta" | "nivel" | "racha" }[];
+  premios?: { id: string; descripcion: string; codigo: string; ganado_at: string; motivo?: "tarjeta" | "nivel" | "racha" | "sorpresa" }[];
   /** Niveles y rachas (fase 7.5), si el local los usa */
   nivel?: null | {
     nivel: "bronce" | "plata" | "oro";

@@ -6,6 +6,7 @@ import { useTarjetaSellos } from "@/hooks/useTarjetaSellos";
 import { formatCLP } from "@/lib/format";
 import { NOMBRE_NIVEL, selloNuevo, textoRacha } from "@/lib/sellos";
 import CuentaComensal from "@/components/comensal/CuentaComensal";
+import RaspeYGana from "@/components/comensal/RaspeYGana";
 
 /**
  * Tarjeta de sellos del comensal (fase 3.7): el sello "cae" sobre la tarjeta cuando acaba de ganarlo
@@ -185,6 +186,9 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
         </div>
       )}
 
+      {/* Premio sorpresa (fase 7.7) */}
+      {t.registrado && tenantId && <RaspeYGana tenantId={tenantId} color={color} clave={t.ultimo?.payment_id} onListo={() => refetch()} />}
+
       {t.registrado && t.ultimo?.retroactivo && animar && (
         <p className="mt-1 text-center text-[11px] text-muted-foreground">Te sumamos el sello de lo que pagaste antes de guardar tu cuenta.</p>
       )}
@@ -201,7 +205,7 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
               style={{ borderColor: color }}
             >
               <p className="text-xs font-semibold text-foreground">
-                {r.motivo === "nivel" ? "🥈 Subiste de nivel: " : r.motivo === "racha" ? "🔥 Completaste la racha: " : "🎁 "}{r.descripcion}
+                {r.motivo === "nivel" ? "🥈 Subiste de nivel: " : r.motivo === "racha" ? "🔥 Completaste la racha: " : r.motivo === "sorpresa" ? "🎟️ Premio sorpresa: " : "🎁 "}{r.descripcion}
               </p>
               <p className="mt-1 font-mono text-2xl font-extrabold tracking-[0.35em] text-foreground" data-testid="codigo-premio">{r.codigo}</p>
               <p className="text-[11px] text-muted-foreground">Muéstrale este código al mozo para que te lo entregue.</p>

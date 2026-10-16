@@ -4,6 +4,23 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.7: premio sorpresa al pagar (raspe y gana) ✅
+**Qué hace:** el dueño activa en Lealtad un premio sorpresa: elige el premio, cada cuánto se gana ("1 de cada 10") y el máximo de premios al mes (su presupuesto). Cada cliente con cuenta raspa una tarjeta al día al pagar (con la app o con el mozo), desde la compra mínima que elija el dueño. Si gana, el premio le aparece con su código y el mozo lo entrega como los demás.
+
+**Cómo está hecho:**
+- El resultado lo decide la base al guardarse el pago, nunca el navegador. El cliente lo ve recién al raspar (`raspar`); antes, ni su tarjeta muestra el premio.
+- El tope del mes nunca se pasa: los ganadores se cuentan bajo un candado del local (probado con 12 pagos a la vez).
+- Un raspe por cliente y día de negocio (índice único), como el sello.
+- El premio no puede ser alcohol (lo revisa la base al guardar).
+- Si el pago se reembolsa entero, el raspe y su premio (si no se entregó) se anulan.
+- La auditoría de la operación revisa que cada raspe ganador tenga su premio (y viceversa) y que ningún local pase su tope.
+
+**Pruebas:**
+- `tests/seguridad/f7-7-raspe.test.ts`: configuración solo del dueño y sin alcohol; tope del mes con 30 visitas y con 12 a la vez; compra mínima; un raspe por día; el cliente raspa solo el suyo; el premio se ve recién al raspar; el reembolso lo anula; un invitado no recibe raspe; auditorías vacías y que detecten un raspe que no calza o un tope pasado.
+- `e2e/raspe.spec.ts`: el dueño lo activa (y la app rechaza un premio con alcohol); el cliente paga y raspa con el dedo.
+
+---
+
 ## 2026-10-16 — Fase 7.6: pasaporte de la casa ✅
 **Qué hace:** cada cliente con cuenta tiene un "pasaporte" de cada local: lo que ha probado de la carta, sección por sección (cervezas, tragos, platos…), y sus insignias:
 - **Por sección completa:** "Experto en Cervezas", "Experto en Tragos"…

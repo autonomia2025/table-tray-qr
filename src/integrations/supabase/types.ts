@@ -1668,6 +1668,11 @@ export type Database = {
           racha_premio: string | null
           racha_semanas: number | null
           reward_description: string
+          sorpresa_activa: boolean
+          sorpresa_monto_minimo: number
+          sorpresa_premio: string | null
+          sorpresa_tope_mes: number
+          sorpresa_uno_de: number
           tenant_id: string
           type: string
           updated_at: string
@@ -1691,6 +1696,11 @@ export type Database = {
           racha_premio?: string | null
           racha_semanas?: number | null
           reward_description?: string
+          sorpresa_activa?: boolean
+          sorpresa_monto_minimo?: number
+          sorpresa_premio?: string | null
+          sorpresa_tope_mes?: number
+          sorpresa_uno_de?: number
           tenant_id: string
           type?: string
           updated_at?: string
@@ -1714,6 +1724,11 @@ export type Database = {
           racha_premio?: string | null
           racha_semanas?: number | null
           reward_description?: string
+          sorpresa_activa?: boolean
+          sorpresa_monto_minimo?: number
+          sorpresa_premio?: string | null
+          sorpresa_tope_mes?: number
+          sorpresa_uno_de?: number
           tenant_id?: string
           type?: string
           updated_at?: string
@@ -3045,6 +3060,106 @@ export type Database = {
         }
         Relationships: []
       }
+      raspes: {
+        Row: {
+          anulado_at: string | null
+          branch_id: string | null
+          created_at: string
+          customer_id: string
+          dia_negocio: string
+          gano: boolean
+          id: string
+          mes: string
+          movimiento_id: string
+          payment_id: string
+          premio: string | null
+          premio_id: string | null
+          raspado_at: string | null
+          tenant_id: string
+          tope: number
+          user_id: string | null
+        }
+        Insert: {
+          anulado_at?: string | null
+          branch_id?: string | null
+          created_at?: string
+          customer_id: string
+          dia_negocio: string
+          gano: boolean
+          id?: string
+          mes: string
+          movimiento_id: string
+          payment_id: string
+          premio?: string | null
+          premio_id?: string | null
+          raspado_at?: string | null
+          tenant_id: string
+          tope: number
+          user_id?: string | null
+        }
+        Update: {
+          anulado_at?: string | null
+          branch_id?: string | null
+          created_at?: string
+          customer_id?: string
+          dia_negocio?: string
+          gano?: boolean
+          id?: string
+          mes?: string
+          movimiento_id?: string
+          payment_id?: string
+          premio?: string | null
+          premio_id?: string | null
+          raspado_at?: string | null
+          tenant_id?: string
+          tope?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "raspes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raspes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raspes_movimiento_id_fkey"
+            columns: ["movimiento_id"]
+            isOneToOne: false
+            referencedRelation: "movimientos_lealtad"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raspes_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raspes_premio_id_fkey"
+            columns: ["premio_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "raspes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       refunds: {
         Row: {
           amount: number
@@ -4256,6 +4371,11 @@ export type Database = {
           racha_premio: string | null
           racha_semanas: number | null
           reward_description: string
+          sorpresa_activa: boolean
+          sorpresa_monto_minimo: number
+          sorpresa_premio: string | null
+          sorpresa_tope_mes: number
+          sorpresa_uno_de: number
           tenant_id: string
           type: string
           updated_at: string
@@ -4288,6 +4408,7 @@ export type Database = {
       }
       _purgar_claves_pasarela: { Args: never; Returns: number }
       _purgar_invitados: { Args: never; Returns: number }
+      _raspe_visita: { Args: { _movimiento_id: string }; Returns: boolean }
       _registrar_corte: {
         Args: {
           _branch_id: string
@@ -4632,6 +4753,7 @@ export type Database = {
       mis_boletas_pendientes: { Args: never; Returns: Json }
       mis_datos: { Args: never; Returns: Json }
       mis_propinas_por_cobrar: { Args: { _branch_id: string }; Returns: Json }
+      mis_raspes: { Args: { _tenant_id: string }; Returns: Json }
       mis_sellos: {
         Args: { _branch_id?: string; _tenant_id: string }
         Returns: Json
@@ -4679,6 +4801,7 @@ export type Database = {
         Args: { _branch_id: string; _desde: string; _hasta: string }
         Returns: Json
       }
+      raspar: { Args: { _raspe_id: string }; Returns: Json }
       rechazar_parte: {
         Args: { _parte_id: string; _qr_token: string }
         Returns: undefined
