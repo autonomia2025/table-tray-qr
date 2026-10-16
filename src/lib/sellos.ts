@@ -23,7 +23,31 @@ export interface Tarjeta {
   puntos?: number;
   hoy_sumado?: boolean;
   ultimo?: null | { payment_id: string; at: string; sello: boolean; puntos: number; premio: boolean; retroactivo: boolean };
-  premios?: { id: string; descripcion: string; codigo: string; ganado_at: string }[];
+  premios?: { id: string; descripcion: string; codigo: string; ganado_at: string; motivo?: "tarjeta" | "nivel" | "racha" }[];
+  /** Niveles y rachas (fase 7.5), si el local los usa */
+  nivel?: null | {
+    nivel: "bronce" | "plata" | "oro";
+    visitas: number;
+    siguiente: "plata" | "oro" | null;
+    faltan: number | null;
+    racha: number;
+    racha_meta: number | null;
+    racha_dia: number | null;
+    niveles_activos: boolean;
+    premio_plata: string | null;
+    premio_oro: string | null;
+    racha_premio: string | null;
+  };
+}
+
+const DIAS = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
+export const NOMBRE_NIVEL = { bronce: "Bronce", plata: "Plata", oro: "Oro" } as const;
+
+/** "2 de 3 viernes seguidos" o "2 de 3 semanas seguidas". */
+export function textoRacha(n: NonNullable<Tarjeta["nivel"]>): string | null {
+  if (!n.racha_meta) return null;
+  const actual = n.racha % n.racha_meta || (n.racha > 0 ? n.racha_meta : 0);
+  return n.racha_dia === null ? `${actual} de ${n.racha_meta} semanas seguidas` : `${actual} de ${n.racha_meta} ${DIAS[n.racha_dia]} seguidos`;
 }
 
 export interface PremioMesa {

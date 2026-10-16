@@ -23,7 +23,18 @@ interface ProgramForm {
   points_goal: number;
   reward_description: string;
   monto_minimo: number;
+  // Niveles y rachas (fase 7.5)
+  niveles_activos: boolean;
+  nivel_plata: number;
+  nivel_oro: number;
+  premio_plata: string;
+  premio_oro: string;
+  racha_semanas: number | null;
+  racha_dia: number | null;
+  racha_premio: string;
 }
+
+const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
 interface CustomerRow {
   id: string;
@@ -43,6 +54,14 @@ const DEFAULT_FORM: ProgramForm = {
   points_goal: 100,
   reward_description: "Bebida gratis",
   monto_minimo: 3000,
+  niveles_activos: false,
+  nivel_plata: 4,
+  nivel_oro: 8,
+  premio_plata: "",
+  premio_oro: "",
+  racha_semanas: null,
+  racha_dia: null,
+  racha_premio: "",
 };
 
 export default function LealtadPage() {
@@ -84,6 +103,14 @@ export default function LealtadPage() {
           points_goal: program.points_goal,
           reward_description: program.reward_description,
           monto_minimo: program.monto_minimo ?? 0,
+          niveles_activos: program.niveles_activos ?? false,
+          nivel_plata: program.nivel_plata ?? 4,
+          nivel_oro: program.nivel_oro ?? 8,
+          premio_plata: program.premio_plata ?? "",
+          premio_oro: program.premio_oro ?? "",
+          racha_semanas: program.racha_semanas ?? null,
+          racha_dia: program.racha_dia ?? null,
+          racha_premio: program.racha_premio ?? "",
         }
       : DEFAULT_FORM);
     setCustomers((custs ?? []) as CustomerRow[]);
@@ -105,6 +132,14 @@ export default function LealtadPage() {
       points_goal: Math.max(1, form.points_goal),
       reward_description: form.reward_description.trim().slice(0, 80) || "Recompensa",
       monto_minimo: Math.min(1_000_000, Math.max(0, Math.round(form.monto_minimo))),
+      niveles_activos: form.niveles_activos,
+      nivel_plata: Math.min(60, Math.max(2, form.nivel_plata)),
+      nivel_oro: Math.min(90, Math.max(form.nivel_plata + 1, form.nivel_oro)),
+      premio_plata: form.premio_plata.trim().slice(0, 80) || null,
+      premio_oro: form.premio_oro.trim().slice(0, 80) || null,
+      racha_semanas: form.racha_semanas,
+      racha_dia: form.racha_semanas ? form.racha_dia : null,
+      racha_premio: form.racha_semanas ? (form.racha_premio.trim().slice(0, 80) || "Premio de la racha") : null,
     };
 
     const { error } = form.id
@@ -197,6 +232,75 @@ export default function LealtadPage() {
               <p className="mt-1 text-xs text-muted-foreground">Evita que alguien junte sellos comprando una bebida suelta. 0 = cualquier compra.</p>
             </div>
           )}
+
+          {/* Niveles y rachas (fase 7.5): premian visitas, nunca cantidades */}
+          <div className="space-y-4 rounded-xl border p-4" data-testid="niveles-rachas">
+            <div className="flex items-center gap-3">
+              <Switch id="niveles" checked={form.niveles_activos} onCheckedChange={(v) => setForm((p) => ({ ...p, niveles_activos: v }))} />
+              <div>
+                <Label htmlFor="niveles" className="font-semibold">Niveles Bronce, Plata y Oro</Label>
+                <p className="text-xs text-muted-foreground">Según las visitas de los últimos 90 días. Al llegar por primera vez a Plata y a Oro, el cliente gana un premio.</p>
+              </div>
+            </div>
+            {form.niveles_activos && (
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="nivel-plata">Plata desde (visitas)</Label>
+                  <Input id="nivel-plata" type="number" min={2} max={60} value={form.nivel_plata}
+                    onChange={(e) => setForm((p) => ({ ...p, nivel_plata: parseInt(e.target.value) || 2 }))} />
+                </div>
+                <div>
+                  <Label htmlFor="premio-plata">Premio al llegar a Plata</Label>
+                  <Input id="premio-plata" maxLength={80} placeholder="Ej: Postre de la casa" value={form.premio_plata}
+                    onChange={(e) => setForm((p) => ({ ...p, premio_plata: e.target.value }))} />
+                </div>
+                <div>
+                  <Label htmlFor="nivel-oro">Oro desde (visitas)</Label>
+                  <Input id="nivel-oro" type="number" min={3} max={90} value={form.nivel_oro}
+                    onChange={(e) => setForm((p) => ({ ...p, nivel_oro: parseInt(e.target.value) || 3 }))} />
+                </div>
+                <div>
+                  <Label htmlFor="premio-oro">Premio al llegar a Oro</Label>
+                  <Input id="premio-oro" maxLength={80} placeholder="Ej: Tabla para compartir" value={form.premio_oro}
+                    onChange={(e) => setForm((p) => ({ ...p, premio_oro: e.target.value }))} />
+                </div>
+              </div>
+            )}
+            <div className="grid gap-3 md:grid-cols-3">
+              <div>
+                <Label>Racha</Label>
+                <Select value={form.racha_semanas ? String(form.racha_semanas) : "no"}
+                  onValueChange={(v) => setForm((p) => ({ ...p, racha_semanas: v === "no" ? null : parseInt(v) }))}>
+                  <SelectTrigger aria-label="Racha"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no">Sin racha</SelectItem>
+                    {[2, 3, 4, 5, 6].map((n) => <SelectItem key={n} value={String(n)}>{n} semanas seguidas</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {form.racha_semanas && (
+                <>
+                  <div>
+                    <Label>Día</Label>
+                    <Select value={form.racha_dia === null ? "cualquiera" : String(form.racha_dia)}
+                      onValueChange={(v) => setForm((p) => ({ ...p, racha_dia: v === "cualquiera" ? null : parseInt(v) }))}>
+                      <SelectTrigger aria-label="Día de la racha"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cualquiera">Cualquier día</SelectItem>
+                        {DIAS.map((d, i) => <SelectItem key={d} value={String(i)}>Los {d === "sábado" || d === "domingo" ? d + "s" : d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="premio-racha">Premio de la racha</Label>
+                    <Input id="premio-racha" maxLength={80} placeholder="Ej: Papas fritas gratis" value={form.racha_premio}
+                      onChange={(e) => setForm((p) => ({ ...p, racha_premio: e.target.value }))} />
+                  </div>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Cuentan solo las visitas que suman sello (con cuenta y desde la compra mínima). Los premios se entregan igual que el de la tarjeta, con su código.</p>
+          </div>
 
           <Button onClick={save} disabled={saving}>{saving ? "Guardando..." : "Guardar programa"}</Button>
         </CardContent>

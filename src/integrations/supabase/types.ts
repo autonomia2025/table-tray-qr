@@ -1656,8 +1656,16 @@ export type Database = {
           id: string
           is_active: boolean
           monto_minimo: number
+          nivel_oro: number
+          nivel_plata: number
+          niveles_activos: boolean
           points_goal: number
           points_per_thousand: number
+          premio_oro: string | null
+          premio_plata: string | null
+          racha_dia: number | null
+          racha_premio: string | null
+          racha_semanas: number | null
           reward_description: string
           tenant_id: string
           type: string
@@ -1670,8 +1678,16 @@ export type Database = {
           id?: string
           is_active?: boolean
           monto_minimo?: number
+          nivel_oro?: number
+          nivel_plata?: number
+          niveles_activos?: boolean
           points_goal?: number
           points_per_thousand?: number
+          premio_oro?: string | null
+          premio_plata?: string | null
+          racha_dia?: number | null
+          racha_premio?: string | null
+          racha_semanas?: number | null
           reward_description?: string
           tenant_id: string
           type?: string
@@ -1684,8 +1700,16 @@ export type Database = {
           id?: string
           is_active?: boolean
           monto_minimo?: number
+          nivel_oro?: number
+          nivel_plata?: number
+          niveles_activos?: boolean
           points_goal?: number
           points_per_thousand?: number
+          premio_oro?: string | null
+          premio_plata?: string | null
+          racha_dia?: number | null
+          racha_premio?: string | null
+          racha_semanas?: number | null
           reward_description?: string
           tenant_id?: string
           type?: string
@@ -1719,6 +1743,8 @@ export type Database = {
           entregado_por: string | null
           entregado_por_nombre: string | null
           id: string
+          logro: string | null
+          motivo: string
           movimiento_id: string | null
           payment_id: string | null
           redeemed_at: string | null
@@ -1735,6 +1761,8 @@ export type Database = {
           entregado_por?: string | null
           entregado_por_nombre?: string | null
           id?: string
+          logro?: string | null
+          motivo?: string
           movimiento_id?: string | null
           payment_id?: string | null
           redeemed_at?: string | null
@@ -1751,6 +1779,8 @@ export type Database = {
           entregado_por?: string | null
           entregado_por_nombre?: string | null
           id?: string
+          logro?: string | null
+          motivo?: string
           movimiento_id?: string | null
           payment_id?: string | null
           redeemed_at?: string | null
@@ -4131,6 +4161,7 @@ export type Database = {
       }
       _liberar_activacion: { Args: { _id: string }; Returns: undefined }
       _llamar_revisar_pagos: { Args: never; Returns: undefined }
+      _logros_visita: { Args: { _movimiento_id: string }; Returns: number }
       _mas_dias_habiles: {
         Args: { _desde: string; _dias: number }
         Returns: string
@@ -4160,6 +4191,14 @@ export type Database = {
         }
       }
       _minutos_plato: { Args: { _menu_item_id: string }; Returns: number }
+      _nivel_y_racha: {
+        Args: {
+          _customer_id: string
+          _dia: string
+          _prog: Database["public"]["Tables"]["loyalty_programs"]["Row"]
+        }
+        Returns: Json
+      }
       _nuevo_enlace_activacion: {
         Args: {
           _branch_id: string
@@ -4202,8 +4241,16 @@ export type Database = {
           id: string
           is_active: boolean
           monto_minimo: number
+          nivel_oro: number
+          nivel_plata: number
+          niveles_activos: boolean
           points_goal: number
           points_per_thousand: number
+          premio_oro: string | null
+          premio_plata: string | null
+          racha_dia: number | null
+          racha_premio: string | null
+          racha_semanas: number | null
           reward_description: string
           tenant_id: string
           type: string

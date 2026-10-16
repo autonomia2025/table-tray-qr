@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Gift, Stamp, Sparkles } from "lucide-react";
 import { useTarjetaSellos } from "@/hooks/useTarjetaSellos";
 import { formatCLP } from "@/lib/format";
-import { selloNuevo } from "@/lib/sellos";
+import { NOMBRE_NIVEL, selloNuevo, textoRacha } from "@/lib/sellos";
 import CuentaComensal from "@/components/comensal/CuentaComensal";
 
 /**
@@ -162,6 +162,26 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
         {texto}
       </p>
 
+      {/* Nivel y racha (fase 7.5) */}
+      {t.registrado && t.nivel && (
+        <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs" data-testid="nivel-racha">
+          {t.nivel.niveles_activos && (
+            <span className="rounded-full border px-3 py-1 font-semibold text-card-foreground">
+              {t.nivel.nivel === "oro" ? "🥇" : t.nivel.nivel === "plata" ? "🥈" : "🥉"} Nivel {NOMBRE_NIVEL[t.nivel.nivel]}
+              {t.nivel.siguiente && t.nivel.faltan !== null && t.nivel.faltan > 0 && (
+                <span className="font-normal text-muted-foreground"> · {t.nivel.faltan === 1 ? "1 visita" : `${t.nivel.faltan} visitas`} para {NOMBRE_NIVEL[t.nivel.siguiente]}</span>
+              )}
+            </span>
+          )}
+          {textoRacha(t.nivel) && (
+            <span className="rounded-full border px-3 py-1 font-semibold text-card-foreground">
+              🔥 {textoRacha(t.nivel)}
+              {t.nivel.racha_premio && <span className="font-normal text-muted-foreground"> · premio: {t.nivel.racha_premio}</span>}
+            </span>
+          )}
+        </div>
+      )}
+
       {t.registrado && t.ultimo?.retroactivo && animar && (
         <p className="mt-1 text-center text-[11px] text-muted-foreground">Te sumamos el sello de lo que pagaste antes de guardar tu cuenta.</p>
       )}
@@ -177,7 +197,9 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
               className="rounded-xl border-2 border-dashed p-3 text-center"
               style={{ borderColor: color }}
             >
-              <p className="text-xs font-semibold text-foreground">🎁 {r.descripcion}</p>
+              <p className="text-xs font-semibold text-foreground">
+                {r.motivo === "nivel" ? "🥈 Subiste de nivel: " : r.motivo === "racha" ? "🔥 Completaste la racha: " : "🎁 "}{r.descripcion}
+              </p>
               <p className="mt-1 font-mono text-2xl font-extrabold tracking-[0.35em] text-foreground" data-testid="codigo-premio">{r.codigo}</p>
               <p className="text-[11px] text-muted-foreground">Muéstrale este código al mozo para que te lo entregue.</p>
             </motion.div>

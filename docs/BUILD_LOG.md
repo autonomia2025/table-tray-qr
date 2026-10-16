@@ -4,6 +4,30 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.5: niveles y rachas ✅
+**Qué hace:** en Lealtad, el dueño puede activar dos cosas:
+- **Niveles:** Bronce, Plata y Oro, según las visitas de los últimos 90 días, con un premio al llegar por primera vez a Plata y otro a Oro.
+- **Rachas:** "3 semanas seguidas" o "3 viernes seguidos", con su premio.
+
+El cliente ve su nivel y su racha en la tarjeta de sellos. Los premios le llegan con su código, como el de la tarjeta, y el personal los entrega igual.
+
+**Cómo está hecho:**
+- Lo calcula la base al sumar un sello: solo cuentan las visitas que suman sello (con cuenta y desde la compra mínima). Se premian visitas, nunca cantidades.
+- Plata y Oro se premian una vez. La racha, cada vez que llega a la meta.
+- Si la visita que ganó el premio se reembolsa entera, el premio se anula, como el de la tarjeta.
+- Solo el dueño configura, con valores sanos (Oro por encima de Plata).
+- En el demo vienen apagados, para no cambiar lo que ya muestra.
+
+**Pruebas:**
+- `tests/seguridad/f7-5-niveles.test.ts` arma un cliente con visitas en fechas conocidas y revisa:
+  - los premios de Plata, Oro y racha, una vez cada uno;
+  - la anulación al reembolsar;
+  - que solo el dueño configure;
+  - que las auditorías sigan vacías.
+- `e2e/niveles.spec.ts` recorre la configuración del dueño y la tarjeta del cliente.
+
+---
+
 ## 2026-10-16 — Fase 7.4b: dividir un plato ✅
 **Qué hace:** en el carrito, si hay más gente en la mesa, cada producto tiene "Dividir". Se elige con quiénes y cada uno paga su parte en su celular. El plato va a la cocina recién cuando están todas pagadas.
 - **Quien no quiere** toca "No, gracias".

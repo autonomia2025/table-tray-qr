@@ -163,7 +163,7 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 | 7.3 | **Campañas por correo:** el mismo mensaje por correo a quienes no tienen la app, con baja en cada correo. Espera el dominio y Resend | ⏸ |
 | 7.4 | **Invitar una ronda:** uno pide "para la mesa" desde su propio pedido y lo paga él; el resto de la mesa lo ve en la mesa en vivo | ✅ |
 | 7.4b | **Dividir un plato** entre quienes elijas, cada uno paga su parte; a cocina recién cuando está todo pagado. Si alguien no paga, quien lo pidió paga esa parte o el personal lo anula y lo pagado se devuelve desde la caja | ✅ |
-| 7.5 | Niveles y rachas | ⏳ |
+| 7.5 | **Niveles y rachas:** Bronce, Plata y Oro por visitas de 90 días, y rachas de semanas seguidas (o del mismo día), con premios que define el dueño y que se entregan con código como los de la tarjeta | ✅ |
 | 7.6 | Pasaporte de la casa | ⏳ |
 | 7.7 | Premio sorpresa al pagar (raspe y gana) | ⏳ |
 | 7.8 | **Juegos en la mesa:** trivia de 5 preguntas que corrige el servidor, con ranking de la mesa, y la ruleta "¿quién invita la próxima?" (solo diversión). Premios por definir | ✅ |
