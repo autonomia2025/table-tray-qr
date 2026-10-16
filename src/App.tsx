@@ -39,6 +39,7 @@ import LealtadPage from "./pages/admin/LealtadPage";
 import CampanasPage from "./pages/admin/CampanasPage";
 import PromoPage from "./pages/PromoPage";
 import PagarPartePage from "./pages/PagarPartePage";
+import PasaportePage from "./pages/PasaportePage";
 
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLayout from "./pages/mozo/MozoLayout";
@@ -126,6 +127,7 @@ const App = () => (
           <Route path="/:slug/pay" element={<PayPage />} />
           <Route path="/:slug/promo/:token" element={<PromoPage />} />
           <Route path="/:slug/parte/:parteId" element={<PagarPartePage />} />
+          <Route path="/:slug/pasaporte" element={<PasaportePage />} />
 
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}

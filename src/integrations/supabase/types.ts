@@ -1659,6 +1659,7 @@ export type Database = {
           nivel_oro: number
           nivel_plata: number
           niveles_activos: boolean
+          pasaporte_activo: boolean
           points_goal: number
           points_per_thousand: number
           premio_oro: string | null
@@ -1681,6 +1682,7 @@ export type Database = {
           nivel_oro?: number
           nivel_plata?: number
           niveles_activos?: boolean
+          pasaporte_activo?: boolean
           points_goal?: number
           points_per_thousand?: number
           premio_oro?: string | null
@@ -1703,6 +1705,7 @@ export type Database = {
           nivel_oro?: number
           nivel_plata?: number
           niveles_activos?: boolean
+          pasaporte_activo?: boolean
           points_goal?: number
           points_per_thousand?: number
           premio_oro?: string | null
@@ -4244,6 +4247,7 @@ export type Database = {
           nivel_oro: number
           nivel_plata: number
           niveles_activos: boolean
+          pasaporte_activo: boolean
           points_goal: number
           points_per_thousand: number
           premio_oro: string | null
@@ -4622,6 +4626,7 @@ export type Database = {
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }
       mi_miembro_backoffice: { Args: never; Returns: string }
+      mi_pasaporte: { Args: { _tenant_id: string }; Returns: Json }
       mi_perfil: { Args: never; Returns: Json }
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
       mis_boletas_pendientes: { Args: never; Returns: Json }

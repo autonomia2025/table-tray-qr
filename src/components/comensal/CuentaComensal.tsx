@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Gift, Loader2, Mail, ArrowLeft, LogOut, CheckCircle2, Download, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Gift, Loader2, Mail, ArrowLeft, LogOut, CheckCircle2, Download, Trash2, ChevronRight } from "lucide-react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { borrarMiCuenta, descargarMisDatos, guardarConsentimiento, miConsentimiento } from "@/lib/privacidad";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +30,8 @@ interface Props {
 export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color }: Props) {
   const { perfil, recargar } = useSesion();
   const registrado = !!perfil && !perfil.es_anonimo && !!perfil.email;
+  const { slug } = useParams<{ slug: string }>();
+  const [params] = useSearchParams();
 
   const [paso, setPaso] = useState<Paso>("inicio");
   const [modo, setModo] = useState<Modo>("guardar");
@@ -230,6 +232,14 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color 
                   <p className="text-xs text-muted-foreground">Sumas sellos en {nombreLocal} cada vez que pagas</p>
                 </div>
               </div>
+              {/* Pasaporte de la casa (fase 7.6) */}
+              {slug && (
+                <Link to={`/${slug}/pasaporte${params.get("t") ? `?t=${params.get("t")}` : ""}`} onClick={() => onCambiar(false)}
+                  className="mt-3 flex items-center justify-between rounded-2xl border border-border p-4 text-sm font-semibold text-foreground" data-testid="cuenta-pasaporte">
+                  <span>🛂 Mi pasaporte de {nombreLocal}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              )}
               {/* Privacidad (Ley 21.719) */}
               <div className="mt-4 space-y-3 rounded-2xl border border-border p-4">
                 <label className="flex items-center justify-between gap-3">

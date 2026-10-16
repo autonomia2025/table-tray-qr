@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Gift, Stamp, Sparkles } from "lucide-react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ChevronRight, Gift, Stamp, Sparkles } from "lucide-react";
 import { useTarjetaSellos } from "@/hooks/useTarjetaSellos";
 import { formatCLP } from "@/lib/format";
 import { NOMBRE_NIVEL, selloNuevo, textoRacha } from "@/lib/sellos";
@@ -27,6 +28,8 @@ interface Props {
 
 export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, vigilar, className = "" }: Props) {
   const { data: t, refetch, isFetching } = useTarjetaSellos(tenantId, branchId);
+  const { slug } = useParams<{ slug: string }>();
+  const [params] = useSearchParams();
   const [cuentaAbierta, setCuentaAbierta] = useState(false);
   const [animar, setAnimar] = useState(false);
   const visto = useRef<string | null>(null);
@@ -205,6 +208,15 @@ export default function TarjetaSellos({ tenantId, branchId, nombreLocal, color, 
             </motion.div>
           ))}
         </div>
+      )}
+
+      {/* Pasaporte de la casa (fase 7.6) */}
+      {t.registrado && slug && (
+        <Link to={`/${slug}/pasaporte${params.get("t") ? `?t=${params.get("t")}` : ""}`}
+          className="mt-4 flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold text-card-foreground" data-testid="ir-pasaporte">
+          <span>🛂 Mi pasaporte de {nombreLocal}</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
       )}
 
       {!t.registrado && (

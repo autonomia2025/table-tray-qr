@@ -109,6 +109,7 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
 33. **Juegos en la mesa:** en el seguimiento de un pedido, en "Mientras esperan", toca "Trivia" (5 preguntas; tu mesa ve tu puntaje) o, si hay dos personas o más en la mesa, "¿Quién invita la próxima?" (gira la ruleta y toda la mesa ve a quién le tocó).
 34. **Dividir un plato:** con dos celulares en la misma mesa (pónganse nombre en el seguimiento), uno agrega un plato al carrito y toca "Dividir", elige a la otra persona y paga su parte. La otra persona ve el plato en su seguimiento y toca "Pagar mi parte". Cuando están todas, el plato pasa a la cocina. Quien no quiera, toca "No, gracias", y quien lo pidió puede tocar "La pago yo".
 35. **Niveles y rachas:** como dueño, en "Lealtad", activa "Niveles Bronce, Plata y Oro" y elige una racha, cada uno con su premio, y toca "Guardar programa". El cliente de ejemplo (`cliente@demo.tablio.test`) ve su nivel y su racha en la tarjeta al pagar. Al subir de nivel o completar la racha le aparece el premio con su código, como el de la tarjeta. En el demo vienen apagados.
+36. **Pasaporte de la casa:** entra como `cliente@demo.tablio.test` desde el QR de una mesa, toca el botón con tu inicial (arriba en la carta) y luego "Mi pasaporte de Demo Tablio". Ves lo que has probado por sección y tus insignias (por ejemplo, "Curioso"). Como dueño, se apaga en "Lealtad" → "Pasaporte de la casa".
 
 ## Experiencia del comensal (invitado o cliente)
 

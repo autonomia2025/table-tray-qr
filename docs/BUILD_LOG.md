@@ -4,6 +4,24 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.6: pasaporte de la casa ✅
+**Qué hace:** cada cliente con cuenta tiene un "pasaporte" de cada local: lo que ha probado de la carta, sección por sección (cervezas, tragos, platos…), y sus insignias:
+- **Por sección completa:** "Experto en Cervezas", "Experto en Tragos"…
+- **Por cantidad de cosas distintas:** Curioso (3), Explorador (10) y Leyenda de la casa (25).
+
+Se abre desde "Tu cuenta" (el botón con la inicial en la carta) o desde la tarjeta de sellos. Son solo insignias, sin premios. Incluye los tragos (el fundador lo aprobó: no premia tomar más, solo muestra lo que probaste). El dueño lo apaga en Lealtad; viene prendido.
+
+**Cómo está hecho:**
+- `mi_pasaporte(local)` lo calcula en el momento desde los pedidos pagados y no anulados de la persona. No guarda datos nuevos de nadie, así que no cambia `mis_datos` ni el borrado de la cuenta.
+- Cuenta cada plato una vez (dos schops iguales son uno) y solo los platos visibles de la carta.
+- `loyalty_programs.pasaporte_activo` (solo el dueño o el administrador lo cambian, con las reglas de siempre de Lealtad).
+
+**Pruebas:**
+- `tests/seguridad/f7-6-pasaporte.test.ts`: sin sesión no se ve; los números calzan con las secciones y las insignias; alguien nuevo parte en cero; lo sin pagar o anulado no cuenta; otra persona de la misma mesa no suma lo tuyo; apagado no se ve; nadie más que el dueño lo cambia; auditorías vacías.
+- `e2e/pasaporte.spec.ts`: el cliente lo abre desde su cuenta y el dueño ve el interruptor.
+
+---
+
 ## 2026-10-16 — Fase 7.5: niveles y rachas ✅
 **Qué hace:** en Lealtad, el dueño puede activar dos cosas:
 - **Niveles:** Bronce, Plata y Oro, según las visitas de los últimos 90 días, con un premio al llegar por primera vez a Plata y otro a Oro.

@@ -32,6 +32,8 @@ interface ProgramForm {
   racha_semanas: number | null;
   racha_dia: number | null;
   racha_premio: string;
+  // Pasaporte de la casa (fase 7.6)
+  pasaporte_activo: boolean;
 }
 
 const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
@@ -62,6 +64,7 @@ const DEFAULT_FORM: ProgramForm = {
   racha_semanas: null,
   racha_dia: null,
   racha_premio: "",
+  pasaporte_activo: true,
 };
 
 export default function LealtadPage() {
@@ -111,6 +114,7 @@ export default function LealtadPage() {
           racha_semanas: program.racha_semanas ?? null,
           racha_dia: program.racha_dia ?? null,
           racha_premio: program.racha_premio ?? "",
+          pasaporte_activo: program.pasaporte_activo ?? true,
         }
       : DEFAULT_FORM);
     setCustomers((custs ?? []) as CustomerRow[]);
@@ -140,6 +144,7 @@ export default function LealtadPage() {
       racha_semanas: form.racha_semanas,
       racha_dia: form.racha_semanas ? form.racha_dia : null,
       racha_premio: form.racha_semanas ? (form.racha_premio.trim().slice(0, 80) || "Premio de la racha") : null,
+      pasaporte_activo: form.pasaporte_activo,
     };
 
     const { error } = form.id
@@ -300,6 +305,15 @@ export default function LealtadPage() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">Cuentan solo las visitas que suman sello (con cuenta y desde la compra mínima). Los premios se entregan igual que el de la tarjeta, con su código.</p>
+          </div>
+
+          {/* Pasaporte de la casa (fase 7.6): solo insignias, sin premios */}
+          <div className="flex items-center gap-3 rounded-xl border p-4" data-testid="pasaporte-config">
+            <Switch id="pasaporte" checked={form.pasaporte_activo} onCheckedChange={(v) => setForm((p) => ({ ...p, pasaporte_activo: v }))} />
+            <div>
+              <Label htmlFor="pasaporte" className="font-semibold">Pasaporte de la casa</Label>
+              <p className="text-xs text-muted-foreground">Cada cliente ve lo que ha probado de tu carta, por sección, y gana insignias (por ejemplo «Experto en Cervezas»). Son solo insignias, sin premios.</p>
+            </div>
           </div>
 
           <Button onClick={save} disabled={saving}>{saving ? "Guardando..." : "Guardar programa"}</Button>
