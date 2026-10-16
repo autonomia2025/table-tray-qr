@@ -40,7 +40,7 @@ describe.skipIf(!hayCredenciales)("permisos finos por rol", () => {
 
   it("solo el dueño o el administrador ven y cambian los permisos; nadie los escribe directo", async () => {
     const tabla = (await dueno.rpc("permisos_del_local", { _tenant_id: DEMO.tenant })).data as unknown as Fila[];
-    expect(tabla.map((f) => f.permiso)).toEqual(["cobrar", "tomar_pedidos", "anular_pedidos", "reembolsar", "cerrar_caja", "ver_reportes", "editar_carta", "marcar_agotado"]);
+    expect(tabla.map((f) => f.permiso)).toEqual(["cobrar", "tomar_pedidos", "anular_pedidos", "reembolsar", "cerrar_caja", "ver_reportes", "editar_carta", "marcar_agotado", "enviar_campanas"]);
     expect((await (await conSesion("admin")).cliente.rpc("permisos_del_local", { _tenant_id: DEMO.tenant })).error).toBeNull();
     const otros = [caja, mozo, cocina, await invitado(), anonimo()];
     if (process.env.DEMO_CREDENCIALES) otros.push((await conSesion("owner_ajeno")).cliente);
@@ -62,7 +62,7 @@ describe.skipIf(!hayCredenciales)("permisos finos por rol", () => {
   it("cada persona recibe sus permisos; los de fábrica son los de siempre", async () => {
     const permisos = async (c: SupabaseClient) =>
       ((await c.rpc("mi_perfil")).data as unknown as { locales: { tenant_id: string; permisos: string[] }[] }).locales.find((l) => l.tenant_id === DEMO.tenant)!.permisos;
-    expect(await permisos(dueno)).toHaveLength(8);
+    expect(await permisos(dueno)).toHaveLength(9);
     if (esBaseLocal) {
       expect(await permisos(caja)).toEqual(["cobrar", "reembolsar", "cerrar_caja"]);
       expect(await permisos(mozo)).toEqual(["cobrar", "tomar_pedidos"]);

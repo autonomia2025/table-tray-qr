@@ -155,8 +155,21 @@ Primero va lo que no depende del fundador. Lo marcado ⏸️ espera algo suyo.
 | 6.4 | Compuerta de la fase 6: casos difíciles (cobros durante un corte, dos cortes a la vez, intentos de PIN a la vez, quitar un permiso mientras se usa), aislamiento de lo nuevo y las tres auditorías vacías, con revisiones nuevas de tablets y permisos | ✅ |
 
 **Fase 7 — Más ventas y experiencia** (ideas de experiencia, segunda ola):
-- **Primero, Campañas** (aprobadas el 15 de octubre): todo listo y con envío como aviso al celular a quienes instalaron la app; el envío por correo se activa cuando haya dominio y Resend.
-- **Campañas por correo (aprobadas el 15 de octubre de 2026; se adelantan apenas haya dominio y Resend):** sección "Campañas" del dueño, públicos listos (no vienen hace 30 días, frecuentes, por plato, todos los que aceptaron promociones), sugerencia en Inicio, beneficio que se activa al pagar con el QR para medir visitas y ventas, baja en cada correo y límite de envíos por local. Después, el mismo mensaje como aviso al celular.
+
+| Paso | Qué | Estado |
+|---|---|---|
+| 7.1 | **Campañas por aviso al celular** (aprobadas el 15 de octubre): sección "Campañas" del dueño, públicos listos (todos, no vienen hace 30 días, frecuentes, por plato), solo a quien aceptó promociones y junta sellos en el local, sin alcohol ni enlaces, límites (4 en 30 días, una por persona a la semana, de 10:00 a 22:00), baja desde cada aviso, medición de visitas y ventas en 7 días y sugerencia en Inicio | ✅ |
+| 7.2 | **Beneficio de la campaña al pagar con el QR:** un descuento o regalo que el cliente activa desde el aviso, congelado en la cotización (el precio sigue saliendo de la base), uno por persona, medido en visitas y ventas | ⏳ |
+| 7.3 | **Campañas por correo:** el mismo mensaje por correo a quienes no tienen la app, con baja en cada correo. Espera el dominio y Resend | ⏸ |
+| 7.4 | Invitar una ronda y dividir un plato | ⏳ |
+| 7.5 | Niveles y rachas | ⏳ |
+| 7.6 | Pasaporte de la casa | ⏳ |
+| 7.7 | Premio sorpresa al pagar (raspe y gana) | ⏳ |
+| 7.8 | Juegos en la mesa (trivia y ruleta) | ⏳ |
+| 7.9 | Billeteras digitales y módulos por plan | ⏳ |
+| 7.10 | Compuerta de la fase 7 | ⏳ |
+
+Detalle de cada idea:
 - **Invitar una ronda** (uno paga para la mesa, desde su propio pedido) y **dividir un plato** entre quienes elijas: respetan "cada uno paga lo suyo".
 - Niveles por local (Bronce, Plata, Oro) y rachas ("3 viernes seguidos"), con beneficios que define el dueño.
 - Pasaporte de la casa: coleccionar estilos y tragos probados, con insignias.

@@ -22,7 +22,8 @@ export interface LocalDelPerfil {
 
 /** Permisos finos (fase 6.3). El catálogo vive en la base (_catalogo_permisos). */
 export type Permiso =
-  | "cobrar" | "tomar_pedidos" | "anular_pedidos" | "reembolsar" | "cerrar_caja" | "ver_reportes" | "editar_carta" | "marcar_agotado";
+  | "cobrar" | "tomar_pedidos" | "anular_pedidos" | "reembolsar" | "cerrar_caja" | "ver_reportes" | "editar_carta" | "marcar_agotado"
+  | "enviar_campanas";
 
 export interface Perfil {
   user_id: string;
@@ -45,22 +46,24 @@ export const NOMBRE_ROL: Record<RolLocal, string> = {
 
 /** Secciones del panel del local (las rutas /admin/:slug/<seccion>). */
 export type SeccionLocal =
-  | "inicio" | "mesas" | "pedidos" | "menu" | "caja" | "lealtad" | "reportes"
+  | "inicio" | "mesas" | "pedidos" | "menu" | "caja" | "lealtad" | "campanas" | "reportes"
   | "equipo" | "qr" | "sucursal" | "soporte" | "kds";
 
-const TODAS: SeccionLocal[] = ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "reportes", "equipo", "qr", "sucursal", "soporte", "kds"];
+const TODAS: SeccionLocal[] = ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "campanas", "reportes", "equipo", "qr", "sucursal", "soporte", "kds"];
 
 export const SECCIONES_POR_ROL: Record<RolLocal, SeccionLocal[]> = {
   owner: TODAS,
   admin: TODAS,
-  manager: ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "reportes", "qr", "soporte", "kds"],
+  manager: ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "campanas", "reportes", "qr", "soporte", "kds"],
   cashier: ["caja", "pedidos", "mesas"],
   waiter: [],
   kitchen: ["kds"],
 };
 
 /** Secciones que dependen de un permiso (fase 6.3): aparecen o desaparecen según lo que el dueño ajustó. */
-const SECCION_CON_PERMISO: Partial<Record<SeccionLocal, Permiso>> = { inicio: "ver_reportes", reportes: "ver_reportes", menu: "editar_carta" };
+const SECCION_CON_PERMISO: Partial<Record<SeccionLocal, Permiso>> = {
+  inicio: "ver_reportes", reportes: "ver_reportes", menu: "editar_carta", campanas: "enviar_campanas",
+};
 
 /** Sin la lista de permisos (todavía cargando), se usan las secciones del rol. */
 export const puedeVer = (rol: RolLocal | "superadmin", seccion: SeccionLocal, permisos?: Permiso[]) => {

@@ -229,6 +229,32 @@ export type Database = {
         }
         Relationships: []
       }
+      bajas_campanas: {
+        Row: {
+          created_at: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bajas_campanas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bill_requests: {
         Row: {
           attended_at: string | null
@@ -389,6 +415,78 @@ export type Database = {
           },
           {
             foreignKeyName: "branches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campanas: {
+        Row: {
+          con_aviso: number
+          creada_por: string | null
+          created_at: string
+          destinatarios: number
+          entregados: number
+          enviada_at: string | null
+          enviada_por: string | null
+          estado: string
+          fallidos: number
+          id: string
+          mensaje: string
+          menu_item_id: string | null
+          publico: string
+          tenant_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          con_aviso?: number
+          creada_por?: string | null
+          created_at?: string
+          destinatarios?: number
+          entregados?: number
+          enviada_at?: string | null
+          enviada_por?: string | null
+          estado?: string
+          fallidos?: number
+          id?: string
+          mensaje: string
+          menu_item_id?: string | null
+          publico: string
+          tenant_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          con_aviso?: number
+          creada_por?: string | null
+          created_at?: string
+          destinatarios?: number
+          entregados?: number
+          enviada_at?: string | null
+          enviada_por?: string | null
+          estado?: string
+          fallidos?: number
+          id?: string
+          mensaje?: string
+          menu_item_id?: string | null
+          publico?: string
+          tenant_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanas_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanas_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -928,6 +1026,57 @@ export type Database = {
           },
           {
             foreignKeyName: "diferencias_pasarela_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      envios_campana: {
+        Row: {
+          abierto_at: string | null
+          campana_id: string
+          created_at: string
+          enviado_at: string | null
+          estado: string
+          id: string
+          tenant_id: string
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          abierto_at?: string | null
+          campana_id: string
+          created_at?: string
+          enviado_at?: string | null
+          estado?: string
+          id?: string
+          tenant_id: string
+          token?: string
+          user_id?: string | null
+        }
+        Update: {
+          abierto_at?: string | null
+          campana_id?: string
+          created_at?: string
+          enviado_at?: string | null
+          estado?: string
+          id?: string
+          tenant_id?: string
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "envios_campana_campana_id_fkey"
+            columns: ["campana_id"]
+            isOneToOne: false
+            referencedRelation: "campanas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "envios_campana_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3456,6 +3605,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _anotar_aviso_campana: {
+        Args: { _envio_id: string; _llego: boolean }
+        Returns: undefined
+      }
       _anotar_conciliacion: {
         Args: { _branch_id: string; _dia: string; _resultados: Json }
         Returns: number
@@ -3474,6 +3627,17 @@ export type Database = {
         Returns: undefined
       }
       _anular_sellos_pago: { Args: { _payment_id: string }; Returns: undefined }
+      _avisos_por_mandar: {
+        Args: { _campana_id: string }
+        Returns: {
+          auth: string
+          endpoint: string
+          envio_id: string
+          p256dh: string
+          suscripcion_id: string
+          token: string
+        }[]
+      }
       _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
       _catalogo_permisos: {
         Args: never
@@ -3507,6 +3671,10 @@ export type Database = {
         Returns: Json
       }
       _credenciales_conexion: { Args: { _conexion_id: string }; Returns: Json }
+      _descansando: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       _desempeno_mozo: {
         Args: {
           _branch_id: string
@@ -3515,6 +3683,12 @@ export type Database = {
           _staff_id: string
         }
         Returns: Json
+      }
+      _destinatarios_campana: {
+        Args: { _plato: string; _publico: string; _tenant_id: string }
+        Returns: {
+          user_id: string
+        }[]
       }
       _devoluciones_por_reintentar: {
         Args: { _branch_id?: string }
@@ -3676,6 +3850,7 @@ export type Database = {
         }
         Returns: Json
       }
+      _reglas_campanas: { Args: never; Returns: Json }
       _reservar_activacion: {
         Args: { _token: string }
         Returns: {
@@ -3689,6 +3864,7 @@ export type Database = {
       }
       _resumen_turno: { Args: { _turno_id: string }; Returns: Json }
       _revisar_salud: { Args: never; Returns: string }
+      _revisar_texto_campana: { Args: { _texto: string }; Returns: undefined }
       _rol_puede: {
         Args: { _permiso: string; _rol: string; _tenant_id: string }
         Returns: boolean
@@ -3766,7 +3942,9 @@ export type Database = {
           tipo: string
         }[]
       }
+      baja_promo: { Args: { _token: string }; Returns: boolean }
       boletas_pendientes: { Args: { _branch_id: string }; Returns: Json }
+      borrar_campana: { Args: { _campana_id: string }; Returns: undefined }
       borrar_pin: { Args: { _staff_id: string }; Returns: undefined }
       calcular_precios: {
         Args: { _branch_id: string; _items: Json; _tenant_id: string }
@@ -3880,6 +4058,7 @@ export type Database = {
         Args: { _codigo: string; _premio_id: string }
         Returns: Json
       }
+      enviar_campana: { Args: { _campana_id: string }; Returns: Json }
       equipo_de_tablet: { Args: { _token: string }; Returns: Json }
       es_backoffice: { Args: never; Returns: boolean }
       es_rol_backoffice: { Args: { _roles: string[] }; Returns: boolean }
@@ -3905,6 +4084,17 @@ export type Database = {
       estado_salud: { Args: never; Returns: Json }
       excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
       get_tenant_id: { Args: never; Returns: string }
+      guardar_campana: {
+        Args: {
+          _campana_id?: string
+          _mensaje: string
+          _plato?: string
+          _publico: string
+          _tenant_id: string
+          _titulo: string
+        }
+        Returns: string
+      }
       guardar_consentimiento: { Args: { _promociones: boolean }; Returns: Json }
       guardar_permiso_rol: {
         Args: {
@@ -4007,6 +4197,10 @@ export type Database = {
       premios_por_entregar: { Args: { _tenant_id: string }; Returns: Json }
       primeros_pasos: { Args: { _branch_id: string }; Returns: Json }
       propinas_por_pagar: { Args: { _branch_id: string }; Returns: Json }
+      publico_campana: {
+        Args: { _plato?: string; _publico: string; _tenant_id: string }
+        Returns: Json
+      }
       puede_asignar_rol: {
         Args: { _rol: string; _tenant_id: string }
         Returns: boolean
@@ -4071,6 +4265,7 @@ export type Database = {
         Returns: Json
       }
       resultado_intento: { Args: { _intento_id: string }; Returns: Json }
+      resultados_campanas: { Args: { _tenant_id: string }; Returns: Json }
       resumen_caja: {
         Args: { _branch_id: string; _dia?: string }
         Returns: Json
@@ -4148,6 +4343,7 @@ export type Database = {
         }[]
       }
       ver_mesa: { Args: { _qr_token: string }; Returns: Json }
+      ver_promo: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

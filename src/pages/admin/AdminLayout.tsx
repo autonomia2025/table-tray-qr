@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import GuiaRapida from "@/components/GuiaRapida";
 import { guiaDeRol } from "@/lib/guias";
-import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift } from "lucide-react";
+import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift, Megaphone } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { NOMBRE_ROL, puedeVer, type SeccionLocal } from "@/lib/roles";
@@ -21,6 +21,7 @@ export default function AdminLayout() {
     { seccion: "menu", path: `/admin/${effectiveSlug}/menu`, label: "Menú", icon: BookOpen, external: false },
     { seccion: "caja", path: `/admin/${effectiveSlug}/caja`, label: "Caja", icon: Wallet, external: false },
     { seccion: "lealtad", path: `/admin/${effectiveSlug}/lealtad`, label: "Lealtad", icon: Gift, external: false },
+    { seccion: "campanas", path: `/admin/${effectiveSlug}/campanas`, label: "Campañas", icon: Megaphone, external: false },
     { seccion: "reportes", path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3, external: false },
 
     { seccion: "equipo", path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users, external: false },

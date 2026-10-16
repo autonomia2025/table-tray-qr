@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, BarChart3, Loader2, Sparkles, Users, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, Loader2, Megaphone, Sparkles, Users, Wallet } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { formatCLP } from "@/lib/format";
 import { historiaDelLocal, nombreDia, variacion, type Historia } from "@/lib/reportes";
 import { fechaLarga, propinasPorPagar, type PropinasPorPagar } from "@/lib/propinasEquipo";
 import { excepcionesCaja } from "@/lib/excepciones";
 import PrimerosPasos from "@/components/admin/PrimerosPasos";
+import { alcanceCampana, campanasDelLocal } from "@/lib/campanas";
+import { usePermiso } from "@/hooks/usePermiso";
 
 // Inicio del dueño (fase 3.6, brief 5.5): cuenta en palabras simples cómo le fue al local, en vez de
 // mostrar veinte gráficos. Los datos los calcula la base (historia_del_local).
@@ -24,7 +26,11 @@ function Comparacion({ actual, antes, contra }: { actual: number; antes: number;
 }
 
 export default function InicioPage() {
-  const { branchId, slug, tenantName } = useAdmin();
+  const { branchId, slug, tenantName, tenantId } = useAdmin();
+  const puede = usePermiso(tenantId);
+  const puedeCampanas = puede("enviar_campanas");
+  // Sugerencia de campaña (fase 7.1): clientes que no vienen hace 30 días y ninguna campaña en 14 días
+  const [dormidos, setDormidos] = useState(0);
   const [h, setH] = useState<Historia | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [propinas, setPropinas] = useState<PropinasPorPagar | null>(null);
@@ -39,6 +45,14 @@ export default function InicioPage() {
     propinasPorPagar(branchId).then(setPropinas);
     excepcionesCaja(branchId).then((l) => setExcepciones(l?.length ?? 0));
   }, [branchId]);
+
+  useEffect(() => {
+    if (!tenantId || !puedeCampanas) return;
+    Promise.all([alcanceCampana(tenantId, "dormidos", null), campanasDelLocal(tenantId)]).then(([a, lista]) => {
+      const reciente = lista.some((c) => c.enviada_at && Date.now() - new Date(c.enviada_at).getTime() < 14 * 86_400_000);
+      setDormidos(!reciente && a ? a.total - a.descansando : 0);
+    });
+  }, [tenantId, puedeCampanas]);
 
   if (error) return <p className="text-sm text-muted-foreground">{error}</p>;
   if (!h) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -128,6 +142,18 @@ export default function InicioPage() {
           <ul className="space-y-2 text-sm text-foreground">
             {alertas.map((a, i) => <li key={i}>{a}</li>)}
           </ul>
+        </section>
+      )}
+
+      {dormidos >= 3 && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-5" aria-label="Sugerencia de campaña">
+          <p className="flex items-start gap-2 text-sm text-foreground">
+            <Megaphone className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <span><strong>{dormidos} clientes</strong> no vienen hace más de 30 días. Mándales una campaña para invitarlos de vuelta.</span>
+          </p>
+          <Link to={`/admin/${slug}/campanas?publico=dormidos`} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+            Escribirles <ArrowRight className="h-4 w-4" />
+          </Link>
         </section>
       )}
 

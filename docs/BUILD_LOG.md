@@ -4,6 +4,39 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.1: campañas por aviso al celular ✅
+**Qué hace:** en "Campañas", el dueño escribe una promoción corta (título y mensaje) y elige a quién le llega:
+- todos sus clientes;
+- los que no vienen hace 30 días;
+- los frecuentes;
+- los que pidieron un plato.
+
+Ve en vivo a cuántos les llega y cómo se ve el aviso en el celular. Al mandarla, les llega como aviso a quienes tienen la app instalada. El aviso abre la promoción, con el color del local, y deja darse de baja. Después ve cuántos la abrieron, cuántos volvieron a pagar en 7 días y cuánto gastaron. Inicio sugiere escribirle a los clientes que no vienen hace un mes.
+
+**Cómo está protegido:**
+- **A quién le llega:** solo a quien guardó su cuenta, aceptó "novedades y promociones de los locales donde junto sellos" y junta sellos en ese local. Nunca a invitados ni a quien se dio de baja.
+- **Límites:** hasta 4 campañas cada 30 días por local; cada persona recibe como máximo una por semana de cada local; solo entre las 10:00 y las 22:00.
+- **Texto:** nada que premie tomar más alcohol (2x1, gratis en tragos, barra libre, happy hour) y sin enlaces, para que nadie se haga pasar por el local.
+- **El envío** sale desde el servidor: las direcciones de los celulares nunca pasan por el navegador. Mandar dos veces no repite avisos.
+- **Quién las envía:** permiso nuevo "Enviar campañas", de fábrica solo para el dueño y el administrador; se le puede dar al encargado.
+- **Privacidad:** el cliente ve en sus datos qué campañas recibió. Al borrar su cuenta se borran sus envíos, pero los números de la campaña quedan.
+
+**Pruebas:**
+- `tests/seguridad/f7-1-campanas.test.ts` revisa:
+  - quién puede armar y ver campañas;
+  - el texto (enlaces y alcohol);
+  - a quién le llega (consentimiento, invitado, baja);
+  - el doble clic;
+  - el descanso de 7 días;
+  - el aviso fallido;
+  - el enlace y la baja;
+  - la medición de quién volvió;
+  - el horario y el límite;
+  - las auditorías, incluido un descuadre hecho a propósito.
+- `e2e/campanas.spec.ts` recorre lo del dueño y lo del cliente.
+
+---
+
 ## 2026-10-15 — Fase 6.4: compuerta de la fase 6 ✅
 **Qué revisa:** que lo nuevo de la fase 6 (tablets, cortes de caja y permisos) aguante los casos difíciles y que la revisión automática lo vigile.
 

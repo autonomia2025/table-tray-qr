@@ -103,6 +103,7 @@ Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un
     - desde Equipo se desactiva una tablet o se borra el PIN de alguien.
 28. **Cortes de turno (varios cierres al día):** como cajera, en Caja → "Cierre de caja", toca "Hacer corte de turno", ponle nombre (por ejemplo "Turno mañana"), escribe el efectivo contado y "Guardar corte". Lo que se cobre después es del turno siguiente; al cerrar el día se cuenta solo desde el último corte y el cierre suma todos.
 29. **Permisos por rol:** como dueño, en Equipo → "Permisos por rol", activa "Ver reportes" para Cajero y desactiva "Devolver plata". Al volver a entrar como cajera, verás Inicio y Reportes en el menú y ya no el botón "Reembolsar". Para dejarlo como venía, vuelve a mover los interruptores (o usa el reinicio del demo).
+30. **Campañas:** como dueño, en "Campañas", escribe un título y un mensaje, elige "Frecuentes" (el cliente de ejemplo `cliente@demo.tablio.test` aceptó promociones y es frecuente) y toca "Enviar campaña". Los avisos salen solo entre las 10:00 y las 22:00, y hay un máximo de 4 campañas cada 30 días. Si el cliente de ejemplo instaló la app en su celular, le llega el aviso, que abre la promoción y permite darse de baja. Los resultados (abiertos, quienes volvieron y lo que gastaron en 7 días) aparecen en la misma página.
 
 ## Experiencia del comensal (invitado o cliente)
 

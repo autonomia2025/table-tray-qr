@@ -36,6 +36,8 @@ import ReportesPage from "./pages/admin/ReportesPage";
 import SoportePage from "./pages/admin/SoportePage";
 import CajaPage from "./pages/admin/CajaPage";
 import LealtadPage from "./pages/admin/LealtadPage";
+import CampanasPage from "./pages/admin/CampanasPage";
+import PromoPage from "./pages/PromoPage";
 
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLayout from "./pages/mozo/MozoLayout";
@@ -107,6 +109,7 @@ const App = () => (
               <Route path="reportes" element={<ReportesPage />} />
               <Route path="caja" element={<CajaPage />} />
               <Route path="lealtad" element={<LealtadPage />} />
+              <Route path="campanas" element={<CampanasPage />} />
 
               <Route path="soporte" element={<SoportePage />} />
             </Route>
@@ -120,6 +123,7 @@ const App = () => (
           <Route path="/:slug/tracking" element={<TrackingPage />} />
           <Route path="/:slug/bill" element={<BillPage />} />
           <Route path="/:slug/pay" element={<PayPage />} />
+          <Route path="/:slug/promo/:token" element={<PromoPage />} />
 
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}

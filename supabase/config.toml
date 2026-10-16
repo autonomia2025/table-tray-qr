@@ -41,6 +41,9 @@ verify_jwt = false
 [functions.avisar-listo]
 verify_jwt = false
 
+[functions.enviar-campana]
+verify_jwt = false
+
 [functions.register-seller]
 verify_jwt = false
 
