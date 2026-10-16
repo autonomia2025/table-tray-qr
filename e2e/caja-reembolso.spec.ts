@@ -15,6 +15,10 @@ test("la caja reembolsa un pago con motivo y queda registrado", async ({ page, b
   await comensal.getByRole("button", { name: /Agregar al carrito/ }).click();
   await comensal.getByText("Ver pedido").click();
   await comensal.getByRole("button", { name: /Ir a pagar/ }).click();
+  // Una propina única para reconocer ESTE pago en la caja (otras pruebas cobran en la misma mesa al mismo tiempo)
+  const propina = 100 + Math.floor(Math.random() * 800);
+  await comensal.getByRole("button", { name: /^Otro/ }).click();
+  await comensal.getByLabel("Monto de propina").fill(String(propina));
   await comensal.getByRole("button", { name: /Pagar con tarjeta/ }).click();
   await expect(comensal.getByText("¡Pago listo!")).toBeVisible({ timeout: 20_000 });
   await cel.close();
@@ -22,7 +26,8 @@ test("la caja reembolsa un pago con motivo y queda registrado", async ({ page, b
   // La cajera lo reembolsa
   await entrar(page, "cashier");
   await expect(page).toHaveURL(/\/admin\/demo-tablio\/caja/, { timeout: 15_000 });
-  const fila = page.locator("tr").filter({ has: page.getByRole("button", { name: /Reembolsar/ }) }).first();
+  const fila = page.locator("tr").filter({ has: page.getByRole("button", { name: /Reembolsar/ }) })
+    .filter({ has: page.getByRole("cell", { name: `$${propina}`, exact: true }) }).first();
   await expect(fila).toBeVisible({ timeout: 20_000 });
   await foto(page, "50-caja-ingresos");
   await fila.getByRole("button", { name: /Reembolsar/ }).click();
