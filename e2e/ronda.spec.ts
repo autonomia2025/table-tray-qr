@@ -4,6 +4,8 @@ import { foto, liberarMesa, linkMesa } from "./apoyo/recorrido";
 // Fase 7.4 — Invitar una ronda: en una mesa con dos personas, una pide "para la mesa" y la paga ella; la
 // otra lo ve en su pantalla ("Camila invitó una ronda"). Paga con la app (simulada en el demo).
 test.skip(!linkMesa(6), "Falta privado/DEMO_CREDENCIALES.md");
+// En la base real las pruebas corren de a dos y esta comparte mesa con otras: ahí la cubren las de seguridad.
+test.skip(process.env.E2E_BASE_DATOS !== "local", "Solo en la base desechable (dos celulares en una mesa compartida)");
 test.skip(({ isMobile }) => isMobile, "Dos celulares a la vez; se prueba una vez");
 
 test("una persona invita una ronda y el resto de la mesa la ve", async ({ browser }) => {

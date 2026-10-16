@@ -1,5 +1,5 @@
 import { test, expect, devices } from "@playwright/test";
-import { codigoMesa, cuenta, entrar, foto, linkMesa } from "./apoyo/recorrido";
+import { codigoMesa, cuenta, entrar, foto, liberarMesa, linkMesa } from "./apoyo/recorrido";
 
 // Fase 3.5 — El código de la mesa prueba que el cliente está ahí (para pedir sin pagar); el mozo lo ve
 // y une mesas para un grupo; el dueño ve los códigos y cuánto arriesga en lo que todavía no se paga.
@@ -8,6 +8,9 @@ test.skip(({ isMobile }) => !isMobile, "Se prueba una vez, en celular");
 
 test("el cliente ingresa el código de su mesa para pagarle al mozo; el mozo une mesas; el dueño ve códigos y riesgo", async ({ page, browser }) => {
   test.setTimeout(150_000);
+  // Parte de mesas libres y separadas (una corrida cortada a la mitad puede haberlas dejado unidas)
+  await liberarMesa(6);
+  await liberarMesa(7);
   const codigo = await codigoMesa(6);
 
   // El cliente pide un agua y elige pagarle al mozo: la app pide el código de la mesa
