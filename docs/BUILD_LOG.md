@@ -4,6 +4,26 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-15 — Fase 6.4: compuerta de la fase 6 ✅
+**Qué revisa:** que lo nuevo de la fase 6 (tablets, cortes de caja y permisos) aguante los casos difíciles y que la revisión automática lo vigile.
+
+**Casos difíciles probados:**
+- Cobros entrando justo durante un corte: cada uno queda en un solo tramo y los cortes cuadran.
+- Dos cortes al mismo tiempo: nunca dos con el mismo número.
+- Ocho intentos de PIN a la vez: se bloquea a los cinco, y después ni el PIN correcto entra.
+- Quitar un permiso justo mientras alguien lo usa: o pasa antes o queda bloqueado, nunca a medias.
+- Aislamiento: el dueño de otro local, un invitado y un anónimo no ven ni tocan cortes, permisos, PIN ni tablets.
+
+**Revisiones nuevas:**
+- `pin_incoherente` y `tablet_incoherente`: algo que apunta a otro local.
+- `permiso_imposible`: un permiso de plata para el mozo o la cocina. Aunque alguien se saltara la tabla, la base igual no le da nada.
+
+La prueba `f6-4-compuerta` exige las tres auditorías vacías y que detecten un descuadre hecho a propósito.
+
+**Además:** el corte de caja guarda el nombre de quien lo hizo (antes guardaba su correo).
+
+---
+
 ## 2026-10-15 — Fase 6.3: permisos finos por rol ✅
 **Qué hace:** en Equipo → Permisos por rol, el dueño (o el administrador) elige qué puede hacer el encargado, la caja, el mozo y la cocina. Son 8 permisos:
 - cobrar en el local;

@@ -1,0 +1,85 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Informe de fase de Tablio. Una columna; fotos en tiras */
+:root {
+  --bg: hsl(36 33% 97%);
+  --surface: hsl(36 30% 99%);
+  --fg: hsl(20 14% 12%);
+  --muted: hsl(20 8% 42%);
+  --line: hsl(30 18% 87%);
+  --accent: hsl(16 82% 51%);
+  --accent-soft: hsl(16 82% 51% / 0.1);
+  --ok: hsl(152 52% 32%);
+  --ok-soft: hsl(152 52% 32% / 0.1);
+  --font-display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: hsl(20 12% 8%); --surface: hsl(20 10% 11%); --fg: hsl(30 20% 94%); --muted: hsl(25 8% 64%);
+    --line: hsl(20 8% 22%); --accent: hsl(16 86% 58%); --accent-soft: hsl(16 86% 58% / 0.14);
+    --ok: hsl(152 45% 55%); --ok-soft: hsl(152 45% 55% / 0.14); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: hsl(20 12% 8%); --surface: hsl(20 10% 11%); --fg: hsl(30 20% 94%); --muted: hsl(25 8% 64%);
+  --line: hsl(20 8% 22%); --accent: hsl(16 86% 58%); --accent-soft: hsl(16 86% 58% / 0.14);
+  --ok: hsl(152 45% 55%); --ok-soft: hsl(152 45% 55% / 0.14); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15.5px; line-height: 1.6; padding-inline: 16px; padding-block: 0 64px; }
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem, 4.5vw, 2.7rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+h2 { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 1.02rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+header.top { display: flex; flex-direction: column; gap: 18px; padding-top: 40px; }
+.marca { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; }
+.marca span { color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--line); background: var(--surface); }
+.chip.ok { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
+.chip.ok::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.lead { font-size: 1.1rem; color: var(--muted); }
+.section { display: flex; flex-direction: column; gap: 20px; }
+.tabla { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+td.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ok-txt { color: var(--ok); font-weight: 700; }
+.antes { color: var(--muted); }
+ul.lista { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 7px; max-width: 72ch; }
+ul.lista li::marker { color: var(--accent); }
+.dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 28px; }
+.dos > div { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.prueba { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.prueba code { font-family: var(--font-data); font-size: 0.82rem; }
+.detectados { display: flex; flex-wrap: wrap; gap: 8px; }
+.detectados span { font-family: var(--font-data); font-size: 0.78rem; padding: 4px 9px; border-radius: 8px; background: var(--ok-soft); color: var(--ok); }
+.tira { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 16px; }
+.tira.ancha { grid-template-columns: 1fr; }
+.pasos { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.pasos li { border-top: 3px solid var(--accent); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pasos .n { font-family: var(--font-data); font-size: 0.78rem; color: var(--accent); }
+.pasos p { color: var(--muted); font-size: 0.92rem; }
+figure.cel a { border-radius: 18px; }
+figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+figure a { display: block; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: 0 1px 2px hsl(20 20% 10% / 0.06); }
+figure img { display: block; width: 100%; height: auto; }
+figcaption { font-size: 0.84rem; line-height: 1.45; color: var(--muted); }
+figcaption b { color: var(--fg); font-family: var(--font-data); font-size: 0.74rem; margin-right: 4px; }
+ol.fase { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px; }
+ol.fase li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+ol.fase .n { font-family: var(--font-data); font-size: 0.78rem; color: var(--accent); min-width: 2.6em; }
+.nota { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 14px 16px; border-radius: 0 12px 12px 0; display: flex; flex-direction: column; gap: 8px; }
+footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--line); padding-top: 18px; }
+</style>

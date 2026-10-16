@@ -46,6 +46,7 @@ Página con la herramienta Artifact, en español simple y sin jerga:
 - **Cómo se probó**, en una frase y con números (pruebas pasadas, ataques que fallaron como debían).
 - **Qué queda pendiente** y qué necesita de él (si es que algo).
 - Título `Tablio · Fase <etapa>`.
+- **Estilo:** `estilo-reporte.part` (en esta carpeta) trae las fuentes y el `<style>` de todos los reportes. El archivo de la página parte con `<title>`, sigue con ese estilo y después el contenido (`<div class="wrap">`). Las fotos se copian junto a la página y se publican con `files`.
 
 ## 5. Bitácora de fases
 
