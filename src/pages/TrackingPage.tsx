@@ -102,6 +102,7 @@ export default function TrackingPage() {
   const { toast } = useToast();
 
   const storeTableToken = useCartStore((s) => s.tableToken);
+  const setEsRonda = useCartStore((s) => s.setEsRonda);
   const tableToken = tableTokenFromUrl || storeTableToken;
   // Identidad del comensal en su mesa: sin esto no puede ver sus pedidos (fase 1.4).
   const unido = useComensalEnMesa(tableToken);
@@ -621,6 +622,21 @@ export default function TrackingPage() {
           {!isCancelled && (
             <p className={`mt-2 text-sm font-semibold ${currentStatusInfo.color}`}>{currentStatusInfo.label}</p>
           )}
+          {/* Rondas que alguien de la mesa invitó (fase 7.4) */}
+          {!!enVivo?.rondas?.length && (
+            <div className="mx-auto mt-3 max-w-sm space-y-1.5 text-left" data-testid="rondas-mesa">
+              {enVivo.rondas.slice(0, 3).map((r) => (
+                <div key={r.id} className="flex items-start gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
+                  <span>🍻</span>
+                  <span className="text-card-foreground">
+                    <strong>{r.mia ? "Invitaste" : `${r.quien} invitó`}</strong> una ronda:{" "}
+                    {r.items.map((i) => `${i.cantidad}× ${i.nombre}`).join(", ")}
+                    <span className="block text-xs text-muted-foreground">{textoPedido(r.estado, "comensal")}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Progress bar */}
@@ -833,6 +849,16 @@ export default function TrackingPage() {
               <ShoppingBag className="h-4 w-4" />
               Agregar más 🍽
             </button>
+
+            {/* Invitar una ronda (fase 7.4): la paga quien invita, desde su propio pedido */}
+            {otros.length > 0 && (
+              <button
+                onClick={() => { setEsRonda(true); navigate(`/${slug}/menu${qs}`); }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground transition-colors active:bg-accent"
+              >
+                🍻 Invitar una ronda a la mesa
+              </button>
+            )}
 
             <button
               onClick={() => navigate(`/${slug}/pay${qs}`)}

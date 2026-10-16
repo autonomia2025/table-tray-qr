@@ -4,6 +4,24 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 7.4: invitar una ronda ✅
+**Qué hace:** cuando hay más de una persona en la mesa, al pagar aparece "🍻 Es una ronda para la mesa". Quien la invita la paga él, desde su propio pedido. El resto de la mesa ve en su seguimiento "Camila invitó una ronda: 1× Empanaditas de queso (6)", con su estado. En el seguimiento también está el botón "Invitar una ronda a la mesa".
+
+**Cómo está hecho:**
+- La plata no cambia: cada uno paga lo suyo (regla 8). La marca viaja con la cotización (`cotizar(…, _ronda)`) hasta el pedido (`orders.ronda`).
+- La mesa en vivo muestra solo las rondas ya pagadas de esa visita, y nadie de otra mesa las ve.
+
+**Pruebas:**
+- `tests/seguridad/f7-4-ronda.test.ts` revisa:
+  - que lo pagado sea exactamente el pedido;
+  - que la mesa vea la ronda;
+  - que una ronda sin pagar no aparezca;
+  - que otra mesa no la vea;
+  - que un pedido normal no cuente como ronda.
+- `e2e/ronda.spec.ts` recorre la ronda con dos celulares en la misma mesa.
+
+---
+
 ## 2026-10-16 — Fase 7.2: beneficio de la campaña al pagar con el QR ✅
 **Qué hace:** una campaña puede traer un descuento (un % o un monto en pesos, con compra mínima y días de validez). El cliente:
 - lo ve al abrir el aviso;

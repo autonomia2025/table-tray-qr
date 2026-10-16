@@ -23,10 +23,21 @@ export interface PedidoEnVivo {
   faltan_min: number | null;
 }
 
+/** Una ronda que alguien de la mesa invitó (fase 7.4). */
+export interface RondaEnVivo {
+  id: string;
+  creado: string;
+  estado: ItemEnVivo["estado"];
+  mia: boolean;
+  quien: string;
+  items: { nombre: string; cantidad: number }[];
+}
+
 export interface MesaEnVivo {
   mesa: number;
   personas: { alias: string | null; yo: boolean }[];
   pedidos: PedidoEnVivo[];
+  rondas?: RondaEnVivo[];
 }
 
 export interface LoDeSiempre {

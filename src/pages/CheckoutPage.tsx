@@ -26,6 +26,8 @@ import { useTableSession } from "@/hooks/useTableSession";
 import { esperarResultado, irAPasarela, pasarelaDeMesa, type Redireccion } from "@/lib/pagos";
 import { detectWallets, requestWalletPayment, type WalletKind } from "@/lib/walletPayment";
 import SelectorPropina from "@/components/comensal/SelectorPropina";
+import { miMesaEnVivo } from "@/lib/mesaEnVivo";
+import { Switch } from "@/components/ui/switch";
 import { PROPINA_SUGERIDA, montoPropina, type Propina } from "@/lib/propina";
 
 
@@ -45,6 +47,10 @@ export default function CheckoutPage() {
   const addItem = useCartStore((s) => s.addItem);
   const clearCart = useCartStore((s) => s.clearCart);
   const subtotalCarrito = useCartStore((s) => s.getTotalPrice());
+  // Ronda para la mesa (fase 7.4): se ofrece si hay más de una persona en la mesa
+  const esRonda = useCartStore((s) => s.esRonda);
+  const setEsRonda = useCartStore((s) => s.setEsRonda);
+  const [enLaMesa, setEnLaMesa] = useState(0);
 
   const [orderNotes, setOrderNotes] = useState("");
   const [propina, setPropina] = useState<Propina>(PROPINA_SUGERIDA);
@@ -114,6 +120,7 @@ export default function CheckoutPage() {
       _qr_token: token,
       _items: lineas as unknown as Json,
       _notas: orderNotes.trim() || null,
+      _ronda: esRonda,
     });
     if (error || !data) {
       setCotizacion(null);
@@ -136,7 +143,13 @@ export default function CheckoutPage() {
     return () => clearTimeout(t);
     // Se vuelve a cotizar si cambia el carrito, la nota o la sesión del comensal
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [perfil?.user_id, token, lineas, orderNotes]);
+  }, [perfil?.user_id, token, lineas, orderNotes, esRonda]);
+
+  useEffect(() => {
+    if (!perfil || !token) return;
+    miMesaEnVivo(token).then((m) => setEnLaMesa(m?.personas.length ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfil?.user_id, token]);
 
   // Lo que se cobra es lo cotizado por el servidor; mientras cotiza, se muestra el del carrito.
   const subtotal = cotizacion?.subtotal ?? subtotalCarrito;
@@ -487,6 +500,18 @@ export default function CheckoutPage() {
                 <span className="text-sm font-bold text-card-foreground">{formatCLP(subtotal)}</span>
               </div>
             </div>
+
+            {/* Invitar una ronda (fase 7.4): lo pagas tú y tu mesa lo ve en la mesa en vivo */}
+            {(enLaMesa > 1 || esRonda) && (
+              <label className="mb-4 flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-4" data-testid="es-ronda">
+                <span className="text-2xl">🍻</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-bold text-card-foreground">Es una ronda para la mesa</span>
+                  <span className="block text-xs text-muted-foreground">La pagas tú y tu mesa ve que la invitaste.</span>
+                </span>
+                <Switch checked={esRonda} onCheckedChange={setEsRonda} aria-label="Es una ronda para la mesa" />
+              </label>
+            )}
 
             {/* Upsell */}
             {upsells.length > 0 && (

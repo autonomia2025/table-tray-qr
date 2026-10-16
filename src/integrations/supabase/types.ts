@@ -989,6 +989,7 @@ export type Database = {
           items: Json | null
           notas: string | null
           order_ids: string[] | null
+          ronda: boolean
           subtotal: number
           table_id: string
           tenant_id: string
@@ -1006,6 +1007,7 @@ export type Database = {
           items?: Json | null
           notas?: string | null
           order_ids?: string[] | null
+          ronda?: boolean
           subtotal: number
           table_id: string
           tenant_id: string
@@ -1023,6 +1025,7 @@ export type Database = {
           items?: Json | null
           notas?: string | null
           order_ids?: string[] | null
+          ronda?: boolean
           subtotal?: number
           table_id?: string
           tenant_id?: string
@@ -2311,6 +2314,7 @@ export type Database = {
           payment_status: string
           perdido_at: string | null
           ready_at: string | null
+          ronda: boolean
           session_id: string
           source: string | null
           status: string | null
@@ -2337,6 +2341,7 @@ export type Database = {
           payment_status?: string
           perdido_at?: string | null
           ready_at?: string | null
+          ronda?: boolean
           session_id: string
           source?: string | null
           status?: string | null
@@ -2363,6 +2368,7 @@ export type Database = {
           payment_status?: string
           perdido_at?: string | null
           ready_at?: string | null
+          ronda?: boolean
           session_id?: string
           source?: string | null
           status?: string | null
@@ -4130,6 +4136,7 @@ export type Database = {
           _notas?: string
           _order_ids?: string[]
           _qr_token: string
+          _ronda?: boolean
         }
         Returns: Json
       }
@@ -4139,6 +4146,7 @@ export type Database = {
           _notas?: string
           _order_ids?: string[]
           _qr_token: string
+          _ronda?: boolean
           _user_id: string
         }
         Returns: Json

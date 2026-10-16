@@ -24,6 +24,9 @@ interface CartState {
   tenantId: string | null;
   branchId: string | null;
   tableNumber: number | null;
+  /** El pedido es una ronda para la mesa (fase 7.4): lo paga quien lo pide; los demás lo ven en la mesa en vivo. */
+  esRonda: boolean;
+  setEsRonda: (v: boolean) => void;
   addItem: (item: Omit<CartItem, "id" | "subtotal">) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -46,6 +49,7 @@ export const useCartStore = create<CartState>()(
       tenantId: null,
       branchId: null,
       tableNumber: null,
+      esRonda: false,
 
       addItem: (item) => {
         const existing = get().items.find(
@@ -84,7 +88,9 @@ export const useCartStore = create<CartState>()(
         }));
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], esRonda: false }),
+
+      setEsRonda: (v) => set({ esRonda: v }),
 
       setTableContext: (tenantId, branchId) => set({ tenantId, branchId }),
 
