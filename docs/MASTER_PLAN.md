@@ -194,7 +194,7 @@ Detalle de cada idea:
 | Paso | Qué | Estado |
 |---|---|---|
 | 9.1 | **Invitar un trago a otra mesa:** la otra mesa acepta primero y recién ahí quien invita paga (nunca se cobra algo que nadie aceptó). Solo números de mesa, mensaje corto sin enlaces ni teléfonos, rechazar y bloquear, máximo 3 abiertas. El dueño lo activa por sucursal | ✅ |
-| 9.2 | **Perfil y amigos:** con cuenta, desactivado por defecto y con permiso explícito; amigos por invitación mutua; bloquear y reportar | ⏳ |
+| 9.2 | **Perfil y amigos:** con cuenta, desactivado por defecto y con permiso explícito; amigos por invitación mutua (código o misma mesa); bloquear y reportar, con moderación de Tablio | ✅ |
 | 9.3 | **Planes con amigos:** "juntémonos el viernes" en un local, con la primera ronda pedida | ⏳ |
 | 9.4 | **Recomendaciones de conocidos:** qué platos recomiendan tus amigos (solo lugares ya visitados y con desfase); fotos con moderación | ⏳ |
 | 9.5 | **"Salud" virtual** entre amigos en el mismo bar | ⏳ |

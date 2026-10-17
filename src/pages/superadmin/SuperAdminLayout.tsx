@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Building2, BarChart2, Puzzle, Settings, LogIn, Users, LogOut, HeartPulse } from 'lucide-react';
+import { Building2, BarChart2, Puzzle, Settings, LogIn, Users, LogOut, HeartPulse, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { path: '/superadmin/metricas', icon: BarChart2, label: 'Métricas' },
   { path: '/superadmin/salud', icon: HeartPulse, label: 'Salud' },
   { path: '/superadmin/modulos', icon: Puzzle, label: 'Planes y módulos' },
+  { path: '/superadmin/comunidad', icon: ShieldAlert, label: 'Comunidad' },
   { path: '/superadmin/config', icon: Settings, label: 'Config' },
 ];
 

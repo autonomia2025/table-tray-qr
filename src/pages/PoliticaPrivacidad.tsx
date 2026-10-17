@@ -38,6 +38,10 @@ export default function PoliticaPrivacidad() {
         <p>El local donde pediste ve tus pedidos y pagos de ese local (lo necesita para atenderte y por ley tributaria). Ningún otro local los ve. No vendemos tus datos.</p>
       </Seccion>
 
+      <Seccion titulo="Comunidad y amigos (si la activas)">
+        <p>La comunidad viene apagada. Si la activas con tu cuenta, guardamos el nombre que elijas, tu código para que te agreguen, tus amistades, a quién bloqueaste y los reportes que hagas. Tus amigos solo ven ese nombre; nadie ve dónde estás ahora. Los reportes los revisa Tablio y puede suspender un perfil. Si apagas la comunidad, se borran tus amistades; si borras tu cuenta, se borra todo.</p>
+      </Seccion>
+
       <Seccion titulo="Cuánto tiempo">
         <p>Si pides como invitado y no vuelves en 90 días, tu sesión se borra sola. Los registros de pedidos y pagos el local debe guardarlos por ley tributaria; si borras tu cuenta, quedan sin tu nombre.</p>
       </Seccion>

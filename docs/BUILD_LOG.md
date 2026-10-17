@@ -4,6 +4,19 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-17 — Fase 9.2: comunidad, perfil y amigos ✅
+**Qué hace:** cada cliente con cuenta puede activar la comunidad (viene apagada). Elige un nombre, acepta cómo se usan sus datos y recibe un código (TAB-…) para que sus amigos lo agreguen. También puede agregar a quien está en su misma mesa, si esa persona también activó la comunidad. Cada amigo se puede quitar, bloquear o reportar; los reportes los revisa Tablio, que puede suspender un perfil.
+
+**Cuidados (criterios del plan):** solo con cuenta verificada y con consentimiento explícito; nadie busca a nadie por nombre ni correo; bloquear corta la amistad sin avisarle; nunca se muestra dónde está alguien ahora; apagar la comunidad borra las amistades y borrar la cuenta borra todo. La política de privacidad suma una sección de comunidad (versión 2026-10-17).
+
+**Cómo está hecho:** tablas `perfiles_comunidad`, `amistades`, `bloqueos_usuario` y `reportes_comunidad`, que no se leen ni escriben desde el navegador (solo el superadmin lee, para moderar); todo por funciones. Página `/:slug/comunidad` desde "Tu cuenta" y moderación en `/superadmin/comunidad`.
+
+**Pruebas:**
+- `tests/seguridad/f9-2-comunidad.test.ts`: sin cuenta verificada no se activa; nadie lee las tablas directo; permiso y nombre sano; amigos por código y por mesa (solo quien está en ella); aceptación mutua; bloquear sin revelar; reportar, moderar con nota y suspender; apagar y borrar la cuenta; auditorías vacías y que detecten un amigo bloqueado.
+- `e2e/comunidad.spec.ts`: el cliente activa la comunidad, acepta a un amigo y el superadmin revisa un reporte.
+
+---
+
 ## 2026-10-17 — Fase 9.1: invitar un trago a otra mesa ✅
 **Qué hace:** un cliente elige otra mesa del local y un producto (con un mensaje corto, si quiere). Esa mesa lo ve arriba de su carta y decide: "Aceptar", "No, gracias" o "No recibir más invitaciones de esa mesa". Recién cuando la aceptan, quien invita paga, y el producto va a la cocina para la otra mesa, con una nota para el mozo ("Invitación de la mesa 3").
 

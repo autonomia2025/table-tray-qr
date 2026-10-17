@@ -43,6 +43,7 @@ import PromoPage from "./pages/PromoPage";
 import PagarPartePage from "./pages/PagarPartePage";
 import PasaportePage from "./pages/PasaportePage";
 import PagarInvitacionPage from "./pages/PagarInvitacionPage";
+import ComunidadPage from "./pages/ComunidadPage";
 
 import { WaitersProvider } from "./contexts/WaitersContext";
 import MozoLayout from "./pages/mozo/MozoLayout";
@@ -55,6 +56,7 @@ import SuperAdminLayout from "./pages/superadmin/SuperAdminLayout";
 import SATenantsPage from "./pages/superadmin/SATenantsPage";
 import SAMetricsPage from "./pages/superadmin/SAMetricsPage";
 import SAModulosPage from "./pages/superadmin/SAModulosPage";
+import SAComunidadPage from "./pages/superadmin/SAComunidadPage";
 import SASaludPage from "./pages/superadmin/SASaludPage";
 import SAConfigPage from "./pages/superadmin/SAConfigPage";
 import SAEquipoPage from "./pages/superadmin/SAEquipoPage";
@@ -134,6 +136,7 @@ const App = () => (
           <Route path="/:slug/parte/:parteId" element={<PagarPartePage />} />
           <Route path="/:slug/pasaporte" element={<PasaportePage />} />
           <Route path="/:slug/invitacion/:invitacionId" element={<PagarInvitacionPage />} />
+          <Route path="/:slug/comunidad" element={<ComunidadPage />} />
           <Route path="/:slug/trivia" element={<TriviaVivoMesaPage />} />
 
           <Route path="/kds" element={<KDSPage />} />
@@ -161,6 +164,7 @@ const App = () => (
             <Route path="equipo" element={<SAEquipoPage />} />
             <Route path="metricas" element={<SAMetricsPage />} />
             <Route path="modulos" element={<SAModulosPage />} />
+            <Route path="comunidad" element={<SAComunidadPage />} />
             <Route path="flags" element={<Navigate to="../modulos" replace />} />
             <Route path="salud" element={<SASaludPage />} />
             <Route path="config" element={<SAConfigPage />} />

@@ -244,6 +244,14 @@ export default function CuentaComensal({ abierto, onCambiar, nombreLocal, color,
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
               )}
+              {/* Comunidad y amigos (fase 9.2): apagada hasta que la persona la activa */}
+              {slug && (
+                <Link to={`/${slug}/comunidad${params.get("t") ? `?t=${params.get("t")}` : ""}`} onClick={() => onCambiar(false)}
+                  className="mt-3 flex items-center justify-between rounded-2xl border border-border p-4 text-sm font-semibold text-foreground" data-testid="cuenta-comunidad">
+                  <span>👥 Comunidad y amigos</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              )}
               {/* Privacidad (Ley 21.719) */}
               <div className="mt-4 space-y-3 rounded-2xl border border-border p-4">
                 <label className="flex items-center justify-between gap-3">

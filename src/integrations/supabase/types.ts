@@ -99,6 +99,33 @@ export type Database = {
           },
         ]
       }
+      amistades: {
+        Row: {
+          aceptada_at: string | null
+          created_at: string
+          de_user_id: string
+          estado: string
+          id: string
+          para_user_id: string
+        }
+        Insert: {
+          aceptada_at?: string | null
+          created_at?: string
+          de_user_id: string
+          estado?: string
+          id?: string
+          para_user_id: string
+        }
+        Update: {
+          aceptada_at?: string | null
+          created_at?: string
+          de_user_id?: string
+          estado?: string
+          id?: string
+          para_user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -446,6 +473,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      bloqueos_usuario: {
+        Row: {
+          bloqueado_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          bloqueado_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          bloqueado_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       branches: {
         Row: {
@@ -3092,6 +3137,42 @@ export type Database = {
           },
         ]
       }
+      perfiles_comunidad: {
+        Row: {
+          activo: boolean
+          codigo: string
+          consentimiento_at: string
+          created_at: string
+          nombre: string
+          politica_version: string
+          suspendido_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activo?: boolean
+          codigo: string
+          consentimiento_at: string
+          created_at?: string
+          nombre: string
+          politica_version?: string
+          suspendido_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activo?: boolean
+          codigo?: string
+          consentimiento_at?: string
+          created_at?: string
+          nombre?: string
+          politica_version?: string
+          suspendido_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       permisos_rol: {
         Row: {
           actualizado_por: string | null
@@ -3482,6 +3563,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reportes_comunidad: {
+        Row: {
+          created_at: string
+          estado: string
+          id: string
+          motivo: string
+          nota: string | null
+          reporta_id: string | null
+          reportado_id: string | null
+          revisado_at: string | null
+          revisado_por: string | null
+        }
+        Insert: {
+          created_at?: string
+          estado?: string
+          id?: string
+          motivo: string
+          nota?: string | null
+          reporta_id?: string | null
+          reportado_id?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          id?: string
+          motivo?: string
+          nota?: string | null
+          reporta_id?: string | null
+          reportado_id?: string | null
+          revisado_at?: string | null
+          revisado_por?: string | null
+        }
+        Relationships: []
       }
       respuestas_trivia_vivo: {
         Row: {
@@ -4605,6 +4722,7 @@ export type Database = {
           titulo: string
         }[]
       }
+      _bloqueados_entre: { Args: { _a: string; _b: string }; Returns: boolean }
       _borrar_datos_comensal: { Args: { _user_id: string }; Returns: Json }
       _catalogo_modulos: {
         Args: never
@@ -4628,6 +4746,7 @@ export type Database = {
         }[]
       }
       _chequeo_salud: { Args: never; Returns: Json }
+      _codigo_amigo: { Args: never; Returns: string }
       _codigo_premio: { Args: { _tenant_id: string }; Returns: string }
       _codigo_presencia: { Args: never; Returns: string }
       _comensal_en_mesa: {
@@ -4675,6 +4794,7 @@ export type Database = {
           token: string
         }[]
       }
+      _en_comunidad: { Args: { _user_id: string }; Returns: boolean }
       _es_finanzas: { Args: never; Returns: boolean }
       _estado_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
       _estado_trivia_vivo: {
@@ -4922,8 +5042,13 @@ export type Database = {
         Returns: Json
       }
       _version_politica: { Args: never; Returns: string }
+      _yo_verificado: { Args: never; Returns: string }
       abrir_mesa: { Args: { _table_id: string }; Returns: Json }
       abrir_turno: { Args: { _branch_id: string }; Returns: Json }
+      activar_comunidad: {
+        Args: { _acepto: boolean; _nombre: string }
+        Returns: Json
+      }
       activar_personal: {
         Args: { _activo: boolean; _staff_id: string }
         Returns: undefined
@@ -4945,6 +5070,7 @@ export type Database = {
         Args: { _cobro_id: string; _motivo: string }
         Returns: undefined
       }
+      apagar_comunidad: { Args: never; Returns: undefined }
       asignar_plan: {
         Args: { _plan_id: string; _tenant_id: string }
         Returns: undefined
@@ -4977,6 +5103,7 @@ export type Database = {
       }
       avanzar_trivia_vivo: { Args: { _trivia_id: string }; Returns: Json }
       baja_promo: { Args: { _token: string }; Returns: boolean }
+      bloquear_usuario: { Args: { _user_id: string }; Returns: undefined }
       boletas_pendientes: { Args: { _branch_id: string }; Returns: Json }
       borrar_campana: { Args: { _campana_id: string }; Returns: undefined }
       borrar_pin: { Args: { _staff_id: string }; Returns: undefined }
@@ -5257,6 +5384,7 @@ export type Database = {
       }
       mesas_para_invitar: { Args: { _qr_token: string }; Returns: Json }
       metricas_finanzas: { Args: { _meses?: number }; Returns: Json }
+      mi_comunidad: { Args: { _qr_token?: string }; Returns: Json }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
       mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }
@@ -5272,6 +5400,10 @@ export type Database = {
         Args: { _branch_id?: string; _tenant_id: string }
         Returns: Json
       }
+      moderar_reporte: {
+        Args: { _nota: string; _reporte_id: string; _suspender: boolean }
+        Returns: undefined
+      }
       modulos_del_local: { Args: { _tenant_id: string }; Returns: Json }
       nuevo_enlace_activacion: { Args: { _tenant_id: string }; Returns: Json }
       pagar_propinas: {
@@ -5285,6 +5417,10 @@ export type Database = {
       }
       pantalla_trivia_vivo: { Args: { _branch_id: string }; Returns: Json }
       pasarela_de_mesa: { Args: { _qr_token: string }; Returns: Json }
+      pedir_amistad: {
+        Args: { _codigo?: string; _qr_token?: string; _user_id?: string }
+        Returns: undefined
+      }
       pedir_cuenta: {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
         Returns: Json
@@ -5312,6 +5448,7 @@ export type Database = {
         Returns: boolean
       }
       puede_editar_fotos: { Args: { _carpeta: string }; Returns: boolean }
+      quitar_amistad: { Args: { _amistad_id: string }; Returns: undefined }
       rango_estado: { Args: { _estado: string }; Returns: number }
       ranking_equipo: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
@@ -5351,10 +5488,15 @@ export type Database = {
         Returns: boolean
       }
       reiniciar_demo: { Args: never; Returns: Json }
+      reportar_usuario: {
+        Args: { _motivo: string; _user_id: string }
+        Returns: undefined
+      }
       reporte_local: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
         Returns: Json
       }
+      reportes_comunidad_abiertos: { Args: never; Returns: Json }
       reservar_intento_pago: {
         Args: {
           _cotizacion_id: string
@@ -5383,6 +5525,10 @@ export type Database = {
           _tipo: string
         }
         Returns: Json
+      }
+      responder_amistad: {
+        Args: { _aceptar: boolean; _amistad_id: string }
+        Returns: undefined
       }
       responder_invitacion: {
         Args: {

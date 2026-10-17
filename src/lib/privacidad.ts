@@ -4,7 +4,7 @@ import { mensajeError } from "@/lib/errores";
 // Privacidad del comensal (fase 4.5, Ley 21.719): ver y descargar sus datos, elegir si recibe
 // promociones y borrar su cuenta. Los registros de plata del local quedan, sin su nombre.
 
-export const VERSION_POLITICA = "2026-10-15";
+export const VERSION_POLITICA = "2026-10-17";
 
 type Resultado<T> = { ok: true; dato: T } | { ok: false; error: string };
 
