@@ -25,6 +25,7 @@ import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { manifiestoDelLocal } from "@/lib/push";
 import { textoPedido } from "@/lib/estados";
 import JuegosMesa from "@/components/comensal/JuegosMesa";
+import InvitacionesMesa from "@/components/comensal/InvitacionesMesa";
 import AvisoTriviaVivo from "@/components/comensal/AvisoTriviaVivo";
 import PlatosDivididos from "@/components/comensal/PlatosDivididos";
 
@@ -838,6 +839,11 @@ export default function TrackingPage() {
         {/* Platos divididos donde estoy (fase 7.4b) */}
         {tableToken && slug && !!enVivo?.divididos?.length && (
           <PlatosDivididos token={tableToken} slug={slug} platos={enVivo.divididos} color={primaryColor} recargar={recargarEnVivo} />
+        )}
+
+        {/* Invitar a otra mesa (fase 9.1) */}
+        {tableToken && slug && enVivo && enVivo.modulos?.invitar !== false && (
+          <InvitacionesMesa token={tableToken} slug={slug} tenantId={tenant?.id} enVivo={enVivo} color={primaryColor} recargar={recargarEnVivo} />
         )}
 
         {/* Juegos en la mesa (fase 7.8): mientras llega lo pedido */}

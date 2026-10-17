@@ -55,6 +55,9 @@ export interface MesaEnVivo {
   ruleta?: { elegido: string; cuando: string; soy_yo: boolean } | null;
   /** Módulos del local (fase 7.9): lo que no tiene, no se muestra. */
   modulos?: import("./modulos").Modulos;
+  /** Invitar a otra mesa (fase 9.1) */
+  invitar_activo?: boolean;
+  invitaciones?: { recibidas: import("./invitar").InvitacionRecibida[]; enviadas: import("./invitar").InvitacionEnviada[] };
 }
 
 export interface LoDeSiempre {

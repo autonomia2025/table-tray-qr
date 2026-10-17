@@ -31,7 +31,7 @@ export default function SucursalPage() {
   const [tenantForm, setTenantForm] = useState({ name: "", primary_color: "#E8531D", logo_url: "", cover_image_url: "", welcome_message: "" });
   const [branchForm, setBranchForm] = useState({ name: "", is_open: true, payment_mode: "open_tab",
     objetivo_llamado_min: 2, objetivo_retiro_min: 5, objetivo_pedido_min: 20,
-    pedir_codigo: "sin_pagar", limite_cuenta_persona: 30000, recordar_boleta: true, datos_transferencia: "" });
+    pedir_codigo: "sin_pagar", limite_cuenta_persona: 30000, recordar_boleta: true, datos_transferencia: "", invitar_mesas: false });
   const [tables, setTables] = useState<TableData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,7 +45,7 @@ export default function SucursalPage() {
     async function load() {
       const [{ data: tenant }, { data: branch }, { data: tabs }] = await Promise.all([
         supabase.from("tenants").select("name, primary_color, logo_url, cover_image_url, welcome_message").eq("id", tenantId).single(),
-        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min, pedir_codigo, limite_cuenta_persona, recordar_boleta, datos_transferencia").eq("id", branchId).single(),
+        supabase.from("branches").select("name, is_open, payment_mode, objetivo_llamado_min, objetivo_retiro_min, objetivo_pedido_min, pedir_codigo, limite_cuenta_persona, recordar_boleta, datos_transferencia, invitar_mesas").eq("id", branchId).single(),
         supabase.from("tables").select("id, number, name, capacity").eq("branch_id", branchId).order("number"),
       ]);
       if (tenant) setTenantForm({
@@ -56,7 +56,7 @@ export default function SucursalPage() {
       if (branch) setBranchForm({ name: branch.name ?? "", is_open: branch.is_open ?? true, payment_mode: branch.payment_mode ?? "open_tab",
         objetivo_llamado_min: branch.objetivo_llamado_min, objetivo_retiro_min: branch.objetivo_retiro_min, objetivo_pedido_min: branch.objetivo_pedido_min,
         pedir_codigo: branch.pedir_codigo, limite_cuenta_persona: branch.limite_cuenta_persona,
-        recordar_boleta: branch.recordar_boleta, datos_transferencia: branch.datos_transferencia ?? "" });
+        recordar_boleta: branch.recordar_boleta, datos_transferencia: branch.datos_transferencia ?? "", invitar_mesas: branch.invitar_mesas ?? false });
       setTables(tabs ?? []);
       setLoading(false);
     }
@@ -77,6 +77,7 @@ export default function SucursalPage() {
         objetivo_pedido_min: branchForm.objetivo_pedido_min,
         pedir_codigo: branchForm.pedir_codigo, limite_cuenta_persona: branchForm.limite_cuenta_persona,
         recordar_boleta: branchForm.recordar_boleta, datos_transferencia: branchForm.datos_transferencia.trim() || null,
+        invitar_mesas: branchForm.invitar_mesas,
       }).eq("id", branchId),
 
     ]);
@@ -255,6 +256,17 @@ export default function SucursalPage() {
               </p>
             </div>
             <Switch id="recordar-boleta" checked={branchForm.recordar_boleta} onCheckedChange={(v) => setBranchForm((p) => ({ ...p, recordar_boleta: v }))} />
+          </div>
+
+          {/* Invitar a otra mesa (fase 9.1): viene apagado; el dueño lo activa */}
+          <div className="flex items-start justify-between gap-4 rounded-xl border p-4" data-testid="invitar-mesas-config">
+            <div>
+              <Label htmlFor="invitar-mesas" className="text-sm font-semibold">Invitar un trago a otra mesa</Label>
+              <p className="text-xs text-muted-foreground">
+                Un cliente invita algo a otra mesa; esa mesa decide si lo acepta y recién ahí quien invita paga. Solo se ve el número de mesa, y quien recibe puede rechazar y bloquear.
+              </p>
+            </div>
+            <Switch id="invitar-mesas" checked={branchForm.invitar_mesas} onCheckedChange={(v) => setBranchForm((p) => ({ ...p, invitar_mesas: v }))} />
           </div>
 
           {/* Tiempos objetivo (fase 3.3): el semáforo del mozo y el ranking del equipo usan estos minutos */}

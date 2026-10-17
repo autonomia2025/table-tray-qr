@@ -404,6 +404,49 @@ export type Database = {
           },
         ]
       }
+      bloqueos_invitacion: {
+        Row: {
+          created_at: string
+          de_table_id: string
+          para_session_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          de_table_id: string
+          para_session_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          de_table_id?: string
+          para_session_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloqueos_invitacion_de_table_id_fkey"
+            columns: ["de_table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bloqueos_invitacion_para_session_id_fkey"
+            columns: ["para_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bloqueos_invitacion_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -412,6 +455,7 @@ export type Database = {
           created_at: string | null
           datos_transferencia: string | null
           id: string
+          invitar_mesas: boolean
           is_open: boolean | null
           limite_cuenta_persona: number
           name: string
@@ -436,6 +480,7 @@ export type Database = {
           created_at?: string | null
           datos_transferencia?: string | null
           id?: string
+          invitar_mesas?: boolean
           is_open?: boolean | null
           limite_cuenta_persona?: number
           name: string
@@ -460,6 +505,7 @@ export type Database = {
           created_at?: string | null
           datos_transferencia?: string | null
           id?: string
+          invitar_mesas?: boolean
           is_open?: boolean | null
           limite_cuenta_persona?: number
           name?: string
@@ -1042,6 +1088,7 @@ export type Database = {
           estado: string
           expira_at: string
           id: string
+          invitacion_id: string | null
           items: Json | null
           notas: string | null
           order_ids: string[] | null
@@ -1061,6 +1108,7 @@ export type Database = {
           estado?: string
           expira_at?: string
           id?: string
+          invitacion_id?: string | null
           items?: Json | null
           notas?: string | null
           order_ids?: string[] | null
@@ -1080,6 +1128,7 @@ export type Database = {
           estado?: string
           expira_at?: string
           id?: string
+          invitacion_id?: string | null
           items?: Json | null
           notas?: string | null
           order_ids?: string[] | null
@@ -1104,6 +1153,13 @@ export type Database = {
             columns: ["envio_campana_id"]
             isOneToOne: false
             referencedRelation: "envios_campana"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_invitacion_id_fkey"
+            columns: ["invitacion_id"]
+            isOneToOne: false
+            referencedRelation: "invitaciones_mesa"
             referencedColumns: ["id"]
           },
           {
@@ -1458,6 +1514,136 @@ export type Database = {
           },
           {
             foreignKeyName: "intentos_pago_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invitaciones_mesa: {
+        Row: {
+          branch_id: string
+          created_at: string
+          de_alias: string | null
+          de_session_id: string
+          de_table_id: string
+          de_user_id: string | null
+          estado: string
+          id: string
+          mensaje: string | null
+          menu_item_id: string
+          order_id: string | null
+          pagada_at: string | null
+          para_session_id: string
+          para_table_id: string
+          payment_id: string | null
+          respondida_at: string | null
+          respondida_por: string | null
+          tenant_id: string
+          vence_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          de_alias?: string | null
+          de_session_id: string
+          de_table_id: string
+          de_user_id?: string | null
+          estado?: string
+          id?: string
+          mensaje?: string | null
+          menu_item_id: string
+          order_id?: string | null
+          pagada_at?: string | null
+          para_session_id: string
+          para_table_id: string
+          payment_id?: string | null
+          respondida_at?: string | null
+          respondida_por?: string | null
+          tenant_id: string
+          vence_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          de_alias?: string | null
+          de_session_id?: string
+          de_table_id?: string
+          de_user_id?: string | null
+          estado?: string
+          id?: string
+          mensaje?: string | null
+          menu_item_id?: string
+          order_id?: string | null
+          pagada_at?: string | null
+          para_session_id?: string
+          para_table_id?: string
+          payment_id?: string | null
+          respondida_at?: string | null
+          respondida_por?: string | null
+          tenant_id?: string
+          vence_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitaciones_mesa_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_de_session_id_fkey"
+            columns: ["de_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_de_table_id_fkey"
+            columns: ["de_table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_para_session_id_fkey"
+            columns: ["para_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_para_table_id_fkey"
+            columns: ["para_table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitaciones_mesa_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4534,6 +4720,7 @@ export type Database = {
           token: string
         }[]
       }
+      _invitar_activo: { Args: { _branch_id: string }; Returns: boolean }
       _liberar_activacion: { Args: { _id: string }; Returns: undefined }
       _llamar_revisar_pagos: { Args: never; Returns: undefined }
       _logros_visita: { Args: { _movimiento_id: string }; Returns: number }
@@ -4811,6 +4998,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cancelar_invitacion: {
+        Args: { _invitacion_id: string; _qr_token: string }
+        Returns: undefined
+      }
       cancelar_llamado: { Args: { _id: string }; Returns: undefined }
       cancelar_suscripcion: {
         Args: { _motivo: string; _tenant_id: string }
@@ -4862,6 +5053,10 @@ export type Database = {
           _qr_token: string
           _ronda?: boolean
         }
+        Returns: Json
+      }
+      cotizar_invitacion: {
+        Args: { _invitacion_id: string; _qr_token: string }
         Returns: Json
       }
       cotizar_parte: {
@@ -5024,6 +5219,15 @@ export type Database = {
         Args: { _branch_id: string; _lineas: Json }
         Returns: Json
       }
+      invitar_otra_mesa: {
+        Args: {
+          _mensaje?: string
+          _menu_item_id: string
+          _mesa: number
+          _qr_token: string
+        }
+        Returns: string
+      }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
       llamar_mozo: {
@@ -5051,6 +5255,7 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      mesas_para_invitar: { Args: { _qr_token: string }; Returns: Json }
       metricas_finanzas: { Args: { _meses?: number }; Returns: Json }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
@@ -5178,6 +5383,15 @@ export type Database = {
           _tipo: string
         }
         Returns: Json
+      }
+      responder_invitacion: {
+        Args: {
+          _aceptar: boolean
+          _bloquear?: boolean
+          _invitacion_id: string
+          _qr_token: string
+        }
+        Returns: undefined
       }
       responder_trivia: {
         Args: { _partida: string; _qr_token: string; _respuestas: number[] }

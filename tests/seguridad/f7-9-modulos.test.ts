@@ -5,7 +5,7 @@ import { anonimo, conSesion, esBaseLocal, hayCredenciales, invitado, qrMesa, DEM
 // Fase 7.9 — Módulos por plan. Lo cumple la base: sin el módulo, sus funciones no corren aunque alguien llame
 // directo, y las pantallas lo esconden. Solo el superadmin cambia planes y ajustes, con motivo y auditoría.
 
-const MODULOS = ["campanas", "niveles", "pasaporte", "raspe", "juegos", "ronda", "dividir", "tablets"];
+const MODULOS = ["campanas", "niveles", "pasaporte", "raspe", "juegos", "ronda", "dividir", "tablets", "invitar"];
 
 describe.skipIf(!hayCredenciales)("módulos por plan", () => {
   it("cualquiera con sesión ve qué módulos tiene el local; sin sesión no", async () => {

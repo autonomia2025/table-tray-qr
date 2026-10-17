@@ -191,6 +191,15 @@ Detalle de cada idea:
 
 **Fase 9 — Comunidad** (la más ambiciosa, al final y con cuidado): perfil con amigos, planes ("juntémonos el viernes", con la primera ronda pedida), recomendaciones y fotos de platos de conocidos, **invitar un trago a otra mesa** (está en el brief) y un "salud" virtual entre amigos en el mismo bar.
 
+| Paso | Qué | Estado |
+|---|---|---|
+| 9.1 | **Invitar un trago a otra mesa:** la otra mesa acepta primero y recién ahí quien invita paga (nunca se cobra algo que nadie aceptó). Solo números de mesa, mensaje corto sin enlaces ni teléfonos, rechazar y bloquear, máximo 3 abiertas. El dueño lo activa por sucursal | ✅ |
+| 9.2 | **Perfil y amigos:** con cuenta, desactivado por defecto y con permiso explícito; amigos por invitación mutua; bloquear y reportar | ⏳ |
+| 9.3 | **Planes con amigos:** "juntémonos el viernes" en un local, con la primera ronda pedida | ⏳ |
+| 9.4 | **Recomendaciones de conocidos:** qué platos recomiendan tus amigos (solo lugares ya visitados y con desfase); fotos con moderación | ⏳ |
+| 9.5 | **"Salud" virtual** entre amigos en el mismo bar | ⏳ |
+| 9.6 | Compuerta de la fase 9 | ⏳ |
+
 ### Criterios para las ideas de experiencia
 - **Primero lo que vende rondas y aprovecha lo ya construido** (la mesa en vivo y los sellos); la comunidad va al final.
 - **Comunidad con consentimiento explícito** (Ley 21.719), **desactivada por defecto**, mostrando solo lugares ya visitados y con desfase (nunca "dónde está alguien ahora"), y con moderación contra abusos.

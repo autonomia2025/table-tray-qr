@@ -4,6 +4,21 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-17 — Fase 9.1: invitar un trago a otra mesa ✅
+**Qué hace:** un cliente elige otra mesa del local y un producto (con un mensaje corto, si quiere). Esa mesa lo ve arriba de su carta y decide: "Aceptar", "No, gracias" o "No recibir más invitaciones de esa mesa". Recién cuando la aceptan, quien invita paga, y el producto va a la cocina para la otra mesa, con una nota para el mozo ("Invitación de la mesa 3").
+
+**Por qué así:** el brief pide que, si nadie la reclama, la plata vuelva, y que quien invita pueda cancelar. Con "aceptar primero y pagar después" eso se cumple sin cobrar nada que haya que devolver: nunca se cobra una invitación no aceptada. Si igual llega un pago de una invitación que se canceló en el camino, la base lo devuelve sola (como los demás pagos que ya no corresponden).
+
+**Cuidados con las personas:** solo se ve el número de mesa y el nombre que quien invita se puso en la suya; el mensaje va sin enlaces, teléfonos ni redes; quien recibe puede rechazar y bloquear a esa mesa por el resto de la visita; nadie tiene más de 3 invitaciones abiertas. Viene apagado: el dueño lo activa en Sucursal. Es un módulo (`invitar`).
+
+**Cómo está hecho:** `invitaciones_mesa` y `bloqueos_invitacion` (no se escriben desde el navegador); funciones `invitar_otra_mesa`, `responder_invitacion`, `cancelar_invitacion`, `cotizar_invitacion` y `mesas_para_invitar`; `confirmar_pago` crea el pedido en la mesa que recibe o devuelve si ya no corresponde; el código de presencia se pide en la mesa de quien invita.
+
+**Pruebas:**
+- `tests/seguridad/f9-1-invitar.test.ts`: sin sesión no se usa y nadie lee las tablas directo; viene apagado y solo el dueño lo activa; aceptar, pagar y el pedido pagado en la otra mesa; cancelar y que el pago que llega igual se devuelva solo; rechazar y bloquear; máximo 3; código de presencia en la mesa de quien invita; auditorías vacías y que detecten una invitación con el pedido en otra mesa.
+- `e2e/invitar.spec.ts`: el dueño lo activa, una mesa invita desde la carta, la otra acepta y recién ahí se paga.
+
+---
+
 ## 2026-10-16 — Fase 8.5: compuerta de la fase 8 ✅
 **Qué revisa** (`tests/seguridad/f8-compuerta.test.ts`; no depende del orden de las pruebas):
 - **Aislamiento:** suscripciones, cobros, noches de trivia y respuestas no las ve el dueño de otro local, un invitado, un anónimo, el personal ni el equipo comercial; tampoco las métricas ni la lista de mensualidades, ni pueden crear una trivia.

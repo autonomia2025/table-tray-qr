@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 // Módulos por plan (fase 7.9). Lo cumple la base (tiene_funcion); aquí solo se esconde lo que el local no tiene.
 // Lo básico (pedir, pagar, mozo, cocina, caja, sellos, reportes) nunca es un módulo.
 
-export type Modulo = "campanas" | "niveles" | "pasaporte" | "raspe" | "juegos" | "ronda" | "dividir" | "tablets";
+export type Modulo = "campanas" | "niveles" | "pasaporte" | "raspe" | "juegos" | "ronda" | "dividir" | "tablets" | "invitar";
 export type Modulos = Partial<Record<Modulo, boolean>>;
 
 export interface ModuloCatalogo { modulo: Modulo; nombre: string; descripcion: string; orden: number }
