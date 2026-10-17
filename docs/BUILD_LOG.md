@@ -11,6 +11,7 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 - `metricas_finanzas(meses)` (solo finanzas y superadmin): ingreso mensual (suma de las mensualidades vigentes, sin pruebas), facturado y cobrado por mes, locales pagando, nuevos (su primer mes pagado), cancelados, abandono (cancelados sobre los que pagaban el mes anterior) y cohortes (de los que pagaron por primera vez un mes, cuántos siguen; solo meses terminados).
 - Las páginas se rehicieron con esa función y quedaron en español ("Ingresos", "Abandono").
 - Las comisiones de los vendedores siguen con sus valores de configuración (eso es del equipo comercial).
+- **Arreglo encontrado en el camino:** al reiniciar el demo, los pagos de propinas de ejemplo de la semana en curso quedaban con fecha del próximo lunes (futuro) y el mozo los veía como su último pago. `_sembrar_propinas_pagadas_demo` ya no deja fechas futuras, y se corrigieron las del demo.
 
 **Pruebas:**
 - `tests/seguridad/f8-2-metricas-finanzas.test.ts`: solo finanzas y el superadmin las ven, y con cobros conocidos calzan el ingreso mensual, facturado, cobrado, nuevos, cancelados, abandono y cohortes.
