@@ -4,6 +4,20 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-17 — Fase 9.6: compuerta de la fase 9 ✅
+**Qué revisa** (`tests/seguridad/f9-compuerta.test.ts`; no depende del orden de las pruebas):
+- **Aislamiento:** ninguna tabla de la comunidad la lee alguien fuera de Tablio (anónimo, invitado, cliente, personal de cualquier rol, otro local, equipo comercial ni finanzas); las invitaciones entre mesas solo las ve el personal de ese local.
+- **Casos difíciles que cruzan etapas:**
+  - Dos pedidos de amistad cruzados al mismo tiempo dejan una sola relación, aceptada.
+  - Diez "salud" a la vez cuentan uno. **Arreglo:** el límite no estaba protegido contra envíos exactamente simultáneos; ahora tiene un candado por pareja.
+  - Dos personas de una mesa respondiendo la misma invitación a la vez: gana una.
+  - Si Tablio suspende a alguien, desaparece de amigos, planes, recomendaciones y presencia.
+  - Borrar la cuenta borra todo lo de la comunidad (y deja la plata del local sin su nombre).
+- **Auditorías:** las tres salen vacías, y detectan amistades entre bloqueados, planes que se invitan a sí mismos, recomendaciones sin desfase y avisos de presencia de otro local.
+- **Entorno de pruebas:** `scripts/pruebas-base-local.sh` ahora le pide al servicio de consultas recargar el esquema después de reconstruir la base y espera a que responda (a veces quedaba con el esquema viejo y todo fallaba con "PGRST002").
+
+---
+
 ## 2026-10-17 — Fase 9.5: "salud" entre amigos en el mismo bar ✅
 **Qué hace:** con la comunidad activa, en la carta aparece "¿Hay amigos tuyos aquí?". Al tocar "Avisar a mis amigos que estoy aquí", la persona ve a sus amigos que también están en ese local y también avisaron, y les puede mandar un "🍻 ¡Salud!".
 

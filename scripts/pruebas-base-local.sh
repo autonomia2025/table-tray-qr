@@ -24,6 +24,16 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -q -c "SELECT public._sembrar_historia_demo();
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -c "SELECT vault.create_secret('http://kong:8000/functions/v1', 'url_funciones', 'Funciones (local)') WHERE NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'url_funciones')" >/dev/null
 echo "▶ Demo y Local Ajeno cargados"
 
+# Después de reconstruir la base, el servicio de consultas (PostgREST) a veces sigue con el esquema viejo y
+# responde "PGRST002" a todo. Se le pide recargarlo y se espera a que conteste antes de probar.
+psql "$DB_URL" -q -c "NOTIFY pgrst, 'reload schema'" >/dev/null
+for _ in $(seq 1 30); do
+  codigo=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/rest/v1/tenants?select=id&limit=1" -H "apikey: $ANON_KEY" || true)
+  [ "$codigo" = "200" ] && break
+  sleep 2
+done
+[ "$codigo" = "200" ] || { echo "✖ El servicio de consultas no responde ($codigo). Reinicia con: supabase stop && supabase start"; exit 1; }
+
 export VITE_SUPABASE_URL="$API_URL"
 export VITE_SUPABASE_PUBLISHABLE_KEY="$ANON_KEY"
 export VITE_SUPABASE_PROJECT_ID="local"

@@ -199,7 +199,7 @@ Detalle de cada idea:
 | 9.4 | **Recomendaciones de conocidos:** cada uno recomienda lo que pagó; sus amigos lo ven en la carta de ese local 24 horas después; Tablio puede ocultar con nota | ✅ |
 | 9.4b | **Fotos de platos de amigos:** con moderación previa de cada foto. Espera decidir cómo se modera | ⏸ |
 | 9.5 | **"Salud" virtual** entre amigos en el mismo bar, con doble permiso: solo te ven tus amigos que también están ahí y también lo activaron; se apaga al irte | ✅ |
-| 9.6 | Compuerta de la fase 9 | ⏳ |
+| 9.6 | **Compuerta de la fase 9:** aislamiento de toda la comunidad, casos que cruzan etapas (suspender saca de todo, borrar la cuenta borra todo, pedidos de amistad cruzados a la vez, muchos "salud" a la vez, dos respuestas a la misma invitación a la vez) y las tres auditorías | ✅ |
 
 ### Criterios para las ideas de experiencia
 - **Primero lo que vende rondas y aprovecha lo ya construido** (la mesa en vivo y los sellos); la comunidad va al final.

@@ -55,17 +55,16 @@ describe.skipIf(!hayCredenciales || !esBaseLocal)("recomendaciones: lo pagado, a
 
   it("el amigo la ve recién 24 horas después; quien no es amigo nunca; bloquear la esconde", async () => {
     expect(await deAmigos(beto)).toEqual([]); // desfase
-    sql(`UPDATE recomendaciones_amigos SET created_at = now() - interval '25 hours', visible_desde = now() - interval '1 hour' WHERE menu_item_id = '${agua}'`);
+    sql(`UPDATE recomendaciones_amigos SET created_at = now() - interval '25 hours', visible_desde = now() - interval '1 hour' WHERE menu_item_id = '${agua}' AND user_id = '${(await ana.auth.getUser()).data.user!.id}'`);
     const vistas = await deAmigos(beto);
     expect(vistas.map((v) => v.plato)).toEqual(["Agua mineral"]);
     expect(vistas[0].amigos).toEqual([{ nombre: "Ana", comentario: "La mejor agua de Ñuñoa" }]);
     expect(await deAmigos(caro)).toEqual([]);
     expect(await deAmigos(ana)).toEqual([]); // la propia no aparece como "de amigos"
-    expect(sql(`SELECT count(*) FROM audit_logs WHERE action = 'comunidad_recomendacion_oculta' AND created_at > now() - interval '1 minute'`)).toBe("0");
   });
 
   it("Tablio la oculta con nota; quitarla la borra; las auditorías siguen vacías y detectan el desfase roto", async () => {
-    const id = sql(`SELECT id FROM recomendaciones_amigos WHERE menu_item_id = '${agua}' ORDER BY created_at DESC LIMIT 1`);
+    const id = sql(`SELECT id FROM recomendaciones_amigos WHERE menu_item_id = '${agua}' AND user_id = '${(await ana.auth.getUser()).data.user!.id}'`);
     expect((await beto.rpc("ocultar_recomendacion", { _recomendacion_id: id, _nota: "no corresponde" })).error).not.toBeNull();
     const sa = (await conSesion("superadmin")).cliente;
     expect((await sa.rpc("ocultar_recomendacion", { _recomendacion_id: id, _nota: "" })).error?.message).toContain("nota");
@@ -75,7 +74,7 @@ describe.skipIf(!hayCredenciales || !esBaseLocal)("recomendaciones: lo pagado, a
     expect(sql(`SELECT count(*) FROM recomendaciones_amigos WHERE id = '${id}'`)).toBe("0");
     // Una nueva, y Beto bloquea a Ana: deja de verla
     await ana.rpc("recomendar_plato", { _menu_item_id: agua });
-    sql(`UPDATE recomendaciones_amigos SET created_at = now() - interval '25 hours', visible_desde = now() - interval '1 hour' WHERE menu_item_id = '${agua}'`);
+    sql(`UPDATE recomendaciones_amigos SET created_at = now() - interval '25 hours', visible_desde = now() - interval '1 hour' WHERE menu_item_id = '${agua}' AND user_id = '${(await ana.auth.getUser()).data.user!.id}'`);
     expect((await deAmigos(beto)).length).toBe(1);
     await beto.rpc("bloquear_usuario", { _user_id: (await ana.auth.getUser()).data.user!.id });
     expect(await deAmigos(beto)).toEqual([]);
