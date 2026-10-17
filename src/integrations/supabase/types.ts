@@ -3556,6 +3556,54 @@ export type Database = {
           },
         ]
       }
+      recomendaciones_amigos: {
+        Row: {
+          comentario: string | null
+          created_at: string
+          id: string
+          menu_item_id: string
+          oculta_at: string | null
+          tenant_id: string
+          user_id: string
+          visible_desde: string
+        }
+        Insert: {
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          menu_item_id: string
+          oculta_at?: string | null
+          tenant_id: string
+          user_id: string
+          visible_desde?: string
+        }
+        Update: {
+          comentario?: string | null
+          created_at?: string
+          id?: string
+          menu_item_id?: string
+          oculta_at?: string | null
+          tenant_id?: string
+          user_id?: string
+          visible_desde?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recomendaciones_amigos_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recomendaciones_amigos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       refunds: {
         Row: {
           amount: number
@@ -5480,6 +5528,7 @@ export type Database = {
       mis_planes: { Args: never; Returns: Json }
       mis_propinas_por_cobrar: { Args: { _branch_id: string }; Returns: Json }
       mis_raspes: { Args: { _tenant_id: string }; Returns: Json }
+      mis_recomendaciones: { Args: { _tenant_id: string }; Returns: Json }
       mis_sellos: {
         Args: { _branch_id?: string; _tenant_id: string }
         Returns: Json
@@ -5490,6 +5539,10 @@ export type Database = {
       }
       modulos_del_local: { Args: { _tenant_id: string }; Returns: Json }
       nuevo_enlace_activacion: { Args: { _tenant_id: string }; Returns: Json }
+      ocultar_recomendacion: {
+        Args: { _nota: string; _recomendacion_id: string }
+        Returns: undefined
+      }
       pagar_propinas: {
         Args: {
           _branch_id: string
@@ -5533,6 +5586,10 @@ export type Database = {
       }
       puede_editar_fotos: { Args: { _carpeta: string }; Returns: boolean }
       quitar_amistad: { Args: { _amistad_id: string }; Returns: undefined }
+      quitar_recomendacion: {
+        Args: { _menu_item_id: string }
+        Returns: undefined
+      }
       rango_estado: { Args: { _estado: string }; Returns: number }
       ranking_equipo: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
@@ -5541,6 +5598,11 @@ export type Database = {
       raspar: { Args: { _raspe_id: string }; Returns: Json }
       rechazar_parte: {
         Args: { _parte_id: string; _qr_token: string }
+        Returns: undefined
+      }
+      recomendaciones_de_amigos: { Args: { _tenant_id: string }; Returns: Json }
+      recomendar_plato: {
+        Args: { _comentario?: string; _menu_item_id: string }
         Returns: undefined
       }
       registrar_acceso_soporte: {

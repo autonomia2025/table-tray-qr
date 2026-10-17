@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { miPasaporte, type Pasaporte } from "@/lib/pasaporte";
+import RecomendarProbados from "@/components/comensal/RecomendarProbados";
 
 /** Pasaporte de la casa (fase 7.6): lo que probaste en el local, por sección, y tus insignias. */
 export default function PasaportePage() {
@@ -73,6 +74,10 @@ export default function PasaportePage() {
               </div>
             </div>
           ))}
+          {local?.id && (
+            <RecomendarProbados tenantId={local.id} color={color}
+              probados={(p.secciones ?? []).flatMap((s) => s.items.filter((i) => i.probado).map((i) => ({ id: i.id, nombre: i.nombre })))} />
+          )}
         </div>
       )}
     </div>

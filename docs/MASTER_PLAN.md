@@ -196,7 +196,8 @@ Detalle de cada idea:
 | 9.1 | **Invitar un trago a otra mesa:** la otra mesa acepta primero y recién ahí quien invita paga (nunca se cobra algo que nadie aceptó). Solo números de mesa, mensaje corto sin enlaces ni teléfonos, rechazar y bloquear, máximo 3 abiertas. El dueño lo activa por sucursal | ✅ |
 | 9.2 | **Perfil y amigos:** con cuenta, desactivado por defecto y con permiso explícito; amigos por invitación mutua (código o misma mesa); bloquear y reportar, con moderación de Tablio | ✅ |
 | 9.3 | **Planes con amigos:** "juntémonos el viernes" en un local donde ya estuviste, solo con amigos, con la primera ronda elegida (se carga al carrito al llegar; nada se cobra antes) | ✅ |
-| 9.4 | **Recomendaciones de conocidos:** qué platos recomiendan tus amigos (solo lugares ya visitados y con desfase); fotos con moderación | ⏳ |
+| 9.4 | **Recomendaciones de conocidos:** cada uno recomienda lo que pagó; sus amigos lo ven en la carta de ese local 24 horas después; Tablio puede ocultar con nota | ✅ |
+| 9.4b | **Fotos de platos de amigos:** con moderación previa de cada foto. Espera decidir cómo se modera | ⏸ |
 | 9.5 | **"Salud" virtual** entre amigos en el mismo bar | ⏳ |
 | 9.6 | Compuerta de la fase 9 | ⏳ |
 

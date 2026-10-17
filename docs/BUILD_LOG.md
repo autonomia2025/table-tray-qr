@@ -4,6 +4,17 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-17 — Fase 9.4: recomendaciones de conocidos ✅
+**Qué hace:** con la comunidad activa, en el pasaporte del local aparece "Recomienda a tus amigos": cada cosa que probaste se puede recomendar, con un comentario corto. Tus amigos lo ven en la carta de ese local, en "Tus amigos recomiendan", desde el día siguiente.
+
+**Cuidados:** solo se recomienda lo que se pagó; solo los amigos vigentes lo ven; con 24 horas de desfase (nunca revela que alguien está en el local ahora); bloquear lo esconde; Tablio puede ocultar una recomendación con nota. Las fotos de amigos quedan para después (9.4b): necesitan moderación previa de cada foto.
+
+**Pruebas:**
+- `tests/seguridad/f9-4-recomendaciones.test.ts`: nadie lee las recomendaciones directo; solo lo pagado, con comentario sano; el amigo la ve recién 24 horas después y quien no es amigo nunca; ocultar con nota (solo Tablio); quitar; bloquear la esconde; auditorías vacías y que detecten el desfase roto.
+- `e2e/recomendaciones.spec.ts`: un amigo recomienda, el cliente lo ve en la carta y recomienda desde su pasaporte.
+
+---
+
 ## 2026-10-17 — Fase 9.3: planes con amigos ✅
 **Qué hace:** en "Comunidad y amigos", "Armar un plan": local (uno donde ya pagaste algo), fecha, amigos invitados, un mensaje y, si quieres, la primera ronda. Los amigos responden "Voy" o "No voy" y todos ven quién va. El día del plan, al abrir la carta de ese local desde una mesa, aparece "Pedir la primera ronda", que la carga al carrito.
 
