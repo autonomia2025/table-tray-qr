@@ -4,6 +4,21 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 8.5: compuerta de la fase 8 ✅
+**Qué revisa** (`tests/seguridad/f8-compuerta.test.ts`; no depende del orden de las pruebas):
+- **Aislamiento:** suscripciones, cobros, noches de trivia y respuestas no las ve el dueño de otro local, un invitado, un anónimo, el personal ni el equipo comercial; tampoco las métricas ni la lista de mensualidades, ni pueden crear una trivia.
+- **Casos difíciles que cruzan etapas:**
+  - Ocho generaciones de cobros al mismo tiempo dejan un solo cobro por mes.
+  - Cancelar una suscripción no borra lo que el local debe; si vuelve, la deuda sigue ahí.
+  - Cambiar el plan en la mensualidad cambia los módulos del local al instante (por ejemplo, sin juegos no hay trivia en vivo).
+  - Diez respuestas a la vez de la misma persona cuentan una.
+  - Una cuenta que jugó se borra entera y sale del ranking.
+- **Auditorías:** las tres salen vacías después de todo, y detectan un cobro sin suscripción y una respuesta con puntos sin acertar.
+
+Sin cambios en la base ni en las pantallas.
+
+---
+
 ## 2026-10-16 — Fase 8.4: noche de trivia en vivo ✅
 **Qué hace:** el local abre "Trivia en vivo" en el computador conectado a la tele y prepara una noche (de 3 a 20 preguntas, de 10 a 60 segundos cada una). Los clientes ven un aviso en la carta y el seguimiento, entran desde su mesa y responden en el celular la misma pregunta que se ve en la tele. Con "Mostrar respuesta", la tele marca la correcta y muestra el ranking, que también ven los celulares.
 

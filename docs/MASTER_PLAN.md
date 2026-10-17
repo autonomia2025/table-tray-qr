@@ -187,7 +187,7 @@ Detalle de cada idea:
 | 8.2 | **Métricas de finanzas desde cobros reales:** ingreso mensual, clientes, abandono y cohortes calculados en la base con los cobros pagados (antes se estimaban en el navegador con precios fijos) | ✅ |
 | 8.3 | **Cobro automático con tarjeta** de la mensualidad, aviso antes del cobro y reintentos. Espera que el fundador elija con qué cobrar (y el dominio para los correos) | ⏸ |
 | 8.4 | **Noche de trivia en vivo:** el local la lanza en su pantalla, los clientes juegan desde la mesa y el ranking se ve en vivo | ✅ |
-| 8.5 | Compuerta de la fase 8 | ⏳ |
+| 8.5 | **Compuerta de la fase 8:** aislamiento de lo nuevo, casos que cruzan etapas (cobros generados a la vez, cambiar de plan cambia los módulos, cancelar con un cobro pendiente, muchas respuestas a la vez, borrar una cuenta que jugó) y las tres auditorías | ✅ |
 
 **Fase 9 — Comunidad** (la más ambiciosa, al final y con cuidado): perfil con amigos, planes ("juntémonos el viernes", con la primera ronda pedida), recomendaciones y fotos de platos de conocidos, **invitar un trago a otra mesa** (está en el brief) y un "salud" virtual entre amigos en el mismo bar.
 
