@@ -1,5 +1,5 @@
 import { test, expect, devices, type Page, type Browser } from "@playwright/test";
-import { cuenta, entrar, foto, linkMesa } from "./apoyo/recorrido";
+import { cuenta, entrar, foto, linkMesa, liberarMesa } from "./apoyo/recorrido";
 
 // Fase 3.4 — La mesa en vivo, desde el celular del comensal: su pedido por estación con tiempo estimado,
 // el aviso cuando algo queda listo, su nombre en la mesa, "otra ronda" con un toque y "lo de siempre".
@@ -33,6 +33,7 @@ async function mozoCierraMesa(browser: Browser, mesa: number) {
 
 test("el comensal ve su pedido por estación, recibe el aviso de lo listo y repite la ronda", async ({ page, browser }) => {
   test.setTimeout(150_000);
+  await liberarMesa(2); // parte con la mesa limpia (otras pruebas la usan)
   const numero = await pedirYPagar(page, 2, ["Agua mineral", "Barros Luco"]);
   await page.getByRole("button", { name: "Ver estado de mi pedido" }).click();
   await expect(page.getByText(/Listo en aprox\. \d+ min/)).toBeVisible({ timeout: 15_000 });
@@ -69,6 +70,7 @@ test("el comensal ve su pedido por estación, recibe el aviso de lo listo y repi
 
 test("quien vuelve encuentra «lo de siempre» arriba de la carta", async ({ page, browser }) => {
   test.setTimeout(150_000);
+  await liberarMesa(2); // parte con la mesa limpia (otras pruebas la usan)
   // Dos visitas distintas pidiendo un mote con huesillo
   for (let visita = 0; visita < 2; visita++) {
     await pedirYPagar(page, 2, ["Mote con huesillo"]);

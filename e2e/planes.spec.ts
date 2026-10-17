@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { conSesion, guardarCuenta, invitado } from "../tests/seguridad/entorno";
-import { entrarComoCliente, foto, linkMesa } from "./apoyo/recorrido";
+import { entrarComoCliente, foto, liberarMesa, linkMesa } from "./apoyo/recorrido";
 
 // Fase 9.3 — Planes con amigos: el cliente arma un plan con un amigo en el demo, con la primera ronda elegida;
 // el día del plan, la carta le ofrece cargar esa ronda al carrito (se paga como siempre). Solo en la base
@@ -15,7 +15,7 @@ const cliente = "(SELECT id FROM auth.users WHERE email = 'cliente@demo.tablio.t
 const limpiar = () => sql(`DELETE FROM planes_amigos WHERE creador_id = ${cliente}; DELETE FROM amistades WHERE de_user_id = ${cliente} OR para_user_id = ${cliente};
   DELETE FROM perfiles_comunidad WHERE user_id = ${cliente}`);
 test.beforeAll(limpiar);
-test.afterAll(limpiar);
+test.afterAll(async () => { limpiar(); await liberarMesa(10); });
 
 test("el cliente arma un plan con un amigo y el día del plan pide la primera ronda con un toque", async ({ browser }) => {
   test.setTimeout(120_000);
@@ -31,7 +31,7 @@ test("el cliente arma un plan con un amigo y el día del plan pide la primera ro
   const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true });
   const c = await ctx.newPage();
   await entrarComoCliente(c);
-  const t = new URL(linkMesa(2)!, "http://x").searchParams.get("t");
+  const t = new URL(linkMesa(10)!, "http://x").searchParams.get("t");
   await c.goto(`/demo-tablio/comunidad?t=${t}`);
   await c.getByRole("button", { name: "Armar un plan" }).click({ timeout: 20_000 });
   const nuevo = c.getByTestId("nuevo-plan");
@@ -58,7 +58,7 @@ test("el cliente arma un plan con un amigo y el día del plan pide la primera ro
 
   // El día del plan: se adelanta la fecha y la carta ofrece la primera ronda
   sql(`UPDATE planes_amigos SET fecha = now() + interval '20 minutes' WHERE creador_id = ${cliente}`);
-  await c.goto(linkMesa(2)!);
+  await c.goto(linkMesa(10)!);
   const hoy = c.getByTestId("plan-de-hoy");
   await expect(hoy).toBeVisible({ timeout: 20_000 });
   await foto(c, "382-cliente-plan-de-hoy-en-la-carta");
