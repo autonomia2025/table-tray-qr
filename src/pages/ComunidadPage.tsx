@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSesion } from "@/contexts/SesionContext";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import PlanesAmigos from "@/components/comensal/PlanesAmigos";
 import {
   activarComunidad, apagarComunidad, bloquearUsuario, miComunidad, pedirAmistadEnMesa, pedirAmistadPorCodigo,
   quitarAmistad, reportarUsuario, responderAmistad, type Comunidad,
@@ -143,6 +144,8 @@ export default function ComunidadPage() {
                 </li>
               ))}
             </Seccion>
+
+            <PlanesAmigos amigos={c.amigos ?? []} color={color} />
 
             {!!c.enviadas?.length && (
               <Seccion titulo="Esperando respuesta">

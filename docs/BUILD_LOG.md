@@ -4,6 +4,17 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-17 — Fase 9.3: planes con amigos ✅
+**Qué hace:** en "Comunidad y amigos", "Armar un plan": local (uno donde ya pagaste algo), fecha, amigos invitados, un mensaje y, si quieres, la primera ronda. Los amigos responden "Voy" o "No voy" y todos ven quién va. El día del plan, al abrir la carta de ese local desde una mesa, aparece "Pedir la primera ronda", que la carga al carrito.
+
+**Cuidados:** solo se invita a amigos, y solo ellos ven el plan; si dejan de ser amigos (o alguien bloquea o apaga la comunidad), deja de verlo. La primera ronda no crea pedidos ni cobra nada antes de llegar: el precio sale al pagar, como siempre. Máximo 5 planes futuros por persona.
+
+**Pruebas:**
+- `tests/seguridad/f9-3-planes.test.ts`: nadie lee los planes directo; solo en un local donde ya pagaste, con amigos, fecha sana, mensaje sin enlaces y ronda de esa carta; la ronda no crea pedidos; el amigo responde, alguien no invitado no; dejar de ser amigos lo saca de su vista; cancelar; auditorías vacías y que detecten un plan que se invita a sí mismo.
+- `e2e/planes.spec.ts`: el cliente arma un plan, un amigo dice que va y el día del plan pide la primera ronda con un toque.
+
+---
+
 ## 2026-10-17 — Fase 9.2: comunidad, perfil y amigos ✅
 **Qué hace:** cada cliente con cuenta puede activar la comunidad (viene apagada). Elige un nombre, acepta cómo se usan sus datos y recibe un código (TAB-…) para que sus amigos lo agreguen. También puede agregar a quien está en su misma mesa, si esa persona también activó la comunidad. Cada amigo se puede quitar, bloquear o reportar; los reportes los revisa Tablio, que puede suspender un perfil.
 

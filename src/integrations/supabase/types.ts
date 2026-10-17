@@ -3250,6 +3250,76 @@ export type Database = {
           },
         ]
       }
+      plan_invitados: {
+        Row: {
+          plan_id: string
+          respondida_at: string | null
+          respuesta: string
+          user_id: string
+        }
+        Insert: {
+          plan_id: string
+          respondida_at?: string | null
+          respuesta?: string
+          user_id: string
+        }
+        Update: {
+          plan_id?: string
+          respondida_at?: string | null
+          respuesta?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_invitados_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "planes_amigos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planes_amigos: {
+        Row: {
+          cancelado_at: string | null
+          creador_id: string
+          created_at: string
+          fecha: string
+          id: string
+          mensaje: string | null
+          ronda: Json
+          tenant_id: string
+        }
+        Insert: {
+          cancelado_at?: string | null
+          creador_id: string
+          created_at?: string
+          fecha: string
+          id?: string
+          mensaje?: string | null
+          ronda?: Json
+          tenant_id: string
+        }
+        Update: {
+          cancelado_at?: string | null
+          creador_id?: string
+          created_at?: string
+          fecha?: string
+          id?: string
+          mensaje?: string | null
+          ronda?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planes_amigos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           created_at: string | null
@@ -5016,6 +5086,7 @@ export type Database = {
       _sembrar_cliente_demo: { Args: never; Returns: number }
       _sembrar_historia_demo: { Args: { _dias?: number }; Returns: number }
       _sembrar_propinas_pagadas_demo: { Args: never; Returns: number }
+      _son_amigos: { Args: { _a: string; _b: string }; Returns: boolean }
       _tenant_caja: { Args: { _branch_id: string }; Returns: string }
       _tenant_reportes: { Args: { _branch_id: string }; Returns: string }
       _tramo_abierto: {
@@ -5130,6 +5201,7 @@ export type Database = {
         Returns: undefined
       }
       cancelar_llamado: { Args: { _id: string }; Returns: undefined }
+      cancelar_plan: { Args: { _plan_id: string }; Returns: undefined }
       cancelar_suscripcion: {
         Args: { _motivo: string; _tenant_id: string }
         Returns: undefined
@@ -5222,6 +5294,16 @@ export type Database = {
       crear_pedido_mozo: {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
+      }
+      crear_plan: {
+        Args: {
+          _amigos: string[]
+          _fecha: string
+          _mensaje?: string
+          _ronda?: Json
+          _tenant_id: string
+        }
+        Returns: string
       }
       crear_trivia_vivo: {
         Args: { _branch_id: string; _preguntas?: number; _segundos?: number }
@@ -5362,6 +5444,7 @@ export type Database = {
         Returns: Json
       }
       lo_de_siempre: { Args: { _qr_token: string }; Returns: Json }
+      locales_para_plan: { Args: never; Returns: Json }
       marcar_agotado: {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined
@@ -5394,6 +5477,7 @@ export type Database = {
       mi_turno: { Args: { _branch_id: string }; Returns: Json }
       mis_boletas_pendientes: { Args: never; Returns: Json }
       mis_datos: { Args: never; Returns: Json }
+      mis_planes: { Args: never; Returns: Json }
       mis_propinas_por_cobrar: { Args: { _branch_id: string }; Returns: Json }
       mis_raspes: { Args: { _tenant_id: string }; Returns: Json }
       mis_sellos: {
@@ -5537,6 +5621,10 @@ export type Database = {
           _invitacion_id: string
           _qr_token: string
         }
+        Returns: undefined
+      }
+      responder_plan: {
+        Args: { _plan_id: string; _voy: boolean }
         Returns: undefined
       }
       responder_trivia: {
