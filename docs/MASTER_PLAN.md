@@ -181,6 +181,14 @@ Detalle de cada idea:
 
 **Fase 8 — El negocio de Tablio:** planes con precio real, cobro a los locales, métricas del backoffice, **noche de trivia en vivo** del bar (pantallas del local y celulares; conecta con el modo eventos).
 
+| Paso | Qué | Estado |
+|---|---|---|
+| 8.1 | **Mensualidad de Tablio:** suscripción de cada local (plan, precio, día de cobro, prueba), cobros que genera la base cada mes, registro del pago por finanzas, estados (al día, por pagar, en gracia, atrasado) con aviso al dueño. Nada se corta solo | ✅ |
+| 8.2 | **Métricas de finanzas desde cobros reales:** ingreso mensual, clientes, abandono y cohortes calculados en la base con los cobros pagados (hoy se estiman en el navegador con precios fijos) | ⏳ |
+| 8.3 | **Cobro automático con tarjeta** de la mensualidad, aviso antes del cobro y reintentos. Espera que el fundador elija con qué cobrar (y el dominio para los correos) | ⏸ |
+| 8.4 | **Noche de trivia en vivo:** el local la lanza en su pantalla, los clientes juegan desde la mesa y el ranking se ve en vivo | ⏳ |
+| 8.5 | Compuerta de la fase 8 | ⏳ |
+
 **Fase 9 — Comunidad** (la más ambiciosa, al final y con cuidado): perfil con amigos, planes ("juntémonos el viernes", con la primera ronda pedida), recomendaciones y fotos de platos de conocidos, **invitar un trago a otra mesa** (está en el brief) y un "salud" virtual entre amigos en el mismo bar.
 
 ### Criterios para las ideas de experiencia

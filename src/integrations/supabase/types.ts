@@ -648,6 +648,62 @@ export type Database = {
           },
         ]
       }
+      cobros_mensualidad: {
+        Row: {
+          created_at: string
+          estado: string
+          folio_factura: string | null
+          id: string
+          medio: string | null
+          monto: number
+          motivo_anulacion: string | null
+          pagado_at: string | null
+          periodo: string
+          referencia: string | null
+          registrado_por: string | null
+          tenant_id: string
+          vence_el: string
+        }
+        Insert: {
+          created_at?: string
+          estado?: string
+          folio_factura?: string | null
+          id?: string
+          medio?: string | null
+          monto: number
+          motivo_anulacion?: string | null
+          pagado_at?: string | null
+          periodo: string
+          referencia?: string | null
+          registrado_por?: string | null
+          tenant_id: string
+          vence_el: string
+        }
+        Update: {
+          created_at?: string
+          estado?: string
+          folio_factura?: string | null
+          id?: string
+          medio?: string | null
+          monto?: number
+          motivo_anulacion?: string | null
+          pagado_at?: string | null
+          periodo?: string
+          referencia?: string | null
+          registrado_por?: string | null
+          tenant_id?: string
+          vence_el?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobros_mensualidad_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       codigos_mesa: {
         Row: {
           branch_id: string
@@ -2936,6 +2992,7 @@ export type Database = {
           is_active: boolean | null
           max_tables: number
           name: string
+          precio_mensual: number | null
         }
         Insert: {
           created_at?: string | null
@@ -2945,6 +3002,7 @@ export type Database = {
           is_active?: boolean | null
           max_tables?: number
           name: string
+          precio_mensual?: number | null
         }
         Update: {
           created_at?: string | null
@@ -2954,6 +3012,7 @@ export type Database = {
           is_active?: boolean | null
           max_tables?: number
           name?: string
+          precio_mensual?: number | null
         }
         Relationships: []
       }
@@ -3585,6 +3644,66 @@ export type Database = {
             foreignKeyName: "support_tickets_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suscripciones_local: {
+        Row: {
+          cancelada_at: string | null
+          created_at: string
+          desde: string
+          dia_cobro: number
+          dias_gracia: number
+          dias_para_pagar: number
+          notas: string | null
+          plan_id: string | null
+          precio_mensual: number
+          prueba_hasta: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancelada_at?: string | null
+          created_at?: string
+          desde?: string
+          dia_cobro?: number
+          dias_gracia?: number
+          dias_para_pagar?: number
+          notas?: string | null
+          plan_id?: string | null
+          precio_mensual: number
+          prueba_hasta?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancelada_at?: string | null
+          created_at?: string
+          desde?: string
+          dia_cobro?: number
+          dias_gracia?: number
+          dias_para_pagar?: number
+          notas?: string | null
+          plan_id?: string | null
+          precio_mensual?: number
+          prueba_hasta?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suscripciones_local_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suscripciones_local_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -4256,6 +4375,8 @@ export type Database = {
           token: string
         }[]
       }
+      _es_finanzas: { Args: never; Returns: boolean }
+      _estado_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
       _exigir_funcion: {
         Args: { _modulo: string; _tenant_id: string }
         Returns: undefined
@@ -4264,6 +4385,7 @@ export type Database = {
         Args: { _permiso: string; _tenant_id: string }
         Returns: undefined
       }
+      _generar_cobros: { Args: { _hoy?: string }; Returns: number }
       _gestiona_sucursal: { Args: { _branch_id: string }; Returns: string }
       _guardar_conexion_pago: {
         Args: {
@@ -4510,6 +4632,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      anular_cobro_mensualidad: {
+        Args: { _cobro_id: string; _motivo: string }
+        Returns: undefined
+      }
       asignar_plan: {
         Args: { _plan_id: string; _tenant_id: string }
         Returns: undefined
@@ -4563,6 +4689,10 @@ export type Database = {
         Returns: Json
       }
       cancelar_llamado: { Args: { _id: string }; Returns: undefined }
+      cancelar_suscripcion: {
+        Args: { _motivo: string; _tenant_id: string }
+        Returns: undefined
+      }
       cerrar_caja: {
         Args: {
           _branch_id: string
@@ -4692,6 +4822,7 @@ export type Database = {
       estado_presencia: { Args: { _qr_token: string }; Returns: Json }
       estado_salud: { Args: never; Returns: Json }
       excepciones_caja: { Args: { _branch_id: string }; Returns: Json }
+      generar_cobros_mes: { Args: never; Returns: number }
       get_tenant_id: { Args: never; Returns: string }
       girar_ruleta: { Args: { _qr_token: string }; Returns: Json }
       guardar_campana: {
@@ -4722,6 +4853,17 @@ export type Database = {
           _tenant_id: string
         }
         Returns: Json
+      }
+      guardar_suscripcion: {
+        Args: {
+          _dia_cobro?: number
+          _notas?: string
+          _plan_id: string
+          _precio_mensual: number
+          _prueba_hasta?: string
+          _tenant_id: string
+        }
+        Returns: undefined
       }
       guardar_suscripcion_push: {
         Args: {
@@ -4774,7 +4916,16 @@ export type Database = {
         Args: { _branch_id: string; _paso: string }
         Returns: undefined
       }
+      mensualidades_locales: {
+        Args: never
+        Returns: {
+          estado: Json
+          local: string
+          tenant_id: string
+        }[]
+      }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
+      mi_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
       mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }
       mi_miembro_backoffice: { Args: never; Returns: string }
       mi_pasaporte: { Args: { _tenant_id: string }; Returns: Json }
@@ -4851,6 +5002,15 @@ export type Database = {
           _recibido?: number
         }
         Returns: Json
+      }
+      registrar_pago_mensualidad: {
+        Args: {
+          _cobro_id: string
+          _folio?: string
+          _medio: string
+          _referencia?: string
+        }
+        Returns: undefined
       }
       registrar_uso_chat: {
         Args: { _limite: number; _user_id: string }

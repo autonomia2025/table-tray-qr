@@ -4,6 +4,22 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 8.1: la mensualidad de Tablio ✅
+**Qué hace:** finanzas (o el superadmin), en "Mensualidades", crea la suscripción de cada local (plan, precio, día de cobro y, si quiere, una prueba gratis). Los cobros de cada mes salen solos en su día de cobro, y finanzas registra cuando el local paga (transferencia u otro medio). El dueño ve su plan, lo que debe y cómo pagar en Sucursal → "Tu plan con Tablio", con aviso en Inicio si está por vencer o vencida.
+
+**Cómo está hecho:**
+- Todo en la base: tablas `suscripciones_local` y `cobros_mensualidad`, que no se escriben desde el navegador; funciones con permiso de finanzas, con motivo cuando corresponde y registro en la auditoría.
+- Un cobro por local y mes (índice único), generado por un reloj diario; nunca en prueba ni antes de la fecha de alta. Registrar un pago dos veces no lo duplica.
+- Estado calculado en la base: al día, por pagar, vencida (en gracia) y atrasada. **Nada se corta solo**: qué pasa con un local muy atrasado lo decide el fundador.
+- El plan de la suscripción es el plan del local (sus módulos, fase 7.9).
+- El cobro automático con tarjeta (8.3) espera que el fundador elija proveedor.
+
+**Pruebas:**
+- `tests/seguridad/f8-1-mensualidad.test.ts`: nadie fuera de finanzas ve ni toca suscripciones o cobros; el dueño y el administrador ven solo lo suyo; cobros en su día, uno por mes y nunca en prueba; estados por pagar, en gracia y atrasado; pago doble a la vez queda una vez; anular exige motivo y no anula lo pagado; cancelar detiene los cobros; auditorías vacías y que detecten un cobro huérfano.
+- `e2e/mensualidad.spec.ts`: finanzas crea la suscripción, el dueño ve el aviso y su plan, y finanzas registra el pago.
+
+---
+
 ## 2026-10-16 — Fase 7.10: compuerta de la fase 7 ✅
 **Qué revisa** (`tests/seguridad/f7-compuerta.test.ts`; no depende del orden de las pruebas):
 - **Aislamiento:** las tablas nuevas (campañas, avisos, bajas, beneficios usados, platos divididos y sus partes, partidas de trivia, ruletas y raspes) no las ve el dueño de otro local, un invitado ni un anónimo; el mozo y la cocina tampoco ven campañas, avisos, raspes ni beneficios. Nadie de afuera arma campañas, raspa o ajusta módulos.

@@ -237,6 +237,25 @@ function AdminAccessSection() {
 }
 
 // ─── Main ───
+// ─── Cómo pagarle la mensualidad a Tablio (fase 8.1) ───
+function DatosPagoSection() {
+  const { toast } = useToast();
+  const { valor, guardar, cargando } = useConfigTablio<string>('datos_pago_tablio', '');
+  const [texto, setTexto] = useState('');
+  useEffect(() => { if (!cargando) setTexto(valor ?? ''); }, [cargando, valor]);
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base flex items-center gap-2"><DollarSign className="w-4 h-4" />Cómo pagar la mensualidad</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">Lo ve el dueño de cada local junto a su mensualidad (por ejemplo, los datos para transferirle a Tablio).</p>
+        <textarea aria-label="Datos para pagar la mensualidad" className="min-h-[96px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" maxLength={600}
+          value={texto} onChange={e => setTexto(e.target.value)} placeholder={'Banco, tipo de cuenta, número, RUT, correo'} />
+        <Button size="sm" onClick={async () => toast({ title: (await guardar(texto.trim())) ? 'Datos guardados' : 'No se pudo guardar' })}><Save className="w-4 h-4 mr-1" />Guardar</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SAConfigPage() {
   const { toast } = useToast();
   const [platformName, setPlatformName] = useState('Tablio');
@@ -286,6 +305,7 @@ export default function SAConfigPage() {
         </CardContent>
       </Card>
 
+      <DatosPagoSection />
       <ZonesSection />
       <GoalsSection />
       <CommissionsSection />

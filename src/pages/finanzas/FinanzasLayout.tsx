@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { DollarSign, Users, TrendingDown, PieChart, LogOut } from 'lucide-react';
+import { DollarSign, Users, TrendingDown, PieChart, LogOut, Receipt } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useSesion } from '@/contexts/SesionContext';
 import { useState, useEffect } from 'react';
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: '/finanzas/clientes', icon: Users, label: 'Clientes' },
   { path: '/finanzas/churn', icon: TrendingDown, label: 'Churn' },
   { path: '/finanzas/costos', icon: PieChart, label: 'Costos' },
+  { path: '/finanzas/mensualidades', icon: Receipt, label: 'Mensualidades' },
 ];
 
 export default function FinanzasLayout() {

@@ -70,6 +70,7 @@ import FinanzasRevenuePage from "./pages/finanzas/FinanzasRevenuePage";
 import FinanzasClientesPage from "./pages/finanzas/FinanzasClientesPage";
 import FinanzasChurnPage from "./pages/finanzas/FinanzasChurnPage";
 import FinanzasCostosPage from "./pages/finanzas/FinanzasCostosPage";
+import FinanzasMensualidadesPage from "./pages/finanzas/FinanzasMensualidadesPage";
 import { JefeVentasProvider } from "./contexts/JefeVentasContext";
 import JefeVentasLayout from "./pages/jefe-ventas/JefeVentasLayout";
 import JVDashboardPage from "./pages/jefe-ventas/JVDashboardPage";
@@ -189,6 +190,7 @@ const App = () => (
             <Route path="clientes" element={<FinanzasClientesPage />} />
             <Route path="churn" element={<FinanzasChurnPage />} />
             <Route path="costos" element={<FinanzasCostosPage />} />
+            <Route path="mensualidades" element={<FinanzasMensualidadesPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

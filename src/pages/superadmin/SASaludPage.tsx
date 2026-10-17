@@ -20,6 +20,7 @@ const NOMBRE_RELOJ: Record<string, string> = {
   "revisar-salud": "Revisar la salud",
   "purgar-invitados": "Borrar invitados de más de 90 días",
   "purgar-claves-pasarela": "Borrar claves de pasarelas desconectadas",
+  "generar-cobros": "Generar los cobros de la mensualidad",
 };
 
 const hora = (iso: string | null) =>

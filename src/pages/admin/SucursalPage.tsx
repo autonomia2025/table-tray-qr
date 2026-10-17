@@ -15,6 +15,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import EstacionesSucursal from "@/components/admin/EstacionesSucursal";
 import PagosSucursal from "@/components/admin/PagosSucursal";
+import MensualidadLocal from "@/components/admin/MensualidadLocal";
 
 interface TableData {
   id: string;
@@ -154,6 +155,7 @@ export default function SucursalPage() {
       </Card>
 
       {branchId && <PagosSucursal branchId={branchId} />}
+      {tenantId && <MensualidadLocal tenantId={tenantId} />}
 
       <Card className="mb-6">
         <CardHeader><CardTitle>Sucursal</CardTitle></CardHeader>

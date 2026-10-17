@@ -10,6 +10,7 @@ import { excepcionesCaja } from "@/lib/excepciones";
 import PrimerosPasos from "@/components/admin/PrimerosPasos";
 import { alcanceCampana, campanasDelLocal } from "@/lib/campanas";
 import { tiene, useModulos } from "@/lib/modulos";
+import { estadoMalo, miMensualidad, type Mensualidad } from "@/lib/mensualidad";
 import { usePermiso } from "@/hooks/usePermiso";
 
 // Inicio del dueño (fase 3.6, brief 5.5): cuenta en palabras simples cómo le fue al local, en vez de
@@ -37,6 +38,7 @@ export default function InicioPage() {
   const [error, setError] = useState<string | null>(null);
   const [propinas, setPropinas] = useState<PropinasPorPagar | null>(null);
   const [excepciones, setExcepciones] = useState(0);
+  const [mensualidad, setMensualidad] = useState<Mensualidad | null>(null);
 
   useEffect(() => {
     if (!branchId) return;
@@ -47,6 +49,9 @@ export default function InicioPage() {
     propinasPorPagar(branchId).then(setPropinas);
     excepcionesCaja(branchId).then((l) => setExcepciones(l?.length ?? 0));
   }, [branchId]);
+
+  // La mensualidad de Tablio (fase 8.1): solo el dueño y el administrador la ven (la base devuelve error al resto)
+  useEffect(() => { if (tenantId) miMensualidad(tenantId).then(setMensualidad); }, [tenantId]);
 
   useEffect(() => {
     if (!tenantId || !puedeCampanas) return;
@@ -83,6 +88,9 @@ export default function InicioPage() {
   } else if (porPagar > 0 && propinas) {
     const proximo = [...propinas.pendientes].sort((a, b) => a.vence.localeCompare(b.vence))[0];
     alertas.push(<>Le debes <strong>{formatCLP(porPagar)}</strong> en propinas al equipo. El primer plazo vence el {fechaLarga(proximo.vence)} (<Link className="underline" to={`/admin/${slug}/caja`}>Caja → Propinas del equipo</Link>).</>);
+  }
+  if (mensualidad && (estadoMalo(mensualidad.estado) || mensualidad.estado === "por_vencer") && mensualidad.pendiente) {
+    alertas.push(<>Tu mensualidad de Tablio ({formatCLP(mensualidad.pendiente)}) {estadoMalo(mensualidad.estado) ? <strong>está vencida</strong> : <>vence el {fechaLarga(mensualidad.vence_el!)}</>}. Los datos para pagar están en <Link className="underline" to={`/admin/${slug}/sucursal`}>Sucursal → Tu plan con Tablio</Link>.</>);
   }
   if (excepciones > 0) alertas.push(<>Hay <strong>{excepciones} {excepciones === 1 ? "excepción" : "excepciones"} de caja</strong> esperando a alguien (por ejemplo, un cobro por devolver o una boleta sin marcar). Revísalas en <Link className="underline" to={`/admin/${slug}/caja`}>Caja → Excepciones</Link>.</>);
   if (h.alertas && h.alertas.perdido_7_dias > 0) alertas.push(<>Esta semana perdiste <strong>{formatCLP(h.alertas.perdido_7_dias)}</strong> en mesas que se fueron sin pagar.</>);
