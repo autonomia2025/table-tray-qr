@@ -198,7 +198,7 @@ Detalle de cada idea:
 | 9.3 | **Planes con amigos:** "juntémonos el viernes" en un local donde ya estuviste, solo con amigos, con la primera ronda elegida (se carga al carrito al llegar; nada se cobra antes) | ✅ |
 | 9.4 | **Recomendaciones de conocidos:** cada uno recomienda lo que pagó; sus amigos lo ven en la carta de ese local 24 horas después; Tablio puede ocultar con nota | ✅ |
 | 9.4b | **Fotos de platos de amigos:** con moderación previa de cada foto. Espera decidir cómo se modera | ⏸ |
-| 9.5 | **"Salud" virtual** entre amigos en el mismo bar | ⏳ |
+| 9.5 | **"Salud" virtual** entre amigos en el mismo bar, con doble permiso: solo te ven tus amigos que también están ahí y también lo activaron; se apaga al irte | ✅ |
 | 9.6 | Compuerta de la fase 9 | ⏳ |
 
 ### Criterios para las ideas de experiencia

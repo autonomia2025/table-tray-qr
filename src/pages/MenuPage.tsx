@@ -14,6 +14,7 @@ import AvisoTriviaVivo from "@/components/comensal/AvisoTriviaVivo";
 import InvitacionesEnCarta from "@/components/comensal/InvitacionesEnCarta";
 import PlanDeHoy from "@/components/comensal/PlanDeHoy";
 import RecomendacionesAmigosCarta from "@/components/comensal/RecomendacionesAmigos";
+import AmigosAqui from "@/components/comensal/AmigosAqui";
 import { useComensalEnMesa, useTableSession } from "@/hooks/useTableSession";
 import { loDeSiempre } from "@/lib/mesaEnVivo";
 import { manifiestoDelLocal } from "@/lib/push";
@@ -316,6 +317,8 @@ export default function MenuPage() {
       {enMesa === true && <PlanDeHoy tenantId={tenantId} slug={slug} token={tableToken} color={primaryColor} />}
       {/* Recomendaciones de amigos (fase 9.4) */}
       {enMesa === true && <RecomendacionesAmigosCarta tenantId={tenantId} slug={slug} token={tableToken} color={primaryColor} />}
+      {/* Amigos aquí y "salud" (fase 9.5) */}
+      {enMesa === true && <AmigosAqui token={tableToken} color={primaryColor} />}
 
       {tableStatus === "invalid" && (
         <div className="mx-4 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">

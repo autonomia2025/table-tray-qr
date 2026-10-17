@@ -39,7 +39,7 @@ export default function PoliticaPrivacidad() {
       </Seccion>
 
       <Seccion titulo="Comunidad y amigos (si la activas)">
-        <p>La comunidad viene apagada. Si la activas con tu cuenta, guardamos el nombre que elijas, tu código para que te agreguen, tus amistades, a quién bloqueaste y los reportes que hagas. Tus amigos solo ven ese nombre; nadie ve dónde estás ahora. Los reportes los revisa Tablio y puede suspender un perfil. Si apagas la comunidad, se borran tus amistades; si borras tu cuenta, se borra todo.</p>
+        <p>La comunidad viene apagada. Si la activas con tu cuenta, guardamos el nombre que elijas, tu código para que te agreguen, tus amistades, a quién bloqueaste y los reportes que hagas. Tus amigos solo ven ese nombre; nadie ve dónde estás ahora, salvo que en un local toques «Avisar a mis amigos que estoy aquí»: entonces te ven solo tus amigos que también están ahí y lo activaron, y se apaga solo al irte. Los reportes los revisa Tablio y puede suspender un perfil. Si apagas la comunidad, se borran tus amistades; si borras tu cuenta, se borra todo.</p>
       </Seccion>
 
       <Seccion titulo="Cuánto tiempo">

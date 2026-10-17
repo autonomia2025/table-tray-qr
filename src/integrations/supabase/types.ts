@@ -3456,6 +3456,45 @@ export type Database = {
         }
         Relationships: []
       }
+      presencias_comunidad: {
+        Row: {
+          created_at: string
+          hasta: string
+          session_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hasta: string
+          session_id: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hasta?: string
+          session_id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presencias_comunidad_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presencias_comunidad_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       raspes: {
         Row: {
           anulado_at: string | null
@@ -3876,6 +3915,41 @@ export type Database = {
           id?: never
         }
         Relationships: []
+      }
+      saludos_amigos: {
+        Row: {
+          created_at: string
+          de_user_id: string
+          id: string
+          para_user_id: string
+          tenant_id: string
+          visto_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          de_user_id: string
+          id?: string
+          para_user_id: string
+          tenant_id: string
+          visto_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          de_user_id?: string
+          id?: string
+          para_user_id?: string
+          tenant_id?: string
+          visto_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saludos_amigos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seller_goals: {
         Row: {
@@ -5032,6 +5106,10 @@ export type Database = {
         Args: { _session_id: string; _user_id: string }
         Returns: boolean
       }
+      _presente_comunidad: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       _programa_lealtad: {
         Args: { _branch_id: string; _tenant_id: string }
         Returns: {
@@ -5185,6 +5263,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      amigos_aqui: { Args: { _qr_token: string }; Returns: Json }
       anular_cobro_mensualidad: {
         Args: { _cobro_id: string; _motivo: string }
         Returns: undefined
@@ -5221,6 +5300,10 @@ export type Database = {
         }[]
       }
       avanzar_trivia_vivo: { Args: { _trivia_id: string }; Returns: Json }
+      avisar_que_estoy: {
+        Args: { _activar: boolean; _qr_token: string }
+        Returns: undefined
+      }
       baja_promo: { Args: { _token: string }; Returns: boolean }
       bloquear_usuario: { Args: { _user_id: string }; Returns: undefined }
       boletas_pendientes: { Args: { _branch_id: string }; Returns: Json }
@@ -5493,6 +5576,10 @@ export type Database = {
       }
       lo_de_siempre: { Args: { _qr_token: string }; Returns: Json }
       locales_para_plan: { Args: never; Returns: Json }
+      mandar_salud: {
+        Args: { _amigo_id: string; _qr_token: string }
+        Returns: undefined
+      }
       marcar_agotado: {
         Args: { _agotado: boolean; _menu_item_id: string }
         Returns: undefined

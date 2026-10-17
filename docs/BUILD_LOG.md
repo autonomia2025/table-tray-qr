@@ -4,6 +4,17 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-17 — Fase 9.5: "salud" entre amigos en el mismo bar ✅
+**Qué hace:** con la comunidad activa, en la carta aparece "¿Hay amigos tuyos aquí?". Al tocar "Avisar a mis amigos que estoy aquí", la persona ve a sus amigos que también están en ese local y también avisaron, y les puede mandar un "🍻 ¡Salud!".
+
+**Cuidados (la regla más delicada: nunca mostrar dónde está alguien ahora):** nadie aparece presente si no lo activa; solo te ven tus amigos que también están en ese mismo local y también lo activaron; termina solo al cerrarse tu mesa (o a las 4 horas); un "salud" cada 2 minutos por pareja; los saludos se borran a los 7 días. Apagar la comunidad o una suspensión de Tablio borran el aviso. La política de privacidad lo explica.
+
+**Pruebas:**
+- `tests/seguridad/f9-5-salud.test.ts`: nadie lee presencias ni saludos directo; sin avisar nadie aparece; quien avisa solo ve amigos que también avisan (no a amigos que no avisan ni a quien no es amigo); el salud llega una vez, con límite y solo a un amigo que avisa; dejar de avisar o cerrar la mesa lo apaga; auditorías vacías y que detecten un aviso de otro local.
+- `e2e/salud-amigos.spec.ts`: el cliente avisa que está, ve a su amigo y recibe un salud.
+
+---
+
 ## 2026-10-17 — Fase 9.4: recomendaciones de conocidos ✅
 **Qué hace:** con la comunidad activa, en el pasaporte del local aparece "Recomienda a tus amigos": cada cosa que probaste se puede recomendar, con un comentario corto. Tus amigos lo ven en la carta de ese local, en "Tus amigos recomiendan", desde el día siguiente.
 
