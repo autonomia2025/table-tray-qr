@@ -8,10 +8,9 @@ import { exportToCSV } from '@/lib/export-utils';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Download, Plus, Trash2, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import { metricasFinanzas } from '@/lib/finanzas';
 
 const PILOT_THRESHOLD = 5;
-const PILOT_PRICE = 199000;
-const COMMERCIAL_PRICE = 299000;
 const CLOSE_COMMISSION = 50000;
 const PILOT_ACTIVE_COMMISSION = 30000;
 const COMMERCIAL_ACTIVE_COMMISSION = 40000;
@@ -58,14 +57,16 @@ export default function FinanzasCostosPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [t, l] = await Promise.all([
+      const [t, l, metricas] = await Promise.all([
         supabase.rpc('tenants_privado').select('plan_id, plan_status, is_active, created_at'),
         supabase.from('leads').select('id, source, stage'),
+        metricasFinanzas(1),
       ]);
       const tenants = (t.data || []).sort((a, b) => new Date(a.created_at || '').getTime() - new Date(b.created_at || '').getTime());
       const paying = tenants.filter((x) => (x.plan_status === 'active' || x.plan_status === 'paying') && x.is_active !== false);
-      setTenantCount(paying.length);
-      setMrr(paying.reduce((s: number, _: any, i: number) => s + (i < PILOT_THRESHOLD ? PILOT_PRICE : COMMERCIAL_PRICE), 0));
+      // Ingreso mensual y clientes desde los cobros reales de la mensualidad (fase 8.2)
+      setTenantCount(metricas?.actual.clientes_activos ?? 0);
+      setMrr(metricas?.actual.mrr ?? 0);
       setLeadCount((l.data || []).length);
 
       // Calculate commission costs
@@ -109,7 +110,7 @@ export default function FinanzasCostosPage() {
   const cac = tenantCount > 0 ? Math.round(marketingSpend / tenantCount) : 0;
 
   // LTV (simplified: avg MRR per client * 12 months avg lifespan)
-  const avgMRRPerClient = tenantCount > 0 ? mrr / tenantCount : 299;
+  const avgMRRPerClient = tenantCount > 0 ? mrr / tenantCount : 0;
   const ltv = Math.round(avgMRRPerClient * 12);
   const ltvCacRatio = cac > 0 ? (ltv / cac).toFixed(1) : '∞';
   const paybackMonths = cac > 0 && avgMRRPerClient > 0 ? (cac / avgMRRPerClient).toFixed(1) : '0';

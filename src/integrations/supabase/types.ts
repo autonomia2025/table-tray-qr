@@ -4924,6 +4924,7 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      metricas_finanzas: { Args: { _meses?: number }; Returns: Json }
       mi_desempeno: { Args: { _branch_id: string }; Returns: Json }
       mi_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
       mi_mesa_en_vivo: { Args: { _qr_token: string }; Returns: Json }

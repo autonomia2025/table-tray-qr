@@ -184,7 +184,7 @@ Detalle de cada idea:
 | Paso | Qué | Estado |
 |---|---|---|
 | 8.1 | **Mensualidad de Tablio:** suscripción de cada local (plan, precio, día de cobro, prueba), cobros que genera la base cada mes, registro del pago por finanzas, estados (al día, por pagar, en gracia, atrasado) con aviso al dueño. Nada se corta solo | ✅ |
-| 8.2 | **Métricas de finanzas desde cobros reales:** ingreso mensual, clientes, abandono y cohortes calculados en la base con los cobros pagados (hoy se estiman en el navegador con precios fijos) | ⏳ |
+| 8.2 | **Métricas de finanzas desde cobros reales:** ingreso mensual, clientes, abandono y cohortes calculados en la base con los cobros pagados (antes se estimaban en el navegador con precios fijos) | ✅ |
 | 8.3 | **Cobro automático con tarjeta** de la mensualidad, aviso antes del cobro y reintentos. Espera que el fundador elija con qué cobrar (y el dominio para los correos) | ⏸ |
 | 8.4 | **Noche de trivia en vivo:** el local la lanza en su pantalla, los clientes juegan desde la mesa y el ranking se ve en vivo | ⏳ |
 | 8.5 | Compuerta de la fase 8 | ⏳ |

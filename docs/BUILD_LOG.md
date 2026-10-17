@@ -4,6 +4,20 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 8.2: métricas de finanzas desde cobros reales ✅
+**Qué cambia:** las páginas de finanzas (Ingresos, Clientes, Abandono y Costos) estimaban en el navegador con precios fijos escritos en el código ($199.000 los primeros 5 locales, $299.000 el resto). Ahora todo sale de la base con los cobros reales de la mensualidad (fase 8.1), como pide el brief (6.3).
+
+**Cómo está hecho:**
+- `metricas_finanzas(meses)` (solo finanzas y superadmin): ingreso mensual (suma de las mensualidades vigentes, sin pruebas), facturado y cobrado por mes, locales pagando, nuevos (su primer mes pagado), cancelados, abandono (cancelados sobre los que pagaban el mes anterior) y cohortes (de los que pagaron por primera vez un mes, cuántos siguen; solo meses terminados).
+- Las páginas se rehicieron con esa función y quedaron en español ("Ingresos", "Abandono").
+- Las comisiones de los vendedores siguen con sus valores de configuración (eso es del equipo comercial).
+
+**Pruebas:**
+- `tests/seguridad/f8-2-metricas-finanzas.test.ts`: solo finanzas y el superadmin las ven, y con cobros conocidos calzan el ingreso mensual, facturado, cobrado, nuevos, cancelados, abandono y cohortes.
+- `e2e/metricas-finanzas.spec.ts`: finanzas ve las tres páginas con seis meses de cobros de ejemplo.
+
+---
+
 ## 2026-10-16 — Fase 8.1: la mensualidad de Tablio ✅
 **Qué hace:** finanzas (o el superadmin), en "Mensualidades", crea la suscripción de cada local (plan, precio, día de cobro y, si quiere, una prueba gratis). Los cobros de cada mes salen solos en su día de cobro, y finanzas registra cuando el local paga (transferencia u otro medio). El dueño ve su plan, lo que debe y cómo pagar en Sucursal → "Tu plan con Tablio", con aviso en Inicio si está por vencer o vencida.
 

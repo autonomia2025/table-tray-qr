@@ -6,9 +6,9 @@ import { useState, useEffect } from 'react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 const NAV_ITEMS = [
-  { path: '/finanzas/revenue', icon: DollarSign, label: 'Revenue' },
+  { path: '/finanzas/revenue', icon: DollarSign, label: 'Ingresos' },
   { path: '/finanzas/clientes', icon: Users, label: 'Clientes' },
-  { path: '/finanzas/churn', icon: TrendingDown, label: 'Churn' },
+  { path: '/finanzas/churn', icon: TrendingDown, label: 'Abandono' },
   { path: '/finanzas/costos', icon: PieChart, label: 'Costos' },
   { path: '/finanzas/mensualidades', icon: Receipt, label: 'Mensualidades' },
 ];
