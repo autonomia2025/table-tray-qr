@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import GuiaRapida from "@/components/GuiaRapida";
 import { guiaDeRol } from "@/lib/guias";
-import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift, Megaphone } from "lucide-react";
+import { Home, LayoutGrid, BookOpen, QrCode, Settings, Users, LogOut, AlertTriangle, ClipboardList, BarChart3, ChefHat, Headset, Wallet, Gift, Megaphone, Trophy } from "lucide-react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { cn } from "@/lib/utils";
 import { NOMBRE_ROL, puedeVer, type SeccionLocal } from "@/lib/roles";
@@ -24,6 +24,7 @@ export default function AdminLayout() {
     { seccion: "caja", path: `/admin/${effectiveSlug}/caja`, label: "Caja", icon: Wallet, external: false },
     { seccion: "lealtad", path: `/admin/${effectiveSlug}/lealtad`, label: "Lealtad", icon: Gift, external: false },
     { seccion: "campanas", path: `/admin/${effectiveSlug}/campanas`, label: "Campañas", icon: Megaphone, external: false },
+    { seccion: "trivia", path: `/admin/${effectiveSlug}/trivia`, label: "Trivia en vivo", icon: Trophy, external: false },
     { seccion: "reportes", path: `/admin/${effectiveSlug}/reportes`, label: "Reportes", icon: BarChart3, external: false },
 
     { seccion: "equipo", path: `/admin/${effectiveSlug}/equipo`, label: "Equipo", icon: Users, external: false },
@@ -33,7 +34,8 @@ export default function AdminLayout() {
     { seccion: "soporte", path: `/admin/${effectiveSlug}/soporte`, label: "Soporte", icon: Headset, external: false },
   ].filter((item) => role && puedeVer(role, item.seccion as SeccionLocal, permisos))
     // Módulos por plan (fase 7.9)
-    .filter((item) => item.seccion !== "campanas" || tiene(modulos, "campanas"));
+    .filter((item) => item.seccion !== "campanas" || tiene(modulos, "campanas"))
+    .filter((item) => item.seccion !== "trivia" || tiene(modulos, "juegos"));
 
   if (isLoading) {
     return (

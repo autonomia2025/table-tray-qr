@@ -4,6 +4,22 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-16 — Fase 8.4: noche de trivia en vivo ✅
+**Qué hace:** el local abre "Trivia en vivo" en el computador conectado a la tele y prepara una noche (de 3 a 20 preguntas, de 10 a 60 segundos cada una). Los clientes ven un aviso en la carta y el seguimiento, entran desde su mesa y responden en el celular la misma pregunta que se ve en la tele. Con "Mostrar respuesta", la tele marca la correcta y muestra el ranking, que también ven los celulares.
+
+**Cómo está hecho:**
+- Todo en la base: `trivias_vivo` y `respuestas_trivia_vivo`, que no se escriben desde el navegador. Una noche a la vez por sucursal.
+- La correcta nunca llega al celular antes del resultado, y la pregunta en curso no cuenta en el ranking hasta entonces (así nadie deduce quién acertó).
+- Una respuesta por persona y pregunta, solo mientras corre el tiempo. Puntaje calculado en la base: 100 por acertar, más hasta 50 por rapidez.
+- Solo diversión: no da sellos, descuentos ni premios. Es parte del módulo "juegos".
+- Paso nuevo en la guía del dueño.
+
+**Pruebas:**
+- `tests/seguridad/f8-4-trivia-vivo.test.ts`: solo el encargado la maneja y nadie lee las tablas directo; una noche completa (una a la vez, respuestas a tiempo y una vez, la correcta escondida, ranking sin la pregunta en curso, otra mesa juega y alguien sin mesa no, fuera de tiempo no, terminar); sin el módulo no se crea; auditorías vacías y que detecten puntos mal dados.
+- `e2e/trivia-vivo.spec.ts`: el dueño la lanza, un cliente entra desde el aviso, responde y la pantalla muestra la respuesta y el ranking.
+
+---
+
 ## 2026-10-16 — Fase 8.2: métricas de finanzas desde cobros reales ✅
 **Qué cambia:** las páginas de finanzas (Ingresos, Clientes, Abandono y Costos) estimaban en el navegador con precios fijos escritos en el código ($199.000 los primeros 5 locales, $299.000 el resto). Ahora todo sale de la base con los cobros reales de la mensualidad (fase 8.1), como pide el brief (6.3).
 

@@ -10,6 +10,7 @@ import MenuItemCard from "@/components/menu/MenuItemCard";
 import FloatingCartBar from "@/components/menu/FloatingCartBar";
 import MenuSkeleton from "@/components/menu/MenuSkeleton";
 import BotonCuenta from "@/components/comensal/BotonCuenta";
+import AvisoTriviaVivo from "@/components/comensal/AvisoTriviaVivo";
 import { useComensalEnMesa, useTableSession } from "@/hooks/useTableSession";
 import { loDeSiempre } from "@/lib/mesaEnVivo";
 import { manifiestoDelLocal } from "@/lib/push";
@@ -304,6 +305,8 @@ export default function MenuPage() {
           </>
         )}
       </header>
+      {/* Trivia en vivo (fase 8.4) */}
+      <AvisoTriviaVivo token={tableToken} slug={slug} color={primaryColor} />
 
       {tableStatus === "invalid" && (
         <div className="mx-4 mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">

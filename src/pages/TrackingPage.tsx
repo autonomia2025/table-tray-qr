@@ -25,6 +25,7 @@ import TarjetaSellos from "@/components/comensal/TarjetaSellos";
 import { manifiestoDelLocal } from "@/lib/push";
 import { textoPedido } from "@/lib/estados";
 import JuegosMesa from "@/components/comensal/JuegosMesa";
+import AvisoTriviaVivo from "@/components/comensal/AvisoTriviaVivo";
 import PlatosDivididos from "@/components/comensal/PlatosDivididos";
 
 /* ---------- types ---------- */
@@ -596,6 +597,8 @@ export default function TrackingPage() {
         <span className="text-sm font-bold text-foreground">{tenant.name}</span>
         <div className="w-8" />
       </header>
+      {/* Trivia en vivo (fase 8.4) */}
+      <AvisoTriviaVivo token={tableToken} slug={slug} color={primaryColor} />
 
       <div className="px-4 pt-5">
         {/* ── CURRENT ORDER ── */}

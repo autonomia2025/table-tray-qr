@@ -36,6 +36,8 @@ import ReportesPage from "./pages/admin/ReportesPage";
 import SoportePage from "./pages/admin/SoportePage";
 import CajaPage from "./pages/admin/CajaPage";
 import LealtadPage from "./pages/admin/LealtadPage";
+import TriviaVivoPage from "./pages/admin/TriviaVivoPage";
+import TriviaVivoMesaPage from "./pages/TriviaVivoMesaPage";
 import CampanasPage from "./pages/admin/CampanasPage";
 import PromoPage from "./pages/PromoPage";
 import PagarPartePage from "./pages/PagarPartePage";
@@ -112,6 +114,7 @@ const App = () => (
               <Route path="reportes" element={<ReportesPage />} />
               <Route path="caja" element={<CajaPage />} />
               <Route path="lealtad" element={<LealtadPage />} />
+              <Route path="trivia" element={<TriviaVivoPage />} />
               <Route path="campanas" element={<CampanasPage />} />
 
               <Route path="soporte" element={<SoportePage />} />
@@ -129,6 +132,7 @@ const App = () => (
           <Route path="/:slug/promo/:token" element={<PromoPage />} />
           <Route path="/:slug/parte/:parteId" element={<PagarPartePage />} />
           <Route path="/:slug/pasaporte" element={<PasaportePage />} />
+          <Route path="/:slug/trivia" element={<TriviaVivoMesaPage />} />
 
           <Route path="/kds" element={<KDSPage />} />
           {/* Mozo */}

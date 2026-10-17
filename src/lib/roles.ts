@@ -46,15 +46,15 @@ export const NOMBRE_ROL: Record<RolLocal, string> = {
 
 /** Secciones del panel del local (las rutas /admin/:slug/<seccion>). */
 export type SeccionLocal =
-  | "inicio" | "mesas" | "pedidos" | "menu" | "caja" | "lealtad" | "campanas" | "reportes"
+  | "inicio" | "mesas" | "pedidos" | "menu" | "caja" | "lealtad" | "campanas" | "trivia" | "reportes"
   | "equipo" | "qr" | "sucursal" | "soporte" | "kds";
 
-const TODAS: SeccionLocal[] = ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "campanas", "reportes", "equipo", "qr", "sucursal", "soporte", "kds"];
+const TODAS: SeccionLocal[] = ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "campanas", "trivia", "reportes", "equipo", "qr", "sucursal", "soporte", "kds"];
 
 export const SECCIONES_POR_ROL: Record<RolLocal, SeccionLocal[]> = {
   owner: TODAS,
   admin: TODAS,
-  manager: ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "campanas", "reportes", "qr", "soporte", "kds"],
+  manager: ["inicio", "mesas", "pedidos", "menu", "caja", "lealtad", "campanas", "trivia", "reportes", "qr", "soporte", "kds"],
   cashier: ["caja", "pedidos", "mesas"],
   waiter: [],
   kitchen: ["kds"],

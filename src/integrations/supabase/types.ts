@@ -3297,6 +3297,63 @@ export type Database = {
           },
         ]
       }
+      respuestas_trivia_vivo: {
+        Row: {
+          alias: string
+          correcta: boolean
+          created_at: string
+          id: string
+          mesa: number | null
+          numero: number
+          opcion: number
+          puntos: number
+          tenant_id: string
+          trivia_id: string
+          user_id: string
+        }
+        Insert: {
+          alias: string
+          correcta: boolean
+          created_at?: string
+          id?: string
+          mesa?: number | null
+          numero: number
+          opcion: number
+          puntos: number
+          tenant_id: string
+          trivia_id: string
+          user_id: string
+        }
+        Update: {
+          alias?: string
+          correcta?: boolean
+          created_at?: string
+          id?: string
+          mesa?: number | null
+          numero?: number
+          opcion?: number
+          puntos?: number
+          tenant_id?: string
+          trivia_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "respuestas_trivia_vivo_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "respuestas_trivia_vivo_trivia_id_fkey"
+            columns: ["trivia_id"]
+            isOneToOne: false
+            referencedRelation: "trivias_vivo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       restaurants: {
         Row: {
           created_at: string | null
@@ -4124,6 +4181,63 @@ export type Database = {
           },
         ]
       }
+      trivias_vivo: {
+        Row: {
+          actual: number
+          branch_id: string
+          creada_por: string | null
+          created_at: string
+          estado: string
+          id: string
+          pregunta_desde: string | null
+          preguntas: string[]
+          segundos: number
+          tenant_id: string
+          terminada_at: string | null
+        }
+        Insert: {
+          actual?: number
+          branch_id: string
+          creada_por?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          pregunta_desde?: string | null
+          preguntas: string[]
+          segundos?: number
+          tenant_id: string
+          terminada_at?: string | null
+        }
+        Update: {
+          actual?: number
+          branch_id?: string
+          creada_por?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          pregunta_desde?: string | null
+          preguntas?: string[]
+          segundos?: number
+          tenant_id?: string
+          terminada_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trivias_vivo_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trivias_vivo_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       turnos: {
         Row: {
           abierto_por: string
@@ -4377,6 +4491,14 @@ export type Database = {
       }
       _es_finanzas: { Args: never; Returns: boolean }
       _estado_mensualidad: { Args: { _tenant_id: string }; Returns: Json }
+      _estado_trivia_vivo: {
+        Args: { _trivia_id: string; _user_id?: string }
+        Returns: Json
+      }
+      _exigir_encargado_trivia: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
       _exigir_funcion: {
         Args: { _modulo: string; _tenant_id: string }
         Returns: undefined
@@ -4666,6 +4788,7 @@ export type Database = {
           tipo: string
         }[]
       }
+      avanzar_trivia_vivo: { Args: { _trivia_id: string }; Returns: Json }
       baja_promo: { Args: { _token: string }; Returns: boolean }
       boletas_pendientes: { Args: { _branch_id: string }; Returns: Json }
       borrar_campana: { Args: { _campana_id: string }; Returns: undefined }
@@ -4777,6 +4900,10 @@ export type Database = {
       crear_pedido_mozo: {
         Args: { _items: Json; _notas?: string; _table_id: string }
         Returns: Json
+      }
+      crear_trivia_vivo: {
+        Args: { _branch_id: string; _preguntas?: number; _segundos?: number }
+        Returns: string
       }
       definir_mi_pin: { Args: { _pin: string }; Returns: undefined }
       desconectar_pago: { Args: { _conexion_id: string }; Returns: undefined }
@@ -4951,6 +5078,7 @@ export type Database = {
         }
         Returns: Json
       }
+      pantalla_trivia_vivo: { Args: { _branch_id: string }; Returns: Json }
       pasarela_de_mesa: { Args: { _qr_token: string }; Returns: Json }
       pedir_cuenta: {
         Args: { _porcentaje?: number; _propina?: number; _qr_token: string }
@@ -5055,6 +5183,15 @@ export type Database = {
         Args: { _partida: string; _qr_token: string; _respuestas: number[] }
         Returns: Json
       }
+      responder_trivia_vivo: {
+        Args: {
+          _numero: number
+          _opcion: number
+          _qr_token: string
+          _trivia_id: string
+        }
+        Returns: Json
+      }
       resultado_intento: { Args: { _intento_id: string }; Returns: Json }
       resultados_campanas: { Args: { _tenant_id: string }; Returns: Json }
       resumen_caja: {
@@ -5099,6 +5236,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      terminar_trivia_vivo: { Args: { _trivia_id: string }; Returns: undefined }
       tiene_funcion: {
         Args: { _modulo: string; _tenant_id: string }
         Returns: boolean
@@ -5120,6 +5258,7 @@ export type Database = {
         Args: { _staff_id: string; _table_id: string }
         Returns: Json
       }
+      trivia_vivo_mesa: { Args: { _qr_token: string }; Returns: Json }
       turnos_sucursal: {
         Args: { _branch_id: string; _desde: string; _hasta: string }
         Returns: Json
