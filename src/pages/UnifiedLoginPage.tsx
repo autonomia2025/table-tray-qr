@@ -17,6 +17,7 @@ export default function UnifiedLoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [cliente, setCliente] = useState<string | null>(null);
 
   const { cargando, perfil, recargar } = useSesion();
 
@@ -53,6 +54,13 @@ export default function UnifiedLoginPage() {
       const destino = destinoTrasLogin(await recargar());
 
       if (!destino) {
+        // Un cliente con cuenta verificada no tiene panel: queda con su sesión para abrir la carta de su mesa
+        // en este navegador (sirve para las cuentas de prueba; los clientes reales entran con código por correo).
+        if (data.user.email_confirmed_at && !data.user.is_anonymous) {
+          setCliente(data.user.email ?? email.trim());
+          setSubmitting(false);
+          return;
+        }
         await supabase.auth.signOut();
         setError("Esta cuenta no tiene acceso a ningún panel");
         setSubmitting(false);
@@ -113,6 +121,27 @@ export default function UnifiedLoginPage() {
             WebkitBackdropFilter: "blur(24px)",
           }}
         >
+          {cliente ? (
+            <div className="space-y-5 text-center">
+              <p className="text-lg font-bold text-white">Entraste como cliente</p>
+              <p className="text-sm text-white/60">
+                <span className="font-medium text-white/80">{cliente}</span> no tiene panel. Abre el link de tu mesa en
+                este mismo navegador: la carta te reconoce y suma tus sellos.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setCliente(null);
+                  setPassword("");
+                }}
+                className="w-full h-12 rounded-xl border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                Salir
+              </Button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-white/70">Email</Label>
@@ -165,6 +194,7 @@ export default function UnifiedLoginPage() {
               Iniciar sesión
             </Button>
           </form>
+          )}
 
           <div className="mt-5 text-center">
             <Link

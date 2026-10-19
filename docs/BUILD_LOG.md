@@ -4,6 +4,23 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-19 — Cuentas del fundador para probar de punta a punta
+**Qué cambió:** el fundador pidió correos y claves para probar el sistema completo sin pagar nada (el demo cobra simulado).
+- **`scripts/demo/accesos_fundador.py`:** crea 11 cuentas `…@fundador.tablio.test` en Demo Tablio y las mesas 11 a 14, solo para él (las pruebas automáticas usan las mesas 1 a 10):
+  - personal del local: dueño, encargada, caja, mozo y cocina;
+  - dos clientes con cuenta verificada;
+  - equipo de Tablio: superadmin, finanzas, jefa de ventas y vendedor.
+
+  Las claves se cifran en el computador y solo quedan en `privado/ACCESOS_FUNDADOR.md`; a la base viaja el cifrado.
+- **`/login` con un cliente:** antes lo sacaba ("Esta cuenta no tiene acceso a ningún panel"). Ahora, si la cuenta está verificada, queda con su sesión y ve "Entraste como cliente: abre el link de tu mesa en este mismo navegador". Los clientes reales no tienen clave, así que para ellos no cambia nada.
+
+**Pruebas:**
+- Las 11 cuentas entran y cada una tiene el rol que corresponde.
+- Las tres auditorías siguen vacías en la base real.
+- `e2e/login-cliente.spec.ts`: el cliente entra por `/login` y la carta de su mesa lo reconoce.
+
+---
+
 ## 2026-10-17 — Fase 9.6: compuerta de la fase 9 ✅
 **Qué revisa** (`tests/seguridad/f9-compuerta.test.ts`; no depende del orden de las pruebas):
 - **Aislamiento:** ninguna tabla de la comunidad la lee alguien fuera de Tablio (anónimo, invitado, cliente, personal de cualquier rol, otro local, equipo comercial ni finanzas); las invitaciones entre mesas solo las ve el personal de ese local.

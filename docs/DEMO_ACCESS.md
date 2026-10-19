@@ -37,6 +37,15 @@ Este archivo explica cómo entrar. **Las contraseñas no están aquí**: viven e
 
 Los correos usan el dominio reservado `.test`: no existen y nunca se le manda un correo a nadie. Por eso "¿Olvidaste tu contraseña?" no sirve para estas cuentas.
 
+### Cuentas del fundador (para probar a mano, 19 de octubre de 2026)
+
+Aparte de las de arriba (que usan las pruebas automáticas y cambian si se regenera el demo), el fundador tiene sus propias cuentas en el mismo local, con correos `…@fundador.tablio.test`: dueño, encargada, caja, mozo, cocina, dos clientes con cuenta (`cliente` y `amiga`, para probar la comunidad entre dos personas), superadmin, finanzas, jefa de ventas y vendedor. También tiene **cuatro mesas propias (11 a 14, terraza)**: las pruebas automáticas usan las mesas 1 a 10 y no las tocan.
+
+- **Claves y links de las mesas:** en `privado/ACCESOS_FUNDADOR.md` (fuera de git), con un recorrido de punta a punta.
+- **Se crean o se renuevan** con `python3 scripts/demo/accesos_fundador.py`. Eso deja `privado/accesos_fundador.sql` (solo las claves cifradas) y se ejecuta en la base. Renovar cambia las claves y los links de las mesas 11 a 14.
+- **Clientes con clave:** entran por `/login`, que les muestra "Entraste como cliente" sin sacarlos. Después abren el link de una mesa en ese mismo navegador. Los clientes reales no tienen clave: entran con un código por correo.
+- `bun run demo:reiniciar` no borra estas cuentas ni las mesas; solo las deja libres.
+
 > ⚠️ La cuenta de superadmin del demo ve **todos** los locales de la base. Cuando haya locales reales, se separa la base de pruebas de la de producción (paso 4.7) o se elimina esta cuenta.
 
 ## Demo de venta en 5 minutos (sugerencia)
