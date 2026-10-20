@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { anonimo, conSesion, hayCredenciales } from "./entorno";
+import { anonimo, conSesion, esBaseLocal, hayCredenciales } from "./entorno";
 
 // reiniciar_demo() borra lo operado del demo: solo un superadmin puede ejecutarla.
+// Reiniciar de verdad solo en la base desechable: en la base real el fundador prueba el demo a mano (20-10-2026).
 describe("reinicio del demo", () => {
   it("un anónimo no puede reiniciar el demo", async () => {
     const { error } = await anonimo().rpc("reiniciar_demo");
@@ -14,7 +15,7 @@ describe("reinicio del demo", () => {
     expect(error?.message).toContain("superadmin");
   });
 
-  it.skipIf(!hayCredenciales)("el superadmin sí puede: hoy queda sin pedidos ni mesas ocupadas, con 4 semanas de ejemplo antes", async () => {
+  it.skipIf(!hayCredenciales || !esBaseLocal)("el superadmin sí puede: hoy queda sin pedidos ni mesas ocupadas, con 4 semanas de ejemplo antes", async () => {
     const { cliente } = await conSesion("superadmin");
     const { data, error } = await cliente.rpc("reiniciar_demo");
     expect(error).toBeNull();
@@ -37,5 +38,28 @@ describe("reinicio del demo", () => {
     expect(auditoria.data ?? []).toHaveLength(0);
     const { data: ocupadas } = await cliente.from("tables").select("id").eq("tenant_id", "651c363f-0084-50af-9873-be98cfeaaf47").neq("status", "free");
     expect(ocupadas ?? []).toHaveLength(0);
+  });
+
+  it.skipIf(!hayCredenciales || !esBaseLocal)("en cero: sin historia ni pagos, con la carta, las mesas y el equipo intactos", async () => {
+    const { cliente } = await conSesion("superadmin");
+    const demo = "651c363f-0084-50af-9873-be98cfeaaf47";
+    const contar = async (tabla: string) =>
+      (await cliente.from(tabla).select("id", { count: "exact", head: true }).eq("tenant_id", demo)).count;
+    const carta = await contar("menu_items");
+    const mesas = await contar("tables");
+    const { error } = await cliente.rpc("reiniciar_demo", { _con_historia: false });
+    expect(error).toBeNull();
+    expect(await contar("orders")).toBe(0);
+    expect(await contar("payments")).toBe(0);
+    expect(await contar("table_sessions")).toBe(0);
+    expect(await contar("menu_items")).toBe(carta);
+    expect(await contar("tables")).toBe(mesas);
+    for (const auditoria of ["auditoria_seguridad", "auditoria_plata", "auditoria_operacion"]) {
+      const { data, error: e } = await cliente.rpc(auditoria);
+      expect(e).toBeNull();
+      expect(data ?? []).toHaveLength(0);
+    }
+    // Las demás pruebas esperan la historia de ejemplo: se vuelve a sembrar
+    expect((await cliente.rpc("reiniciar_demo")).error).toBeNull();
   });
 });

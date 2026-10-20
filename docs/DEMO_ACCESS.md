@@ -147,6 +147,14 @@ bun run demo:reiniciar
 
 Borra pedidos, pagos, sesiones, llamados, lealtad e invitaciones del demo, deja las mesas libres y la carta disponible, y vuelve a sembrar 4 semanas de ventas de ejemplo (días anteriores a hoy) para que el inicio y los reportes tengan qué mostrar. No toca la carta, el equipo ni otros locales. Solo funciona con la cuenta superadmin del demo.
 
+```bash
+bun run demo:reiniciar --en-cero
+```
+
+Lo mismo, pero **sin historia**: el local queda como recién abierto. Borra también las tablets, los PIN y el registro de las pruebas. Se quedan la carta, las mesas, el equipo, las cuentas y la configuración. Así quedó el demo el 20 de octubre de 2026, para que el fundador lo pruebe desde cero. Ese mismo día se borró "La parrillada", un local de prueba que venía de Lovable: Demo Tablio es el único local de la base.
+
+> Mientras el fundador prueba el demo a mano, las pruebas automáticas no se corren contra la base real: crean pedidos y pagos en su demo. Se corren contra la base desechable (`bun run test:local`) y en la integración continua.
+
 ## Pruebas automáticas
 
 ```bash

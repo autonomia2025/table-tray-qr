@@ -5720,7 +5720,7 @@ export type Database = {
         Args: { _limite: number; _user_id: string }
         Returns: boolean
       }
-      reiniciar_demo: { Args: never; Returns: Json }
+      reiniciar_demo: { Args: { _con_historia?: boolean }; Returns: Json }
       reportar_usuario: {
         Args: { _motivo: string; _user_id: string }
         Returns: undefined

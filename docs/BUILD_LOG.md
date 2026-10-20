@@ -4,6 +4,24 @@ Qué cambió, cuándo y por qué. Lo más reciente va arriba.
 
 ---
 
+## 2026-10-20 — Demo en cero y adiós a La parrillada
+**Qué cambió:** el fundador pidió dejar Demo Tablio "en 0" para probar desde el principio, y borrar La parrillada.
+- **`reiniciar_demo(_con_historia)`** (migración `20261020010000_demo_en_cero.sql`). Sin argumento hace lo de siempre. Con `false` (`bun run demo:reiniciar --en-cero`) no siembra la historia de ejemplo y borra también las tablets, los PIN y el registro de las pruebas. Ahora borra además lo que el reinicio dejaba suelto: eventos de pedidos, comensales de la mesa y partidas de trivia.
+- **Resultado en la base real:** se borraron 568 pedidos y 563 pagos de prueba. Quedan los 24 platos, las 14 mesas, el equipo y las cuentas.
+- **La parrillada** (migración `20261020020000_borrar_la_parrillada.sql`): era un local de prueba de Lovable (marzo), con 2 mesas, 2 platos y 2 pedidos.
+  - Se borra el local completo, en cascada, con la protección de la estación principal suspendida solo durante el borrado.
+  - El registro de auditoría se conserva sin el local.
+  - Se borran las cuentas de sus dos mozos de prueba. La del dueño se queda, sin local.
+  - En una base nueva no hace nada.
+- **Pruebas contra la base real:** mientras el fundador prueba el demo a mano, no se corren, porque ensucian su demo. `tests/seguridad/demo.test.ts` ahora reinicia de verdad solo en la base desechable, y la receta `/cerrar-fase` lo anota.
+
+**Pruebas:**
+- En la base desechable, la nueva prueba "en cero" deja 0 pedidos, pagos y visitas, con la carta y las mesas intactas y las tres auditorías vacías.
+- El borrado del local se probó contra una copia llena del demo dentro de una transacción deshecha: no deja restos y la protección vuelve a quedar activa.
+- En la base real, las tres auditorías siguen vacías.
+
+---
+
 ## 2026-10-19 — Cuentas del fundador para probar de punta a punta
 **Qué cambió:** el fundador pidió correos y claves para probar el sistema completo sin pagar nada (el demo cobra simulado).
 - **`scripts/demo/accesos_fundador.py`:** crea 11 cuentas `…@fundador.tablio.test` en Demo Tablio y las mesas 11 a 14, solo para él (las pruebas automáticas usan las mesas 1 a 10):

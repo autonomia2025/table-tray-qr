@@ -1,6 +1,7 @@
 // Deja limpio el local de demo: borra pedidos, pagos, sesiones y llamados; libera las mesas.
 // Entra como el superadmin del demo (privado/DEMO_CREDENCIALES.md) y llama a reiniciar_demo().
-// Uso: bun run demo:reiniciar
+// Uso: bun run demo:reiniciar            → vuelve a sembrar 4 semanas de ventas de ejemplo
+//      bun run demo:reiniciar --en-cero  → sin historia: el local queda como recién abierto
 import fs from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
@@ -26,9 +27,10 @@ if (e1) {
   console.error("No pude entrar como superadmin del demo:", e1.message);
   process.exit(1);
 }
-const { data, error } = await sb.rpc("reiniciar_demo");
+const enCero = process.argv.includes("--en-cero");
+const { data, error } = await sb.rpc("reiniciar_demo", { _con_historia: !enCero });
 if (error) {
   console.error("No se pudo reiniciar el demo:", error.message);
   process.exit(1);
 }
-console.log(`✅ Demo limpio. Pedidos borrados: ${data.pedidos_borrados}`);
+console.log(`✅ Demo limpio${enCero ? " y en cero" : ""}. Pedidos borrados: ${data.pedidos_borrados}`);

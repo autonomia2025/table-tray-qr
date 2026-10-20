@@ -17,7 +17,10 @@ Nada de esto se salta. Si algo falla: dos intentos y parar (regla de calidad 4),
 1. `bun run typecheck`, `bun run build`, `bun run lint:tope`, `bun run test`.
 2. `bun run test:local` (base desechable: migraciones desde cero, seguridad y navegador).
 3. Si se tocó la base: `supabase db push`, publicar las funciones cambiadas y regenerar `types.ts`.
-4. `bun run test:seguridad` y `bun run test:e2e` contra la base real y contra la app publicada.
+4. `bun run test:seguridad` y `bun run test:e2e` contra la base real y contra la app publicada. **Excepción
+   (20 de octubre de 2026):** mientras el fundador prueba Demo Tablio a mano, no se corren contra la base real,
+   porque crean pedidos y pagos en su demo. Basta con el paso 2 y la integración continua. Si hace falta
+   correrlas, se le pregunta antes y después se deja el demo como estaba (`bun run demo:reiniciar --en-cero`).
 5. Las compuertas siguen vacías: `auditoria_seguridad`, `auditoria_plata`, `auditoria_operacion`.
 6. Commit en español (un cambio lógico por commit), push a `main` y revisar que la integración continua quede
    en verde (API pública de GitHub, con moderación: ver la memoria `github-ci-sin-gh`).
